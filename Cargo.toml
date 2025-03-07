@@ -2,5 +2,20 @@
 name = "xui-rs"
 version = "0.1.0"
 edition = "2024"
+authors = ["Gleb Gudkov <GudkovGO@tutamail.com>"]
+description = "A Rust library for accessing 3x-ui panel API"
+license = "Unlicense"
+readme = "README.md"
+repository = "https://github.com/LineGM/xui-rs"
+homepage = "https://github.com/LineGM/xui-rs"
+
+keywords = ["3x-ui", "panel", "api", "rust", "library"]
 
 [dependencies]
+reqwest = { version = "0.12", features = ["json", "cookies"] }
+tokio = { version = "1.43", features = ["rt-multi-thread", "macros"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+thiserror = "2.0"
+regex = "1.11"
