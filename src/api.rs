@@ -1,15 +1,14 @@
 use regex::Regex;
-use reqwest::Client;
 use reqwest::header::COOKIE;
+use reqwest::{Client, IntoUrl};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use url::Url;
 
 use crate::errors::MyError;
 
 pub struct XUiClient {
     client: Client,
-    panel_base_url: Url,
+    panel_base_url: url::Url,
     session_cookie: Option<String>,
     cookie_expiry: Option<Instant>,
     username: Option<String>,
@@ -24,37 +23,43 @@ impl XUiClient {
     ///
     /// # Arguments
     ///
-    /// * `panel_url` - A string slice representing the base URL for the X-UI panel.
+    /// * `panel_url` - A string slice or any type that can be converted into a URL representing the base URL for the X-UI panel.
     ///
     /// # Returns
     ///
     /// A `Result` containing an instance of `XUiClient` if successful, or a `MyError` if an error occurred.
     ///
+    /// # Notes
+    ///
+    /// - A trailing slash is significant.
+    ///   Without it, the last path component is considered to be a "file" name
+    ///   to be removed to get at the "directory" that is used as the base.
+    ///
     /// # Example
     ///
-    /// ```
+    /// ```rust
     /// use xui_rs::api::XUiClient;
     ///
-    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
-    ///     let client = XUiClient::new("https://your-xui-panel.com")?;
+    /// fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let client = XUiClient::new("https://your-xui-panel.com/")?;
     ///     Ok(())
     /// }
     /// ```
-    pub fn new(panel_url: &str) -> Result<Self, MyError> {
+    pub fn new(panel_url: impl IntoUrl) -> Result<Self, MyError> {
         // Create a new instance of the client with the given base URL.
         // A new HTTP client is created and the session cookie is initially set to None.
-        let url = match Url::parse(panel_url) {
+        let url = match panel_url.into_url() {
             Ok(url) => url,
-            Err(e) => return Err(MyError::UrlParseError(e)),
+            Err(e) => return Err(MyError::ReqwestError(e)),
         };
 
-        let new_client = match Client::builder().build() {
-            Ok(new_client) => new_client,
+        let reqwest_client = match Client::builder().build() {
+            Ok(reqwest_client) => reqwest_client,
             Err(e) => return Err(MyError::ReqwestError(e)),
         };
 
         Ok(Self {
-            client: new_client,
+            client: reqwest_client,
             panel_base_url: url,
             session_cookie: None,
             cookie_expiry: None,
@@ -93,8 +98,8 @@ impl XUiClient {
     ///
     /// # Arguments
     ///
-    /// * `username` - A string slice representing the username for login.
-    /// * `password` - A string slice representing the password for login.
+    /// * `username` - Any type that can be converted into a String representing the username for login.
+    /// * `password` - Any type that can be converted into a String representing the password for login.
     ///
     /// # Returns
     ///
@@ -103,7 +108,7 @@ impl XUiClient {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```rust
     /// use xui_rs::api::XUiClient;
     ///
     /// async fn example() -> Result<(), xui_rs::errors::MyError> {
@@ -112,15 +117,22 @@ impl XUiClient {
     ///     Ok(())
     /// }
     /// ```
-    pub async fn login(&mut self, username: &str, password: &str) -> Result<(), MyError> {
-        let login_endpoint = match self.panel_base_url.join("login") {
+    pub async fn login(
+        &mut self,
+        username: impl Into<String>,
+        password: impl Into<String>,
+    ) -> Result<(), MyError> {
+        let login_endpoint = match self.panel_base_url.join("login/") {
             Ok(login_endpoint) => login_endpoint,
             Err(err) => return Err(MyError::UrlParseError(err)),
         };
 
+        let username_str: String = username.into();
+        let password_str: String = password.into();
+
         let mut params = HashMap::new();
-        params.insert("username", username);
-        params.insert("password", password);
+        params.insert("username", &username_str);
+        params.insert("password", &password_str);
 
         let response = self
             .client
@@ -139,8 +151,8 @@ impl XUiClient {
                 self.extract_cookie_expiry();
 
                 // Store credentials for potential re-login
-                self.username = Some(username.to_owned());
-                self.password = Some(password.to_owned());
+                self.username = Some(username_str);
+                self.password = Some(password_str);
             }
             Ok(())
         } else {
@@ -201,9 +213,18 @@ impl XUiClient {
         }
     }
 
-    async fn api_get_request(&mut self, endpoint: Url) -> Result<serde_json::Value, MyError> {
+    /// Sends a GET request to the specified endpoint and returns the JSON response.
+    async fn api_get_request(
+        &mut self,
+        endpoint: impl IntoUrl,
+    ) -> Result<serde_json::Value, MyError> {
+        let endpoint_url = match endpoint.into_url() {
+            Ok(endpoint_url) => endpoint_url,
+            Err(e) => return Err(MyError::ReqwestError(e)),
+        };
+
         let response = self
-            .with_cookie(self.client.get(endpoint))
+            .with_cookie(self.client.get(endpoint_url))
             .await?
             .send()
             .await?;
@@ -225,7 +246,7 @@ impl XUiClient {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```rust
     /// use xui_rs::api::XUiClient;
     ///
     /// async fn example() -> Result<(), xui_rs::errors::MyError> {
@@ -237,7 +258,7 @@ impl XUiClient {
     /// }
     /// ```
     pub async fn get_inbounds(&mut self) -> Result<serde_json::Value, MyError> {
-        let inbounds_list_endpoint = match self.panel_base_url.join("panel/api/inbounds/list") {
+        let inbounds_list_endpoint = match self.panel_base_url.join("panel/api/inbounds/list/") {
             Ok(inbounds_list_endpoint) => inbounds_list_endpoint,
             Err(err) => return Err(MyError::UrlParseError(err)),
         };
@@ -252,7 +273,7 @@ impl XUiClient {
     ///
     /// # Arguments
     ///
-    /// * `inbound_id` - A 32-bit unsigned integer representing the ID of the inbound to retrieve.
+    /// * `inbound_id` - Any type that can be converted into a u64 representing the ID of the inbound to retrieve.
     ///
     /// # Returns
     ///
@@ -261,21 +282,26 @@ impl XUiClient {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```rust
     /// use xui_rs::api::XUiClient;
     ///
     /// async fn example() -> Result<(), xui_rs::errors::MyError> {
     ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
     ///     client.login("admin", "password").await?;
-    ///     let inbound = client.get_inbound(1).await?;
+    ///     let inbound = client.get_inbound(1_u64).await?;
     ///     println!("Inbound details: {}", inbound);
     ///     Ok(())
     /// }
     /// ```
-    pub async fn get_inbound(&mut self, inbound_id: u32) -> Result<serde_json::Value, MyError> {
+    pub async fn get_inbound(
+        &mut self,
+        inbound_id: impl Into<u64>,
+    ) -> Result<serde_json::Value, MyError> {
+        let inbound: u64 = inbound_id.into();
+
         let inbound_get_endpoint = match self
             .panel_base_url
-            .join(&format!("panel/api/inbounds/get/{}", inbound_id))
+            .join(&format!("panel/api/inbounds/get/{}/", inbound))
         {
             Ok(inbound_get_endpoint) => inbound_get_endpoint,
             Err(err) => return Err(MyError::UrlParseError(err)),
@@ -291,7 +317,7 @@ impl XUiClient {
     ///
     /// # Arguments
     ///
-    /// * `client_email` - A string slice representing the email address of the client.
+    /// * `client_email` - Any type that can be converted into a String representing the email address of the client.
     ///
     /// # Returns
     ///
@@ -300,7 +326,7 @@ impl XUiClient {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```rust
     /// use xui_rs::api::XUiClient;
     ///
     /// async fn example() -> Result<(), xui_rs::errors::MyError> {
@@ -313,11 +339,11 @@ impl XUiClient {
     /// ```
     pub async fn get_client_traffic_by_email(
         &mut self,
-        client_email: &str,
+        client_email: impl Into<String>,
     ) -> Result<serde_json::Value, MyError> {
         let traffic_by_email_endpoint = match self.panel_base_url.join(&format!(
-            "panel/api/inbounds/getClientTraffics/{}",
-            client_email
+            "panel/api/inbounds/getClientTraffics/{}/",
+            client_email.into()
         )) {
             Ok(traffic_by_email_endpoint) => traffic_by_email_endpoint,
             Err(err) => return Err(MyError::UrlParseError(err)),
@@ -333,7 +359,7 @@ impl XUiClient {
     ///
     /// # Arguments
     ///
-    /// * `uuid` - A string slice representing the UUID of the client.
+    /// * `uuid` - Any type that can be converted into a String representing the UUID of the client.
     ///
     /// # Returns
     ///
@@ -342,7 +368,7 @@ impl XUiClient {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```rust
     /// use xui_rs::api::XUiClient;
     ///
     /// async fn example() -> Result<(), xui_rs::errors::MyError> {
@@ -355,11 +381,11 @@ impl XUiClient {
     /// ```
     pub async fn get_client_traffic_by_uuid(
         &mut self,
-        uuid: &str,
+        uuid: impl Into<String>,
     ) -> Result<serde_json::Value, MyError> {
         let traffic_by_uuid_endpoint = match self.panel_base_url.join(&format!(
-            "panel/api/inbounds/getClientTrafficsById/{}",
-            uuid
+            "panel/api/inbounds/getClientTrafficsById/{}/",
+            uuid.into()
         )) {
             Ok(traffic_by_uuid_endpoint) => traffic_by_uuid_endpoint,
             Err(err) => return Err(MyError::UrlParseError(err)),
@@ -380,7 +406,7 @@ impl XUiClient {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```rust
     /// use xui_rs::api::XUiClient;
     ///
     /// async fn example() -> Result<(), xui_rs::errors::MyError> {
@@ -393,7 +419,7 @@ impl XUiClient {
     /// ```
     pub async fn get_backup(&mut self) -> Result<u16, MyError> {
         let create_backup_endpoint =
-            match self.panel_base_url.join("panel/api/inbounds/createbackup") {
+            match self.panel_base_url.join("panel/api/inbounds/createbackup/") {
                 Ok(create_backup_endpoint) => create_backup_endpoint,
                 Err(err) => return Err(MyError::UrlParseError(err)),
             };
