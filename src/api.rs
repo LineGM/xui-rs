@@ -3,12 +3,13 @@ use reqwest::Client;
 use reqwest::header::COOKIE;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+use url::Url;
 
 use crate::errors::MyError;
 
 pub struct XUiClient {
     client: Client,
-    panel_base_url: String,
+    panel_base_url: Url,
     session_cookie: Option<String>,
     cookie_expiry: Option<Instant>,
     username: Option<String>,
@@ -23,22 +24,43 @@ impl XUiClient {
     ///
     /// # Arguments
     ///
-    /// * `panel_base_url` - A string slice representing the base URL for the client.
+    /// * `panel_url` - A string slice representing the base URL for the X-UI panel.
     ///
     /// # Returns
     ///
-    /// An instance of `XUiClient`.
-    pub fn new(panel_url: &str) -> Self {
+    /// A `Result` containing an instance of `XUiClient` if successful, or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let client = XUiClient::new("https://your-xui-panel.com")?;
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn new(panel_url: &str) -> Result<Self, MyError> {
         // Create a new instance of the client with the given base URL.
         // A new HTTP client is created and the session cookie is initially set to None.
-        Self {
-            client: Client::new(),
-            panel_base_url: panel_url.to_owned(),
+        let url = match Url::parse(panel_url) {
+            Ok(url) => url,
+            Err(e) => return Err(MyError::UrlParseError(e)),
+        };
+
+        let new_client = match Client::builder().build() {
+            Ok(new_client) => new_client,
+            Err(e) => return Err(MyError::ReqwestError(e)),
+        };
+
+        Ok(Self {
+            client: new_client,
+            panel_base_url: url,
             session_cookie: None,
             cookie_expiry: None,
             username: None,
             password: None,
-        }
+        })
     }
 
     /// Extracts Max-Age value from cookie string
@@ -60,32 +82,41 @@ impl XUiClient {
         // Try to extract Max-Age first
         if let Some(max_age) = self.extract_max_age() {
             self.cookie_expiry = Some(Instant::now() + Duration::from_secs(max_age));
-            return;
         }
     }
 
-    /// Logs in to the panel using the provided username and password.
+    /// Logs in to the 3X-UI panel using the provided username and password.
     ///
-    /// This function sends a POST request to "/login" with the given username and password
-    /// in form data format. If the response is successful, it extracts the session cookie
-    /// from the "set-cookie" header and stores it in the client's state. Otherwise, it
-    /// returns an error with the status code.
+    /// This function sends a POST request to the login endpoint with the given username and password
+    /// in JSON format. If the response is successful, it extracts the session cookie from the
+    /// "set-cookie" header and stores it for future authenticated requests.
     ///
     /// # Arguments
     ///
-    /// * `username` - A string representing the username for login.
-    /// * `password` - A string representing the password for login.
+    /// * `username` - A string slice representing the username for login.
+    /// * `password` - A string slice representing the password for login.
     ///
     /// # Returns
     ///
-    /// A `Result` indicating the success of the login. If the login is successful, it returns
-    /// `Ok(())`. If the login fails, it returns an error with the status code.
+    /// A `Result` indicating the success of the login operation. If successful, it returns
+    /// `Ok(())`. If the login fails, it returns a `MyError` with details.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///     Ok(())
+    /// }
+    /// ```
     pub async fn login(&mut self, username: &str, password: &str) -> Result<(), MyError> {
-        // Store credentials for potential re-login
-        self.username = Some(username.to_owned());
-        self.password = Some(password.to_owned());
-
-        let login_endpoint = format!("{}/login", self.panel_base_url);
+        let login_endpoint = match self.panel_base_url.join("login") {
+            Ok(login_endpoint) => login_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
 
         let mut params = HashMap::new();
         params.insert("username", username);
@@ -93,7 +124,7 @@ impl XUiClient {
 
         let response = self
             .client
-            .post(&login_endpoint)
+            .post(login_endpoint)
             .json(&params)
             .send()
             .await?;
@@ -106,11 +137,15 @@ impl XUiClient {
                 // Parse expiry time from cookie
                 self.session_cookie = Some(cookie_str);
                 self.extract_cookie_expiry();
+
+                // Store credentials for potential re-login
+                self.username = Some(username.to_owned());
+                self.password = Some(password.to_owned());
             }
             Ok(())
         } else {
             // If the response is not successful, return an error with the status code.
-            Err(MyError::Custom(format!(
+            Err(MyError::CustomError(format!(
                 "Login failed with status: {}",
                 response.status()
             )))
@@ -139,7 +174,7 @@ impl XUiClient {
             {
                 return self.login(&username, &password).await;
             } else {
-                return Err(MyError::Custom(
+                return Err(MyError::CustomError(
                     "Session expired and no credentials available for re-login".to_string(),
                 ));
             }
@@ -160,11 +195,13 @@ impl XUiClient {
             Ok(req.header(COOKIE, cookie))
         } else {
             // This should not happen due to ensure_authenticated, but just in case
-            Err(MyError::Custom("No session cookie available".to_string()))
+            Err(MyError::CustomError(
+                "No session cookie available".to_string(),
+            ))
         }
     }
 
-    async fn api_get_request(&mut self, endpoint: &str) -> Result<serde_json::Value, MyError> {
+    async fn api_get_request(&mut self, endpoint: Url) -> Result<serde_json::Value, MyError> {
         let response = self
             .with_cookie(self.client.get(endpoint))
             .await?
@@ -176,46 +213,81 @@ impl XUiClient {
         Ok(response_as_json)
     }
 
-    /// Retrieves a list of all inbound configurations from the panel.
+    /// Retrieves a list of all inbound configurations from the 3X-UI panel.
     ///
-    /// This function sends a GET request to "/panel/api/inbounds/list"
-    /// and returns the JSON response containing a list of inbound configurations.
+    /// This function sends a GET request to the inbounds list endpoint and returns
+    /// the JSON response containing all configured inbounds.
     ///
     /// # Returns
     ///
-    /// A `Result` wrapping a `serde_json::Value` containing the JSON response. If an error occurs
-    /// during the request or response parsing, a `MyError` is returned.
+    /// A `Result` containing a `serde_json::Value` with the inbounds data if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///     let inbounds = client.get_inbounds().await?;
+    ///     println!("Inbounds: {}", inbounds);
+    ///     Ok(())
+    /// }
+    /// ```
     pub async fn get_inbounds(&mut self) -> Result<serde_json::Value, MyError> {
-        let inbounds_list_endpoint = format!("{}/panel/api/inbounds/list", self.panel_base_url);
-        self.api_get_request(&inbounds_list_endpoint).await
+        let inbounds_list_endpoint = match self.panel_base_url.join("panel/api/inbounds/list") {
+            Ok(inbounds_list_endpoint) => inbounds_list_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        self.api_get_request(inbounds_list_endpoint).await
     }
 
-    /// Retrieves the inbound configuration for a specified inbound ID.
+    /// Retrieves the configuration for a specific inbound by its ID.
     ///
-    /// This function sends a GET request to "/panel/api/inbounds/get/<inbound_id>"
-    /// and returns the JSON response containing the inbound configuration.
+    /// This function sends a GET request to fetch details about a specific inbound
+    /// configuration identified by the provided ID.
     ///
     /// # Arguments
     ///
-    /// * `inbound_id` - A 32-bit unsigned integer representing the ID of the inbound.
+    /// * `inbound_id` - A 32-bit unsigned integer representing the ID of the inbound to retrieve.
     ///
     /// # Returns
     ///
-    /// A `Result` wrapping a `Value` containing the JSON response. If an error occurs
-    /// during the request or response parsing, a `MyError` is returned.
+    /// A `Result` containing a `serde_json::Value` with the inbound data if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///     let inbound = client.get_inbound(1).await?;
+    ///     println!("Inbound details: {}", inbound);
+    ///     Ok(())
+    /// }
+    /// ```
     pub async fn get_inbound(&mut self, inbound_id: u32) -> Result<serde_json::Value, MyError> {
-        let inbound_get_endpoint = format!(
-            "{}/panel/api/inbounds/get/{}",
-            self.panel_base_url, inbound_id
-        );
+        let inbound_get_endpoint = match self
+            .panel_base_url
+            .join(&format!("panel/api/inbounds/get/{}", inbound_id))
+        {
+            Ok(inbound_get_endpoint) => inbound_get_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
 
-        self.api_get_request(&inbound_get_endpoint).await
+        self.api_get_request(inbound_get_endpoint).await
     }
 
-    /// Retrieves traffic information for a client identified by email.
+    /// Retrieves traffic information for a client identified by their email address.
     ///
-    /// This function sends a GET request to "/panel/api/inbounds/getClientTraffics/<client_email>"
-    /// and returns the JSON response containing traffic statistics for the specified client.
+    /// This function sends a GET request to fetch traffic statistics for a specific client
+    /// identified by their email address.
     ///
     /// # Arguments
     ///
@@ -223,36 +295,41 @@ impl XUiClient {
     ///
     /// # Returns
     ///
-    /// A `Result` wrapping a `serde_json::Value` containing the JSON response with traffic data.
-    /// If an error occurs during the request or response parsing, a `MyError` is returned.
+    /// A `Result` containing a `serde_json::Value` with the client's traffic data if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///     let traffic = client.get_client_traffic_by_email("user@example.com").await?;
+    ///     println!("Traffic data: {}", traffic);
+    ///     Ok(())
+    /// }
+    /// ```
     pub async fn get_client_traffic_by_email(
         &mut self,
         client_email: &str,
     ) -> Result<serde_json::Value, MyError> {
-        let client_traffic_endpoint = format!(
-            "{}/panel/api/inbounds/getClientTraffics/{}",
-            self.panel_base_url, client_email
-        );
+        let traffic_by_email_endpoint = match self.panel_base_url.join(&format!(
+            "panel/api/inbounds/getClientTraffics/{}",
+            client_email
+        )) {
+            Ok(traffic_by_email_endpoint) => traffic_by_email_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
 
-        self.api_get_request(&client_traffic_endpoint).await
+        self.api_get_request(traffic_by_email_endpoint).await
     }
 
-    pub async fn get_client_traffic_by_uuid(
-        &mut self,
-        uuid: &str,
-    ) -> Result<serde_json::Value, MyError> {
-        let client_traffic_endpoint = format!(
-            "{}/panel/api/inbounds/getClientTrafficsById/{}",
-            self.panel_base_url, uuid
-        );
-
-        self.api_get_request(&client_traffic_endpoint).await
-    }
-
-    /// Retrieves traffic information for a client identified by UUID.
+    /// Retrieves traffic information for a client identified by their UUID.
     ///
-    /// This function sends a GET request to "/panel/api/inbounds/getClientTrafficsById/<uuid>"
-    /// and returns the JSON response containing traffic statistics for the specified client.
+    /// This function sends a GET request to fetch traffic statistics for a specific client
+    /// identified by their UUID.
     ///
     /// # Arguments
     ///
@@ -260,17 +337,73 @@ impl XUiClient {
     ///
     /// # Returns
     ///
-    /// A `Result` wrapping a `serde_json::Value` containing the JSON response with traffic data.
-    /// If an error occurs during the request or response parsing, a `MyError` is returned.
-    pub async fn get_backup(&mut self) -> Result<(), MyError> {
-        let client_traffic_endpoint =
-            format!("{}/panel/api/inbounds/createbackup", self.panel_base_url);
+    /// A `Result` containing a `serde_json::Value` with the client's traffic data if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///     let traffic = client.get_client_traffic_by_uuid("d7c06399-a3e3-4007-9109-19012597dd01").await?;
+    ///     println!("Traffic data: {}", traffic);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn get_client_traffic_by_uuid(
+        &mut self,
+        uuid: &str,
+    ) -> Result<serde_json::Value, MyError> {
+        let traffic_by_uuid_endpoint = match self.panel_base_url.join(&format!(
+            "panel/api/inbounds/getClientTrafficsById/{}",
+            uuid
+        )) {
+            Ok(traffic_by_uuid_endpoint) => traffic_by_uuid_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
 
-        let _response = self
-            .with_cookie(self.client.get(client_traffic_endpoint))
+        self.api_get_request(traffic_by_uuid_endpoint).await
+    }
+
+    /// Creates a backup of the 3X-UI panel configuration.
+    ///
+    /// This function sends a GET request to trigger the panel's backup creation mechanism.
+    /// It returns the HTTP status code of the response.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the HTTP status code (u16) if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///     let status = client.get_backup().await?;
+    ///     println!("Backup creation status: {}", status);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn get_backup(&mut self) -> Result<u16, MyError> {
+        let create_backup_endpoint =
+            match self.panel_base_url.join("panel/api/inbounds/createbackup") {
+                Ok(create_backup_endpoint) => create_backup_endpoint,
+                Err(err) => return Err(MyError::UrlParseError(err)),
+            };
+
+        let response = self
+            .with_cookie(self.client.get(create_backup_endpoint))
             .await?
-            .send();
+            .send()
+            .await?;
 
-        Ok(())
+        Ok(response.status().as_u16())
     }
 }
