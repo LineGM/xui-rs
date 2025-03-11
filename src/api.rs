@@ -432,4 +432,708 @@ impl XUiClient {
 
         Ok(response.status().as_u16())
     }
+
+    /// Sends a POST request to the specified endpoint with an optional JSON body and returns the JSON response.
+    async fn api_post_request(
+        &mut self,
+        endpoint: impl IntoUrl,
+        body: Option<&serde_json::Value>,
+    ) -> Result<serde_json::Value, MyError> {
+        let endpoint_url = match endpoint.into_url() {
+            Ok(endpoint_url) => endpoint_url,
+            Err(e) => return Err(MyError::ReqwestError(e)),
+        };
+
+        let mut req_builder = self.with_cookie(self.client.post(endpoint_url)).await?;
+
+        if let Some(json_body) = body {
+            req_builder = req_builder.json(json_body);
+        }
+
+        let response = req_builder.send().await?;
+        let response_as_json = response.json().await?;
+
+        Ok(response_as_json)
+    }
+
+    /// Retrieves IP records for a client identified by their email address.
+    ///
+    /// This function sends a POST request to fetch IP records for a specific client
+    /// identified by their email address.
+    ///
+    /// # Arguments
+    ///
+    /// * `client_email` - Any type that can be converted into a String representing the email address of the client.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `serde_json::Value` with the client's IP records if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///     let ip_records = client.get_client_ips("user@example.com").await?;
+    ///     println!("IP records: {}", ip_records);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn get_client_ips(
+        &mut self,
+        client_email: impl Into<String>,
+    ) -> Result<serde_json::Value, MyError> {
+        let client_ips_endpoint = match self.panel_base_url.join(&format!(
+            "panel/api/inbounds/clientIps/{}/",
+            client_email.into()
+        )) {
+            Ok(client_ips_endpoint) => client_ips_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        self.api_post_request(client_ips_endpoint, None).await
+    }
+
+    /// Adds a new inbound configuration to the 3X-UI panel.
+    ///
+    /// This function sends a POST request with a JSON body containing the inbound configuration
+    /// parameters to add a new inbound.
+    ///
+    /// # Arguments
+    ///
+    /// * `inbound_config` - A serde_json::Value containing the inbound configuration parameters.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `serde_json::Value` with the response if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xui_rs::api::XUiClient;
+    /// use serde_json::json;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///
+    ///     let inbound_config = json!({
+    ///         "up": 0,
+    ///         "down": 0,
+    ///         "total": 0,
+    ///         "remark": "New Inbound",
+    ///         "enable": true,
+    ///         "expiryTime": 0,
+    ///         "listen": "",
+    ///         "port": 10000,
+    ///         "protocol": "vmess",
+    ///         "settings": "{\"clients\":[{\"id\":\"b831381d-6324-4d53-ad4f-8cda48b30811\",\"alterId\":0,\"email\":\"example@example.com\",\"limitIp\":0,\"totalGB\":0,\"expiryTime\":0,\"enable\":true,\"tgId\":\"\",\"subId\":\"\"}],\"disableInsecureEncryption\":false}",
+    ///         "streamSettings": "{\"network\":\"tcp\",\"security\":\"none\",\"tcpSettings\":{\"acceptProxyProtocol\":false,\"header\":{\"type\":\"none\"}}}",
+    ///         "sniffing": "{\"enabled\":true,\"destOverride\":[\"http\",\"tls\"]}"
+    ///     });
+    ///
+    ///     let response = client.add_inbound(inbound_config).await?;
+    ///     println!("Add inbound response: {}", response);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn add_inbound(
+        &mut self,
+        inbound_config: serde_json::Value,
+    ) -> Result<serde_json::Value, MyError> {
+        let add_inbound_endpoint = match self.panel_base_url.join("panel/api/inbounds/add/") {
+            Ok(add_inbound_endpoint) => add_inbound_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        self.api_post_request(add_inbound_endpoint, Some(&inbound_config))
+            .await
+    }
+
+    /// Adds a new client to a specific inbound in the 3X-UI panel.
+    ///
+    /// This function sends a POST request with a JSON body containing the client configuration
+    /// to add a new client to an existing inbound. The client JSON is wrapped in a "clients" array
+    /// within the settings string.
+    ///
+    /// # Arguments
+    ///
+    /// * `inbound_id` - Any type that can be converted into a u64 representing the ID of the inbound to add the client to.
+    /// * `client` - A serde_json::Value representing the client object to add.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `serde_json::Value` with the response if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xui_rs::api::XUiClient;
+    /// use serde_json::json;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///
+    ///     let client_config = json!({
+    ///         "id": "bbfad557-28f2-47e5-9f3d-e3c7f532fbda",
+    ///         "flow": "",
+    ///         "email": "new_client@example.com",
+    ///         "limitIp": 0,
+    ///         "totalGB": 0,
+    ///         "expiryTime": 0,
+    ///         "enable": true,
+    ///         "tgId": "",
+    ///         "subId": "sub_id_here",
+    ///         "reset": 0
+    ///     });
+    ///
+    ///     let response = client.add_client(5, client_config).await?;
+    ///     println!("Add client response: {}", response);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn add_client(
+        &mut self,
+        inbound_id: impl Into<u64>,
+        client: serde_json::Value,
+    ) -> Result<serde_json::Value, MyError> {
+        let add_client_endpoint = match self.panel_base_url.join("panel/api/inbounds/addClient/") {
+            Ok(add_client_endpoint) => add_client_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        // Create the settings string with the client in a "clients" array
+        let settings_obj_str = serde_json::json!({
+            "clients": [client]
+        })
+        .to_string();
+
+        // Create the request body
+        let request_body = serde_json::json!({
+            "id": inbound_id.into(),
+            "settings": settings_obj_str
+        });
+
+        self.api_post_request(add_client_endpoint, Some(&request_body))
+            .await
+    }
+
+    /// Updates an existing inbound configuration in the 3X-UI panel.
+    ///
+    /// This function sends a POST request with a JSON body containing the updated inbound configuration
+    /// parameters to modify an existing inbound identified by its ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `inbound_id` - Any type that can be converted into a u64 representing the ID of the inbound to update.
+    /// * `inbound_config` - A serde_json::Value containing the updated inbound configuration parameters.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `serde_json::Value` with the response if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xui_rs::api::XUiClient;
+    /// use serde_json::json;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///
+    ///     // First get the current inbound configuration
+    ///     let current_inbound = client.get_inbound(4).await?;
+    ///
+    ///     // Modify the configuration as needed
+    ///     let mut updated_config = current_inbound["obj"].clone();
+    ///     updated_config["port"] = json!(44360);
+    ///     updated_config["protocol"] = json!("vless");
+    ///
+    ///     // Update the inbound with the modified configuration
+    ///     let response = client.update_inbound(4, updated_config).await?;
+    ///     println!("Update inbound response: {}", response);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn update_inbound(
+        &mut self,
+        inbound_id: impl Into<u64>,
+        inbound_config: serde_json::Value,
+    ) -> Result<serde_json::Value, MyError> {
+        let id = inbound_id.into();
+        let update_inbound_endpoint = match self
+            .panel_base_url
+            .join(&format!("panel/api/inbounds/update/{}/", id))
+        {
+            Ok(update_inbound_endpoint) => update_inbound_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        self.api_post_request(update_inbound_endpoint, Some(&inbound_config))
+            .await
+    }
+
+    /// Updates an existing client in the 3X-UI panel.
+    ///
+    /// This function sends a POST request with a JSON body containing the updated client configuration
+    /// to modify an existing client identified by its UUID.
+    ///
+    /// # Arguments
+    ///
+    /// * `uuid` - Any type that can be converted into a String representing the UUID of the client to update.
+    /// * `inbound_id` - Any type that can be converted into a u64 representing the ID of the inbound containing the client.
+    /// * `client` - A serde_json::Value representing the updated client object.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `serde_json::Value` with the response if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xui_rs::api::XUiClient;
+    /// use serde_json::json;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///
+    ///     // Define the updated client configuration
+    ///     let updated_client = json!({
+    ///         "id": "95e4e7bb-7796-47e7-e8a7-f4055194f776",
+    ///         "flow": "",
+    ///         "email": "updated_client@example.com",
+    ///         "limitIp": 2,
+    ///         "totalGB": 42949672960,  // 40 GB in bytes
+    ///         "expiryTime": 1682864675944,  // Unix timestamp in milliseconds
+    ///         "enable": true,
+    ///         "tgId": "",
+    ///         "subId": "sub_id_here",
+    ///         "reset": 0
+    ///     });
+    ///
+    ///     // Update the client
+    ///     let response = client.update_client(
+    ///         "95e4e7bb-7796-47e7-e8a7-f4055194f776",  // UUID of the client to update
+    ///         3,  // Inbound ID
+    ///         updated_client
+    ///     ).await?;
+    ///
+    ///     println!("Update client response: {}", response);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn update_client(
+        &mut self,
+        uuid: impl Into<String>,
+        inbound_id: impl Into<u64>,
+        client: serde_json::Value,
+    ) -> Result<serde_json::Value, MyError> {
+        let client_uuid = uuid.into();
+        let update_client_endpoint = match self
+            .panel_base_url
+            .join(&format!("panel/api/inbounds/updateClient/{}/", client_uuid))
+        {
+            Ok(update_client_endpoint) => update_client_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        // Create the settings string with the client in a "clients" array
+        let settings_obj_str = serde_json::json!({
+            "clients": [client]
+        })
+        .to_string();
+
+        // Create the request body
+        let request_body = serde_json::json!({
+            "id": inbound_id.into(),
+            "settings": settings_obj_str
+        });
+
+        self.api_post_request(update_client_endpoint, Some(&request_body))
+            .await
+    }
+
+    /// Clears IP records for a client identified by their email address.
+    ///
+    /// This function sends a POST request to reset or clear all IP records associated
+    /// with a specific client identified by their email address.
+    ///
+    /// # Arguments
+    ///
+    /// * `client_email` - Any type that can be converted into a String representing the email address of the client.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `serde_json::Value` with the response if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///
+    ///     // Clear IP records for a client
+    ///     let response = client.clear_client_ips("user@example.com").await?;
+    ///     println!("Clear IP records response: {}", response);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn clear_client_ips(
+        &mut self,
+        client_email: impl Into<String>,
+    ) -> Result<serde_json::Value, MyError> {
+        let email = client_email.into();
+        let clear_ips_endpoint = match self
+            .panel_base_url
+            .join(&format!("panel/api/inbounds/clearClientIps/{}/", email))
+        {
+            Ok(clear_ips_endpoint) => clear_ips_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        // This endpoint doesn't require a request body
+        self.api_post_request(clear_ips_endpoint, None).await
+    }
+
+    /// Resets traffic statistics for all inbounds in the system.
+    ///
+    /// This function sends a POST request to reset the traffic statistics for all inbounds
+    /// configured in the 3X-UI panel.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `serde_json::Value` with the response if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///
+    ///     // Reset traffic statistics for all inbounds
+    ///     let response = client.reset_all_traffics().await?;
+    ///     println!("Reset all traffics response: {}", response);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn reset_all_traffics(&mut self) -> Result<serde_json::Value, MyError> {
+        let reset_all_traffics_endpoint = match self
+            .panel_base_url
+            .join("panel/api/inbounds/resetAllTraffics/")
+        {
+            Ok(reset_all_traffics_endpoint) => reset_all_traffics_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        // This endpoint doesn't require a request body
+        self.api_post_request(reset_all_traffics_endpoint, None)
+            .await
+    }
+
+    /// Resets traffic statistics for all clients in a specific inbound.
+    ///
+    /// This function sends a POST request to reset the traffic statistics for all clients
+    /// associated with a specific inbound identified by its ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `inbound_id` - Any type that can be converted into a u64 representing the ID of the inbound.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `serde_json::Value` with the response if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///
+    ///     // Reset traffic statistics for all clients in inbound with ID 3
+    ///     let response = client.reset_all_client_traffics(3).await?;
+    ///     println!("Reset all client traffics response: {}", response);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn reset_all_client_traffics(
+        &mut self,
+        inbound_id: impl Into<u64>,
+    ) -> Result<serde_json::Value, MyError> {
+        let id = inbound_id.into();
+        let reset_clients_endpoint = match self.panel_base_url.join(&format!(
+            "panel/api/inbounds/resetAllClientTraffics/{}/",
+            id
+        )) {
+            Ok(reset_clients_endpoint) => reset_clients_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        // This endpoint doesn't require a request body
+        self.api_post_request(reset_clients_endpoint, None).await
+    }
+
+    /// Resets traffic statistics for a specific client in a specific inbound.
+    ///
+    /// This function sends a POST request to reset the traffic statistics for a specific client
+    /// identified by their email address within a particular inbound identified by its ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `inbound_id` - Any type that can be converted into a u64 representing the ID of the inbound.
+    /// * `client_email` - Any type that can be converted into a String representing the email address of the client.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `serde_json::Value` with the response if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///
+    ///     // Reset traffic statistics for a specific client in inbound with ID 3
+    ///     let response = client.reset_client_traffic(3, "user@example.com").await?;
+    ///     println!("Reset client traffic response: {}", response);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn reset_client_traffic(
+        &mut self,
+        inbound_id: impl Into<u64>,
+        client_email: impl Into<String>,
+    ) -> Result<serde_json::Value, MyError> {
+        let id = inbound_id.into();
+        let email = client_email.into();
+
+        let reset_client_traffic_endpoint = match self.panel_base_url.join(&format!(
+            "panel/api/inbounds/{}/resetClientTraffic/{}/",
+            id, email
+        )) {
+            Ok(reset_client_traffic_endpoint) => reset_client_traffic_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        // This endpoint doesn't require a request body
+        self.api_post_request(reset_client_traffic_endpoint, None)
+            .await
+    }
+
+    /// Deletes a client from a specific inbound.
+    ///
+    /// This function sends a POST request to delete a client identified by its UUID
+    /// from a specific inbound identified by its ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `inbound_id` - Any type that can be converted into a u64 representing the ID of the inbound.
+    /// * `client_uuid` - Any type that can be converted into a String representing the UUID of the client to delete.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `serde_json::Value` with the response if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///
+    ///     // Delete a client from inbound with ID 3
+    ///     let response = client.delete_client(
+    ///         3,
+    ///         "bf036995-a81d-41b3-8e06-8e233418c96a"
+    ///     ).await?;
+    ///
+    ///     println!("Delete client response: {}", response);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn delete_client(
+        &mut self,
+        inbound_id: impl Into<u64>,
+        client_uuid: impl Into<String>,
+    ) -> Result<serde_json::Value, MyError> {
+        let id = inbound_id.into();
+        let uuid = client_uuid.into();
+
+        let delete_client_endpoint = match self
+            .panel_base_url
+            .join(&format!("panel/api/inbounds/{}/delClient/{}/", id, uuid))
+        {
+            Ok(delete_client_endpoint) => delete_client_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        // This endpoint doesn't require a request body
+        self.api_post_request(delete_client_endpoint, None).await
+    }
+
+    /// Deletes an inbound from the 3X-UI panel.
+    ///
+    /// This function sends a POST request to delete an inbound identified by its ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `inbound_id` - Any type that can be converted into a u64 representing the ID of the inbound to delete.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `serde_json::Value` with the response if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///
+    ///     // Delete inbound with ID 3
+    ///     let response = client.delete_inbound(3).await?;
+    ///     println!("Delete inbound response: {}", response);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn delete_inbound(
+        &mut self,
+        inbound_id: impl Into<u64>,
+    ) -> Result<serde_json::Value, MyError> {
+        let id = inbound_id.into();
+
+        let delete_inbound_endpoint = match self
+            .panel_base_url
+            .join(&format!("panel/api/inbounds/del/{}/", id))
+        {
+            Ok(delete_inbound_endpoint) => delete_inbound_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        // This endpoint doesn't require a request body
+        self.api_post_request(delete_inbound_endpoint, None).await
+    }
+
+    /// Deletes all depleted clients from a specific inbound or from all inbounds.
+    ///
+    /// This function sends a POST request to delete all depleted clients (clients that have used all their allocated traffic
+    /// or have expired) from a specific inbound identified by its ID. If no inbound ID is provided,
+    /// depleted clients will be deleted from all inbounds.
+    ///
+    /// # Arguments
+    ///
+    /// * `inbound_id` - Optional parameter that can be converted into a u64 representing the ID of the inbound.
+    ///                  If None, depleted clients will be deleted from all inbounds.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `serde_json::Value` with the response if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///
+    ///     // Delete depleted clients from inbound with ID 4
+    ///     let response = client.delete_depleted_clients(Some(4)).await?;
+    ///     println!("Delete depleted clients from specific inbound: {}", response);
+    ///
+    ///     // Delete depleted clients from all inbounds
+    ///     let response = client.delete_depleted_clients(None).await?;
+    ///     println!("Delete depleted clients from all inbounds: {}", response);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn delete_depleted_clients(
+        &mut self,
+        inbound_id: Option<impl Into<u64>>,
+    ) -> Result<serde_json::Value, MyError> {
+        let endpoint_path = match inbound_id {
+            Some(id) => format!("panel/api/inbounds/delDepletedClients/{}/", id.into()),
+            None => "panel/api/inbounds/delDepletedClients/".to_string(),
+        };
+
+        let delete_depleted_clients_endpoint = match self.panel_base_url.join(&endpoint_path) {
+            Ok(delete_depleted_clients_endpoint) => delete_depleted_clients_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        // This endpoint doesn't require a request body
+        self.api_post_request(delete_depleted_clients_endpoint, None)
+            .await
+    }
+
+    /// Retrieves a list of currently online clients in the 3X-UI panel.
+    ///
+    /// This function sends a POST request to fetch information about all clients
+    /// that are currently online or active in the system.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `serde_json::Value` with the online clients data if successful,
+    /// or a `MyError` if an error occurred.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xui_rs::api::XUiClient;
+    ///
+    /// async fn example() -> Result<(), xui_rs::errors::MyError> {
+    ///     let mut client = XUiClient::new("https://your-xui-panel.com/")?;
+    ///     client.login("admin", "password").await?;
+    ///
+    ///     // Get list of online clients
+    ///     let online_clients = client.get_online_clients().await?;
+    ///     println!("Online clients: {}", online_clients);
+    ///     Ok(())
+    /// }
+    /// ```
+    /// TODO: look into multipart example in postman
+    pub async fn get_online_clients(&mut self) -> Result<serde_json::Value, MyError> {
+        let online_clients_endpoint = match self.panel_base_url.join("panel/api/inbounds/onlines/")
+        {
+            Ok(online_clients_endpoint) => online_clients_endpoint,
+            Err(err) => return Err(MyError::UrlParseError(err)),
+        };
+
+        // This endpoint doesn't require a request body
+        self.api_post_request(online_clients_endpoint, None).await
+    }
 }
