@@ -714,8 +714,8 @@ impl XUiClient {
     ///         "flow": "",
     ///         "email": "updated_client@example.com",
     ///         "limitIp": 2,
-    ///         "totalGB": 0,  // in bytes, 0 - unlimited
-    ///         "expiryTime": 0,  // Unix timestamp in milliseconds, 0 - unlimited
+    ///         "totalGB": 42949672960_u64,  // 40 GB in bytes, 0 - unlimited
+    ///         "expiryTime": 1682864675944_u64,  // Unix timestamp in milliseconds, 0 - unlimited
     ///         "enable": true,
     ///         "tgId": "",
     ///         "subId": "sub_id_here",
