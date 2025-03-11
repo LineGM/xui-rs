@@ -594,7 +594,7 @@ impl XUiClient {
     ///         "reset": 0
     ///     });
     ///
-    ///     let response = client.add_client(5, client_config).await?;
+    ///     let response = client.add_client(5_u64, client_config).await?;
     ///     println!("Add client response: {}", response);
     ///     Ok(())
     /// }
@@ -651,7 +651,7 @@ impl XUiClient {
     ///     client.login("admin", "password").await?;
     ///
     ///     // First get the current inbound configuration
-    ///     let current_inbound = client.get_inbound(4).await?;
+    ///     let current_inbound = client.get_inbound(4_u64).await?;
     ///
     ///     // Modify the configuration as needed
     ///     let mut updated_config = current_inbound["obj"].clone();
@@ -659,7 +659,7 @@ impl XUiClient {
     ///     updated_config["protocol"] = json!("vless");
     ///
     ///     // Update the inbound with the modified configuration
-    ///     let response = client.update_inbound(4, updated_config).await?;
+    ///     let response = client.update_inbound(4_u64, updated_config).await?;
     ///     println!("Update inbound response: {}", response);
     ///     Ok(())
     /// }
@@ -714,8 +714,8 @@ impl XUiClient {
     ///         "flow": "",
     ///         "email": "updated_client@example.com",
     ///         "limitIp": 2,
-    ///         "totalGB": 42949672960,  // 40 GB in bytes
-    ///         "expiryTime": 1682864675944,  // Unix timestamp in milliseconds
+    ///         "totalGB": 0,  // in bytes, 0 - unlimited
+    ///         "expiryTime": 0,  // Unix timestamp in milliseconds, 0 - unlimited
     ///         "enable": true,
     ///         "tgId": "",
     ///         "subId": "sub_id_here",
@@ -725,7 +725,7 @@ impl XUiClient {
     ///     // Update the client
     ///     let response = client.update_client(
     ///         "95e4e7bb-7796-47e7-e8a7-f4055194f776",  // UUID of the client to update
-    ///         3,  // Inbound ID
+    ///         3_u64,  // Inbound ID
     ///         updated_client
     ///     ).await?;
     ///
@@ -873,7 +873,7 @@ impl XUiClient {
     ///     client.login("admin", "password").await?;
     ///
     ///     // Reset traffic statistics for all clients in inbound with ID 3
-    ///     let response = client.reset_all_client_traffics(3).await?;
+    ///     let response = client.reset_all_client_traffics(3_u64).await?;
     ///     println!("Reset all client traffics response: {}", response);
     ///     Ok(())
     /// }
@@ -920,7 +920,7 @@ impl XUiClient {
     ///     client.login("admin", "password").await?;
     ///
     ///     // Reset traffic statistics for a specific client in inbound with ID 3
-    ///     let response = client.reset_client_traffic(3, "user@example.com").await?;
+    ///     let response = client.reset_client_traffic(3_u64, "user@example.com").await?;
     ///     println!("Reset client traffic response: {}", response);
     ///     Ok(())
     /// }
@@ -972,7 +972,7 @@ impl XUiClient {
     ///
     ///     // Delete a client from inbound with ID 3
     ///     let response = client.delete_client(
-    ///         3,
+    ///         3_u64,
     ///         "bf036995-a81d-41b3-8e06-8e233418c96a"
     ///     ).await?;
     ///
@@ -1023,7 +1023,7 @@ impl XUiClient {
     ///     client.login("admin", "password").await?;
     ///
     ///     // Delete inbound with ID 3
-    ///     let response = client.delete_inbound(3).await?;
+    ///     let response = client.delete_inbound(3_u64).await?;
     ///     println!("Delete inbound response: {}", response);
     ///     Ok(())
     /// }
@@ -1072,11 +1072,11 @@ impl XUiClient {
     ///     client.login("admin", "password").await?;
     ///
     ///     // Delete depleted clients from inbound with ID 4
-    ///     let response = client.delete_depleted_clients(Some(4)).await?;
+    ///     let response = client.delete_depleted_clients(Some(4_u64)).await?;
     ///     println!("Delete depleted clients from specific inbound: {}", response);
     ///
     ///     // Delete depleted clients from all inbounds
-    ///     let response = client.delete_depleted_clients(None).await?;
+    ///     let response = client.delete_depleted_clients(None::<u64>).await?;
     ///     println!("Delete depleted clients from all inbounds: {}", response);
     ///     Ok(())
     /// }
