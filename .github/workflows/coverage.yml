@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo install cargo-tarpaulin
-      - run: cargo tarpaulin --ignore-tests
+      - run: cargo tarpaulin --ignore-tests --out xml
       - name: Coveralls GitHub Action
         uses: coverallsapp/github-action@v2.3.6
   
