@@ -1055,7 +1055,7 @@ impl XUiClient {
     /// # Arguments
     ///
     /// * `inbound_id` - Optional parameter that can be converted into a u64 representing the ID of the inbound.
-    ///                  If None, depleted clients will be deleted from all inbounds.
+    /// If None, depleted clients will be deleted from all inbounds.
     ///
     /// # Returns
     ///
