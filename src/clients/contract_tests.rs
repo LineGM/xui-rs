@@ -1,0 +1,269 @@
+use std::collections::BTreeSet;
+
+use serde_json::Value;
+
+const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
+    (
+        "get",
+        "/panel/api/clients/list",
+        Some("get_panel_api_clients_list"),
+    ),
+    (
+        "get",
+        "/panel/api/clients/list/paged",
+        Some("get_panel_api_clients_list_paged"),
+    ),
+    (
+        "get",
+        "/panel/api/clients/get/{email}",
+        Some("get_panel_api_clients_get_email"),
+    ),
+    ("get", "/panel/api/clients/get/tgId/{tgId}", None),
+    (
+        "get",
+        "/panel/api/clients/traffic/{email}",
+        Some("get_panel_api_clients_traffic_email"),
+    ),
+    (
+        "get",
+        "/panel/api/clients/subLinks/{subId}",
+        Some("get_panel_api_clients_subLinks_subId"),
+    ),
+    (
+        "get",
+        "/panel/api/clients/links/{email}",
+        Some("get_panel_api_clients_links_email"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/add",
+        Some("post_panel_api_clients_add"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/update/{email}",
+        Some("post_panel_api_clients_update_email"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/del/{email}",
+        Some("post_panel_api_clients_del_email"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/{email}/attach",
+        Some("post_panel_api_clients_email_attach"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/{email}/detach",
+        Some("post_panel_api_clients_email_detach"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/{email}/externalLinks",
+        Some("post_panel_api_clients_email_externalLinks"),
+    ),
+    (
+        "get",
+        "/panel/api/clients/export",
+        Some("get_panel_api_clients_export"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/import",
+        Some("post_panel_api_clients_import"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/delOrphans",
+        Some("post_panel_api_clients_delOrphans"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/resetAllTraffics",
+        Some("post_panel_api_clients_resetAllTraffics"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/delDepleted",
+        Some("post_panel_api_clients_delDepleted"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/bulkAdjust",
+        Some("post_panel_api_clients_bulkAdjust"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/bulkEnable",
+        Some("post_panel_api_clients_bulkEnable"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/bulkDisable",
+        Some("post_panel_api_clients_bulkDisable"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/bulkDel",
+        Some("post_panel_api_clients_bulkDel"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/bulkCreate",
+        Some("post_panel_api_clients_bulkCreate"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/bulkAttach",
+        Some("post_panel_api_clients_bulkAttach"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/bulkDetach",
+        Some("post_panel_api_clients_bulkDetach"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/bulkResetTraffic",
+        Some("post_panel_api_clients_bulkResetTraffic"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/resetTraffic/{email}",
+        Some("post_panel_api_clients_resetTraffic_email"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/updateTraffic/{email}",
+        Some("post_panel_api_clients_updateTraffic_email"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/ips/{email}",
+        Some("post_panel_api_clients_ips_email"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/clearIps/{email}",
+        Some("post_panel_api_clients_clearIps_email"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/onlines",
+        Some("post_panel_api_clients_onlines"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/onlinesByGuid",
+        Some("post_panel_api_clients_onlinesByGuid"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/clientIpsByGuid",
+        Some("post_panel_api_clients_clientIpsByGuid"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/activeInbounds",
+        Some("post_panel_api_clients_activeInbounds"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/lastOnline",
+        Some("post_panel_api_clients_lastOnline"),
+    ),
+    (
+        "get",
+        "/panel/api/clients/groups",
+        Some("get_panel_api_clients_groups"),
+    ),
+    (
+        "get",
+        "/panel/api/clients/groups/{name}/emails",
+        Some("get_panel_api_clients_groups_name_emails"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/groups/create",
+        Some("post_panel_api_clients_groups_create"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/groups/rename",
+        Some("post_panel_api_clients_groups_rename"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/groups/delete",
+        Some("post_panel_api_clients_groups_delete"),
+    ),
+    ("post", "/panel/api/clients/groups/resetTraffic", None),
+    (
+        "post",
+        "/panel/api/clients/groups/bulkAdd",
+        Some("post_panel_api_clients_groups_bulkAdd"),
+    ),
+    (
+        "post",
+        "/panel/api/clients/groups/bulkRemove",
+        Some("post_panel_api_clients_groups_bulkRemove"),
+    ),
+];
+
+#[test]
+fn sdk_covers_openapi_and_source_routes() {
+    let openapi: Value =
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.6.0.openapi.json")).unwrap();
+    let paths = openapi["paths"].as_object().unwrap();
+    let documented = paths
+        .iter()
+        .flat_map(|(path, item)| {
+            item.as_object().into_iter().flat_map(move |operations| {
+                operations
+                    .iter()
+                    .filter(|(_, operation)| {
+                        operation["tags"]
+                            .as_array()
+                            .is_some_and(|tags| tags.iter().any(|tag| tag == "Clients"))
+                    })
+                    .map(move |(method, operation)| {
+                        (
+                            method.as_str(),
+                            path.as_str(),
+                            operation["operationId"].as_str().unwrap(),
+                        )
+                    })
+            })
+        })
+        .collect::<BTreeSet<_>>();
+    let implemented_openapi = SDK_ROUTES
+        .iter()
+        .filter_map(|(method, path, operation)| {
+            operation.map(|operation| (*method, *path, operation))
+        })
+        .collect::<BTreeSet<_>>();
+    assert_eq!(documented.len(), 41);
+    assert_eq!(documented, implemented_openapi);
+
+    let source: Value =
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.6.0.clients-routes.json")).unwrap();
+    let source_routes = source["routes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|route| {
+            (
+                route["method"].as_str().unwrap(),
+                route["path"].as_str().unwrap(),
+            )
+        })
+        .collect::<BTreeSet<_>>();
+    let implemented_routes = SDK_ROUTES
+        .iter()
+        .map(|(method, path, _)| (*method, *path))
+        .collect::<BTreeSet<_>>();
+    assert_eq!(source_routes.len(), 43);
+    assert_eq!(source_routes, implemented_routes);
+}

@@ -196,6 +196,11 @@ impl Client {
         crate::InboundsApi::new(self)
     }
 
+    /// Accesses client and client-group management operations.
+    pub const fn clients(&self) -> crate::ClientsApi<'_> {
+        crate::ClientsApi::new(self)
+    }
+
     pub(crate) fn endpoint(&self, path: &str) -> Result<Url> {
         self.inner
             .base_url
@@ -234,6 +239,40 @@ impl Client {
     {
         self.execute_with(method, path, scope, |request| request.form(body))
             .await
+    }
+
+    pub(crate) async fn execute_query<T, Q>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &Q,
+        scope: AuthenticationScope,
+    ) -> Result<ApiResponse<T>>
+    where
+        T: DeserializeOwned,
+        Q: Serialize + ?Sized,
+    {
+        self.execute_with(method, path, scope, |request| request.query(query))
+            .await
+    }
+
+    pub(crate) async fn execute_query_json<T, Q, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &Q,
+        body: &B,
+        scope: AuthenticationScope,
+    ) -> Result<ApiResponse<T>>
+    where
+        T: DeserializeOwned,
+        Q: Serialize + ?Sized,
+        B: Serialize + ?Sized,
+    {
+        self.execute_with(method, path, scope, |request| {
+            request.query(query).json(body)
+        })
+        .await
     }
 
     async fn execute_with<T, F>(

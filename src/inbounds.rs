@@ -37,6 +37,25 @@ pub enum InboundProtocol {
     Mtproto,
 }
 
+impl InboundProtocol {
+    /// Returns the protocol name used by 3x-ui and Xray.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Vmess => "vmess",
+            Self::Vless => "vless",
+            Self::Trojan => "trojan",
+            Self::Shadowsocks => "shadowsocks",
+            Self::Wireguard => "wireguard",
+            Self::Hysteria => "hysteria",
+            Self::Http => "http",
+            Self::Mixed => "mixed",
+            Self::Tunnel => "tunnel",
+            Self::Tun => "tun",
+            Self::Mtproto => "mtproto",
+        }
+    }
+}
+
 /// Schedule used to reset an inbound's traffic counters.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]

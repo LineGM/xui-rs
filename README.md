@@ -97,11 +97,46 @@ client.inbounds().update(created.id, &edited).await?;
 See [the inbound API guide](docs/inbounds.md) for the operation inventory,
 replacement/import semantics, and intentionally open-ended Xray JSON fields.
 
+## Clients
+
+`Client::clients()` covers all 43 client and group routes registered by v3.6.0,
+including server-side paging, portable import/export, bulk operations, online
+and IP attribution, and group traffic baselines.
+
+```rust,no_run
+use xui_rs::{
+    Client, ClientConfig, ClientCreateRequest, ClientPageRequest,
+    ClientStatusFilter,
+};
+
+# async fn example(client: &Client) -> xui_rs::Result<()> {
+let page = client
+    .clients()
+    .list_paged(&ClientPageRequest {
+        statuses: vec![ClientStatusFilter::Online],
+        ..ClientPageRequest::default()
+    })
+    .await?;
+
+let config = ClientConfig::new("alice@example.com");
+let request = ClientCreateRequest::new(config, vec![7, 9]);
+
+// Uncomment only when creation is intended.
+// client.clients().create(&request).await?;
+println!("{} online clients", page.summary.online_count);
+# Ok(())
+# }
+```
+
+Every email, subscription ID, and group name is encoded as one URL path
+segment. Client credentials, subscription IDs, external links, and private
+keys are redacted from `Debug`. See [the client API guide](docs/clients.md).
+
 ## Compatibility
 
 | xui-rs | 3x-ui | Status |
 |---|---|---|
-| `0.2.x` | `3.6.0` | Auth and complete inbounds API |
+| `0.2.x` | `3.6.0` | Auth, inbounds, and clients APIs |
 | `0.1.x` | legacy API | Superseded |
 
 Rust 1.85.0 is the minimum supported compiler. Development and CI use the

@@ -24,8 +24,15 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   and global client-traffic synchronization.
 - A vendored upstream OpenAPI document, source-route snapshot, and coverage
   test that detects missing or extra inbound operations.
+- Complete typed client and client-group API across all 43 routes registered by
+  3x-ui v3.6.0: full/paged lookup, CRUD, attachments, links, traffic/IP/online
+  state, import/export, bulk operations, and group lifecycle management.
+- Typed server-side paging filters and sorting, null-safe Go slice decoding,
+  exact `totalGB`/`allowedIPs` wire names, and percent-encoded path segments.
 
 ### Security
 
 - Redacted protocol settings, stream settings, sniffing data, UUIDs, and
   subscription IDs from model `Debug` output.
+- Redacted client protocol credentials, private/pre-shared keys, MTProto
+  secrets, subscription identifiers, and external-link values from `Debug`.
