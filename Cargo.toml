@@ -1,27 +1,53 @@
 [package]
 name = "xui-rs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
+rust-version = "1.85"
 authors = ["Gleb Gudkov <GudkovGO@tutamail.com>"]
-description = "A Rust library for accessing 3x-ui panel API"
+description = "A modern, typed async Rust SDK for the 3x-ui panel API"
 license = "Unlicense"
 readme = "README.md"
 repository = "https://github.com/LineGM/xui-rs"
 homepage = "https://github.com/LineGM/xui-rs"
+documentation = "https://docs.rs/xui-rs"
 
-keywords = ["3x-ui", "panel", "api", "rust", "library"]
-categories = ["development-tools"]
+keywords = ["3x-ui", "xray", "sdk", "api", "async"]
+categories = ["api-bindings", "web-programming::http-client"]
+include = [
+    "src/**",
+    "docs/**",
+    "examples/**",
+    "tests/**",
+    "Cargo.toml",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE",
+]
 
 [dependencies]
-reqwest = { version = "0.12", features = ["json", "cookies"] }
-tokio = { version = "1.43", features = ["rt-multi-thread", "macros"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1"
-tracing = "0.1"
-thiserror = "2.0"
-regex = "1.11"
-url = "2.5"
+reqwest = { version = "0.13.4", features = ["cookies", "json"] }
+secrecy = "0.10.3"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+thiserror = "2.0.20"
+tokio = { version = "1.53.1", features = ["sync"] }
+tracing = "0.1.44"
+url = "2.5.8"
 
 [dev-dependencies]
-httpmock = "0.7"
-tokio-test = "0.4"
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }
+wiremock = "0.6.5"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints.rust]
+missing_docs = "deny"
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+must_use_candidate = "allow"

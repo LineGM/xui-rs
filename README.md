@@ -1,124 +1,90 @@
-# xui-rs: 3X-UI Panel API Client
+<div align="center">
 
-[![Windows](https://github.com/LineGM/xui-rs/actions/workflows/windows.yml/badge.svg)](https://github.com/LineGM/xui-rs/actions/workflows/windows.yml)
-[![Linux](https://github.com/LineGM/xui-rs/actions/workflows/linux.yml/badge.svg)](https://github.com/LineGM/xui-rs/actions/workflows/linux.yml)
-[![macOS](https://github.com/LineGM/xui-rs/actions/workflows/macos.yml/badge.svg)](https://github.com/LineGM/xui-rs/actions/workflows/macos.yml)
+# xui-rs
 
-[![Coverage Status](https://coveralls.io/repos/github/LineGM/xui-rs/badge.svg?branch=main)](https://coveralls.io/github/LineGM/xui-rs?branch=main)
-[![Dependencies Status](https://deps.rs/repo/github/LineGM/xui-rs/status.svg)](https://deps.rs/repo/github/LineGM/xui-rs)
+**A modern, typed async Rust SDK for 3x-ui**
 
-[![Clippy](https://github.com/LineGM/xui-rs/actions/workflows/clippy.yml/badge.svg)](https://github.com/LineGM/xui-rs/actions/workflows/clippy.yml)
-[![Rustfmt](https://github.com/LineGM/xui-rs/actions/workflows/rustfmt.yml/badge.svg)](https://github.com/LineGM/xui-rs/actions/workflows/rustfmt.yml)
+[![CI](https://github.com/LineGM/xui-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/LineGM/xui-rs/actions/workflows/ci.yml)
+[![Coverage](https://coveralls.io/repos/github/LineGM/xui-rs/badge.svg?branch=main)](https://coveralls.io/github/LineGM/xui-rs?branch=main)
+[![MSRV](https://img.shields.io/badge/MSRV-1.85.0-dea584.svg)](https://www.rust-lang.org)
+[![3x-ui](https://img.shields.io/badge/3x--ui-v3.6.0-0ea5e9.svg)](https://github.com/MHSanaei/3x-ui/releases/tag/v3.6.0)
+[![License](https://img.shields.io/badge/license-Unlicense-blue.svg)](LICENSE)
 
-## Features
+</div>
 
-* Login to the **3X-UI** panel and manage session cookies automatically.
-* Automatic re-login when the session cookie expires (if initial credentials are provided).
-* Fetch a list of all inbound configurations.
-* Fetch details for a specific inbound configuration by **ID**.
-* Fetch client traffic statistics by **email**.
-* Fetch client traffic statistics by **UUID**.
-* Trigger a panel configuration backup.
-* Async API calls using `reqwest` and `tokio`.
-* Custom error type (`MyError`) for easier error handling.
+> [!IMPORTANT]
+> The `0.2` line is an active ground-up rewrite targeting the complete 3x-ui
+> v3.6.0 API. The authentication and transport foundation is ready; domain API
+> modules are being added incrementally. Do not expect compatibility with 0.1.
 
-## Installation
+## Why xui-rs?
 
-Add this library to your `Cargo.toml`:
+- Strong request and response types instead of unstructured JSON.
+- A cheap-to-clone client designed for concurrent async workloads.
+- API-token and cookie-session authentication with secrets redacted by default.
+- Correct base-path handling for panels installed below a custom URL prefix.
+- Contract tests derived from the upstream 3x-ui API surface.
+- Strict formatting, linting, documentation, MSRV, and cross-platform CI gates.
 
-```toml
-[dependencies]
-xui-rs = { git = "[https://github.com/LineGM/xui-rs.git](https://github.com/LineGM/xui-rs.git)" } # Or path = "path/to/xui-rs" if local, or version if published
-tokio = { version = "1", features = ["full"] }
-serde_json = "1.0"
+## Authentication
+
+API tokens are the recommended choice for services, bots, and automation. They
+avoid browser-session state and 3x-ui's CSRF flow.
+
+```rust,no_run
+use xui_rs::Client;
+
+let client = Client::builder("https://panel.example.com/secret/")?
+    .bearer_token(std::env::var("XUI_API_TOKEN")?)
+    .build()?;
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-## Usage
+Cookie login remains available for panels where an API token cannot be used.
+The SDK obtains a pre-auth CSRF token, stores only cookie name/value pairs in a
+standards-compliant jar, and reuses the CSRF token for unsafe requests.
 
-You need an async runtime like `tokio`.
+```rust,no_run
+use xui_rs::{Client, LoginRequest};
 
-```rust
-use xui_rs::XUiClient;
-use xui_rs::errors::MyError;
+# async fn example() -> xui_rs::Result<()> {
+let client = Client::new("https://panel.example.com/secret/")?;
+let login = LoginRequest::new("admin", "password")
+    .with_two_factor_code("123456");
 
-#[tokio::main]
-async fn main() -> Result<(), MyError> {
-    // IMPORTANT: The panel URL MUST end with a trailing slash `/`.
-    let panel_url = "[https://your-xui-panel.com/](https://your-xui-panel.com/)";
-    let username = "your_username";
-    let password = "your_password";
-
-    // Create a new client instance
-    let mut client = XUiClient::new(panel_url)?;
-
-    // Login to the panel
-    client.login(username, password).await?;
-    println!("Successfully logged in!");
-
-    // Get all inbounds
-    match client.get_inbounds().await {
-        Ok(inbounds) => {
-            println!("Inbounds:\n{}", serde_json::to_string_pretty(&inbounds)?);
-        }
-        Err(e) => eprintln!("Error getting inbounds: {}", e),
-    }
-
-    // Get a specific inbound (e.g., ID 1)
-    let inbound_id = 1_u64;
-    match client.get_inbound(inbound_id).await {
-        Ok(inbound) => {
-             println!("\nInbound {}:\n{}", inbound_id, serde_json::to_string_pretty(&inbound)?);
-        }
-        Err(e) => eprintln!("Error getting inbound {}: {}", inbound_id, e),
-    }
-
-    // Get client traffic by email
-    let client_email = "user@example.com";
-    match client.get_client_traffic_by_email(client_email).await {
-        Ok(traffic) => {
-             println!("\nTraffic for {}:\n{}", client_email, serde_json::to_string_pretty(&traffic)?);
-        }
-        Err(e) => eprintln!("Error getting traffic for {}: {}", client_email, e),
-    }
-
-    // Get client traffic by UUID
-    let client_uuid = "d7c06399-a3e3-4007-9109-19012597dd01"; // Replace with a valid UUID
-    match client.get_client_traffic_by_uuid(client_uuid).await {
-        Ok(traffic) => {
-             println!("\nTraffic for UUID {}:\n{}", client_uuid, serde_json::to_string_pretty(&traffic)?);
-        }
-        Err(e) => eprintln!("Error getting traffic for UUID {}: {}", client_uuid, e),
-    }
-
-    // Trigger a backup
-    match client.get_backup().await {
-        Ok(status_code) => {
-            println!("\nBackup request sent. Response status: {}", status_code);
-        }
-        Err(e) => eprintln!("Error triggering backup: {}", e),
-    }
-
-    Ok(())
-}
+client.auth().login(login).await?;
+client.auth().logout().await?;
+# Ok(())
+# }
 ```
 
-## API Methods
-* ``XUiClient::new(panel_url: impl IntoUrl) -> Result<Self, MyError>``: Creates a new client. panel_url must end with /.
-* ``client.login(username: impl Into<String>, password: impl Into<String>) -> Result<(), MyError>``: Logs in and stores the session cookie.
-* ``client.get_inbounds() -> Result<serde_json::Value, MyError>``: Gets all inbounds.
-* ``client.get_inbound(inbound_id: impl Into<u64>) -> Result<serde_json::Value, MyError>``: Gets a specific inbound by ID.
-* ``client.get_client_traffic_by_email(client_email: impl Into<String>) -> Result<serde_json::Value, MyError>``: Gets client traffic by email.
-* ``client.get_client_traffic_by_uuid(uuid: impl Into<String>) -> Result<serde_json::Value, MyError>``: Gets client traffic by UUID.
-* ``client.get_backup() -> Result<u16, MyError>``: Triggers a panel backup and returns the HTTP status code.
+Credentials are never retained for automatic re-login. An expired session is
+reported as [`Error::Unauthorized`](https://docs.rs/xui-rs/latest/xui_rs/enum.Error.html),
+allowing the application to decide how and when credentials may be requested.
+See [the authentication design](docs/authentication.md) for the rationale.
 
-## Error Handling
+## Compatibility
 
-Most methods return `Result<T, MyError>`. The `MyError` enum encapsulates various potential errors, including network errors (`reqwest::Error`), JSON parsing errors (`serde_json::Error`), URL parsing errors, and API-specific issues.
+| xui-rs | 3x-ui | Status |
+|---|---|---|
+| `0.2.x` | `3.6.0` | Active rewrite |
+| `0.1.x` | legacy API | Superseded |
 
-## Contributing
+Rust 1.85.0 is the minimum supported compiler. Development and CI use the
+pinned Rust 1.98.0 toolchain.
 
-Contributions are welcome! Please see [**CONTRIBUTING**](CONTRIBUTING.md) for details on how to contribute.
+## Development
+
+```console
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all-targets
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and
+[SECURITY.md](SECURITY.md) for private vulnerability reporting.
 
 ## License
 
-This project is licensed under the **Unlicense** - see the [**LICENSE**](LICENSE) file for details. 
+Released into the public domain under the [Unlicense](LICENSE).
