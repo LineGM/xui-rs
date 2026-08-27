@@ -51,6 +51,16 @@ pub enum Error {
         source: reqwest::Error,
     },
 
+    /// A request value could not be encoded in the endpoint's wire format.
+    #[error("could not encode request for {operation}: {source}")]
+    Encode {
+        /// Human-readable operation name.
+        operation: &'static str,
+        /// Underlying JSON encoding error.
+        #[source]
+        source: serde_json::Error,
+    },
+
     /// The panel returned HTTP success with `success: false`.
     #[error("panel rejected {method} {url}: {message}")]
     Api {

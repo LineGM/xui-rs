@@ -19,3 +19,13 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - Username/password and optional 2FA login, logout, CSRF, and 2FA-status APIs.
 - Secret-redaction, custom base-path support, strict lint configuration, and
   contract tests for authentication behaviour.
+- Complete typed 3x-ui v3.6.0 inbound API: full/slim lists, options and share
+  links, CRUD, enable/reset/delete operations, import, fallback management,
+  and global client-traffic synchronization.
+- A vendored upstream OpenAPI document, source-route snapshot, and coverage
+  test that detects missing or extra inbound operations.
+
+### Security
+
+- Redacted protocol settings, stream settings, sniffing data, UUIDs, and
+  subscription IDs from model `Debug` output.

@@ -191,6 +191,11 @@ impl Client {
         AuthApi::new(self)
     }
 
+    /// Accesses inbound management operations.
+    pub const fn inbounds(&self) -> crate::InboundsApi<'_> {
+        crate::InboundsApi::new(self)
+    }
+
     pub(crate) fn endpoint(&self, path: &str) -> Result<Url> {
         self.inner
             .base_url
@@ -209,6 +214,39 @@ impl Client {
         T: DeserializeOwned,
         B: Serialize + ?Sized,
     {
+        self.execute_with(method, path, scope, |request| match body {
+            Some(body) => request.json(body),
+            None => request,
+        })
+        .await
+    }
+
+    pub(crate) async fn execute_form<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: &B,
+        scope: AuthenticationScope,
+    ) -> Result<ApiResponse<T>>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.execute_with(method, path, scope, |request| request.form(body))
+            .await
+    }
+
+    async fn execute_with<T, F>(
+        &self,
+        method: Method,
+        path: &str,
+        scope: AuthenticationScope,
+        configure: F,
+    ) -> Result<ApiResponse<T>>
+    where
+        T: DeserializeOwned,
+        F: Fn(RequestBuilder) -> RequestBuilder,
+    {
         let url = self.endpoint(path)?;
         let is_unsafe = !matches!(
             method,
@@ -224,31 +262,31 @@ impl Client {
             .execute_once(
                 method.clone(),
                 url.clone(),
-                body,
                 scope,
                 unsafe_session_request,
+                &configure,
             )
             .await;
         if unsafe_session_request && matches!(first, Err(Error::Forbidden { .. })) {
             self.clear_csrf_token().await;
             return self
-                .execute_once(method, url, body, scope, unsafe_session_request)
+                .execute_once(method, url, scope, unsafe_session_request, &configure)
                 .await;
         }
         first
     }
 
-    async fn execute_once<T, B>(
+    async fn execute_once<T, F>(
         &self,
         method: Method,
         url: Url,
-        body: Option<&B>,
         scope: AuthenticationScope,
         csrf_required: bool,
+        configure: &F,
     ) -> Result<ApiResponse<T>>
     where
         T: DeserializeOwned,
-        B: Serialize + ?Sized,
+        F: Fn(RequestBuilder) -> RequestBuilder,
     {
         let mut request = self.inner.http.request(method.clone(), url.clone());
         if matches!(scope, AuthenticationScope::PanelApi) {
@@ -258,9 +296,7 @@ impl Client {
             let token = self.ensure_csrf_token().await?;
             request = request.header("x-csrf-token", token.expose_secret());
         }
-        if let Some(body) = body {
-            request = request.json(body);
-        }
+        request = configure(request);
 
         debug!(%method, %url, "sending 3x-ui request");
         let response = request.send().await.map_err(|source| Error::Transport {

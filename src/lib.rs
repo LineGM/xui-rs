@@ -6,8 +6,15 @@
 mod auth;
 mod client;
 mod error;
+mod inbounds;
 mod response;
 
 pub use auth::{AuthApi, CsrfToken, LoginRequest};
 pub use client::{AuthenticationKind, Client, ClientBuilder};
 pub use error::{Error, Result};
+pub use inbounds::{
+    BulkDeleteClientsResult, BulkDeleteInboundsResult, ClientTraffic, ClientTrafficUsage,
+    FallbackInput, FallbackParent, Inbound, InboundConfig, InboundFallback, InboundOption,
+    InboundProtocol, InboundsApi, ShareAddressStrategy, SkippedClient, SkippedInbound,
+    TrafficPushRequest, TrafficReset,
+};

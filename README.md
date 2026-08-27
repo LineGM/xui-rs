@@ -63,11 +63,45 @@ reported as [`Error::Unauthorized`](https://docs.rs/xui-rs/latest/xui_rs/enum.Er
 allowing the application to decide how and when credentials may be requested.
 See [the authentication design](docs/authentication.md) for the rationale.
 
+## Inbounds
+
+The complete v3.6.0 inbound surface is available through `Client::inbounds`,
+including the source-only `allLinks` route omitted from upstream OpenAPI.
+
+```rust,no_run
+use xui_rs::{Client, InboundConfig, InboundProtocol};
+
+# async fn example() -> xui_rs::Result<()> {
+let client = Client::builder("https://panel.example.com/secret/")?
+    .bearer_token("api-token")
+    .build()?;
+
+let mut config = InboundConfig::new(InboundProtocol::Vless, 443);
+config.remark = "production-vless".into();
+config.settings = serde_json::json!({ "clients": [] });
+config.stream_settings = serde_json::json!({
+    "network": "tcp",
+    "security": "reality"
+});
+
+let created = client.inbounds().create(&config).await?;
+
+// Update is a full replacement in 3x-ui, so preserve the fetched state.
+let mut edited = created.to_config();
+edited.remark = "renamed-vless".into();
+client.inbounds().update(created.id, &edited).await?;
+# Ok(())
+# }
+```
+
+See [the inbound API guide](docs/inbounds.md) for the operation inventory,
+replacement/import semantics, and intentionally open-ended Xray JSON fields.
+
 ## Compatibility
 
 | xui-rs | 3x-ui | Status |
 |---|---|---|
-| `0.2.x` | `3.6.0` | Active rewrite |
+| `0.2.x` | `3.6.0` | Auth and complete inbounds API |
 | `0.1.x` | legacy API | Superseded |
 
 Rust 1.85.0 is the minimum supported compiler. Development and CI use the
