@@ -29,6 +29,14 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   state, import/export, bulk operations, and group lifecycle management.
 - Typed server-side paging filters and sorting, null-safe Go slice decoding,
   exact `totalGB`/`allowedIPs` wire names, and percent-encoded path segments.
+- Complete typed server API across all 38 routes registered by 3x-ui v3.6.0,
+  including the three update-status and REALITY-scan routes omitted from
+  upstream OpenAPI.
+- Typed machine/Xray metrics, structured logs, maintenance and cryptographic
+  helpers, cluster IP synchronization, in-memory database downloads, and
+  multipart database restore.
+- A server source-route snapshot and exhaustive mocked route coverage that
+  tracks the authoritative Go response shapes where OpenAPI examples differ.
 
 ### Security
 
@@ -36,3 +44,7 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   subscription IDs from model `Debug` output.
 - Redacted client protocol credentials, private/pre-shared keys, MTProto
   secrets, subscription identifiers, and external-link values from `Debug`.
+- Redacted generated X25519, ML-DSA, ML-KEM, ECH, and VLESS encryption private
+  material from `Debug`.
+- Redacted full Xray configuration and database backup bytes from `Debug` while
+  retaining explicit accessors for callers that intentionally need them.

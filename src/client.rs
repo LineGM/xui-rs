@@ -201,6 +201,11 @@ impl Client {
         crate::ClientsApi::new(self)
     }
 
+    /// Accesses server status, Xray lifecycle, maintenance, and utility operations.
+    pub const fn server(&self) -> crate::ServerApi<'_> {
+        crate::ServerApi::new(self)
+    }
+
     pub(crate) fn endpoint(&self, path: &str) -> Result<Url> {
         self.inner
             .base_url
@@ -275,6 +280,47 @@ impl Client {
         .await
     }
 
+    pub(crate) async fn execute_multipart<T>(
+        &self,
+        method: Method,
+        path: &str,
+        field: &'static str,
+        filename: &str,
+        bytes: &[u8],
+        scope: AuthenticationScope,
+    ) -> Result<ApiResponse<T>>
+    where
+        T: DeserializeOwned,
+    {
+        self.execute_with(method, path, scope, |request| {
+            let part = reqwest::multipart::Part::bytes(bytes.to_vec())
+                .file_name(filename.to_owned())
+                .mime_str("application/octet-stream")
+                .expect("static MIME type is valid");
+            request.multipart(reqwest::multipart::Form::new().part(field, part))
+        })
+        .await
+    }
+
+    pub(crate) async fn execute_bytes(
+        &self,
+        method: Method,
+        path: &str,
+        scope: AuthenticationScope,
+    ) -> Result<(header::HeaderMap, Vec<u8>)> {
+        let url = self.endpoint(path)?;
+        let response = self
+            .execute_raw_once(method.clone(), url.clone(), scope, false, |request| request)
+            .await?;
+        let headers = response.headers().clone();
+        let bytes = response.bytes().await.map_err(|source| Error::Transport {
+            method,
+            url: Box::new(url),
+            source,
+        })?;
+        Ok((headers, bytes.to_vec()))
+    }
+
     async fn execute_with<T, F>(
         &self,
         method: Method,
@@ -327,51 +373,14 @@ impl Client {
         T: DeserializeOwned,
         F: Fn(RequestBuilder) -> RequestBuilder,
     {
-        let mut request = self.inner.http.request(method.clone(), url.clone());
-        if matches!(scope, AuthenticationScope::PanelApi) {
-            request = self.authenticate(request);
-        }
-        if csrf_required {
-            let token = self.ensure_csrf_token().await?;
-            request = request.header("x-csrf-token", token.expose_secret());
-        }
-        request = configure(request);
-
-        debug!(%method, %url, "sending 3x-ui request");
-        let response = request.send().await.map_err(|source| Error::Transport {
-            method: method.clone(),
-            url: Box::new(url.clone()),
-            source,
-        })?;
-        let status = response.status();
+        let response = self
+            .execute_raw_once(method.clone(), url.clone(), scope, csrf_required, configure)
+            .await?;
         let bytes = response.bytes().await.map_err(|source| Error::Transport {
             method: method.clone(),
             url: Box::new(url.clone()),
             source,
         })?;
-
-        match status {
-            StatusCode::UNAUTHORIZED => {
-                return Err(Error::Unauthorized {
-                    method,
-                    url: Box::new(url),
-                });
-            }
-            StatusCode::FORBIDDEN => {
-                return Err(Error::Forbidden {
-                    method,
-                    url: Box::new(url),
-                });
-            }
-            _ if !status.is_success() => {
-                return Err(Error::HttpStatus {
-                    method,
-                    url: Box::new(url),
-                    status,
-                });
-            }
-            _ => {}
-        }
 
         let envelope: ApiResponse<T> =
             serde_json::from_slice(&bytes).map_err(|source| Error::Decode {
@@ -391,6 +400,52 @@ impl Client {
             });
         }
         Ok(envelope)
+    }
+
+    async fn execute_raw_once<F>(
+        &self,
+        method: Method,
+        url: Url,
+        scope: AuthenticationScope,
+        csrf_required: bool,
+        configure: F,
+    ) -> Result<reqwest::Response>
+    where
+        F: FnOnce(RequestBuilder) -> RequestBuilder,
+    {
+        let mut request = self.inner.http.request(method.clone(), url.clone());
+        if matches!(scope, AuthenticationScope::PanelApi) {
+            request = self.authenticate(request);
+        }
+        if csrf_required {
+            let token = self.ensure_csrf_token().await?;
+            request = request.header("x-csrf-token", token.expose_secret());
+        }
+        request = configure(request);
+
+        debug!(%method, %url, "sending 3x-ui request");
+        let response = request.send().await.map_err(|source| Error::Transport {
+            method: method.clone(),
+            url: Box::new(url.clone()),
+            source,
+        })?;
+        let status = response.status();
+        match status {
+            StatusCode::UNAUTHORIZED => Err(Error::Unauthorized {
+                method,
+                url: Box::new(url),
+            }),
+            StatusCode::FORBIDDEN => Err(Error::Forbidden {
+                method,
+                url: Box::new(url),
+            }),
+            _ if !status.is_success() => Err(Error::HttpStatus {
+                method,
+                url: Box::new(url),
+                status,
+            }),
+            _ => Ok(response),
+        }
     }
 
     fn authenticate(&self, request: RequestBuilder) -> RequestBuilder {

@@ -132,11 +132,38 @@ Every email, subscription ID, and group name is encoded as one URL path
 segment. Client credentials, subscription IDs, external links, and private
 keys are redacted from `Debug`. See [the client API guide](docs/clients.md).
 
+## Server and Xray
+
+`Client::server()` covers all 38 routes registered by the v3.6.0 server
+controller: typed host/Xray status and history, observatory data, lifecycle and
+updates, logs, cryptographic helpers, REALITY target scanning, database
+backup/restore, and cluster IP synchronization.
+
+```rust,no_run
+use xui_rs::{Client, HistoryBucket, SystemMetric};
+
+# async fn example(client: &Client) -> xui_rs::Result<()> {
+let status = client.server().status().await?;
+let cpu = client
+    .server()
+    .system_history(SystemMetric::Cpu, HistoryBucket::Hour1)
+    .await?;
+
+println!("Xray {:?}; {} CPU samples", status.xray.state, cpu.len());
+# Ok(())
+# }
+```
+
+Database downloads stay in memory and preserve attachment metadata. Restore,
+self-update, and Xray lifecycle methods are explicit operations and never run
+implicitly. Generated private material is redacted from `Debug`. See [the
+server API guide](docs/server.md).
+
 ## Compatibility
 
 | xui-rs | 3x-ui | Status |
 |---|---|---|
-| `0.2.x` | `3.6.0` | Auth, inbounds, and clients APIs |
+| `0.2.x` | `3.6.0` | Auth, inbounds, clients, and server APIs |
 | `0.1.x` | legacy API | Superseded |
 
 Rust 1.85.0 is the minimum supported compiler. Development and CI use the

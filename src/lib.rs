@@ -9,6 +9,7 @@ mod clients;
 mod error;
 mod inbounds;
 mod response;
+mod server;
 
 pub use auth::{AuthApi, CsrfToken, LoginRequest};
 pub use client::{AuthenticationKind, Client, ClientBuilder};
@@ -27,4 +28,14 @@ pub use inbounds::{
     FallbackInput, FallbackParent, Inbound, InboundConfig, InboundFallback, InboundOption,
     InboundProtocol, InboundsApi, ShareAddressStrategy, SkippedClient, SkippedInbound,
     TrafficPushRequest, TrafficReset,
+};
+pub use server::{
+    AppStats, ClientIpObservation, ClientIpRecord, DatabaseFile, DiskIo, EchKeyPair,
+    Fail2banStatus, HistoryBucket, LegacyCpuPoint, LogLevel, MetricPoint, Mldsa65KeyPair,
+    Mlkem768KeyPair, NetworkIo, NetworkTraffic, NodeSummary, PanelLogRequest, PanelUpdateInfo,
+    PanelUpdateRun, PanelUpdateState, PanelUpdateStatus, ProcessState, PublicAddresses,
+    RealityScanRequest, RealityScanResult, ResourceUsage, ServerApi, ServerStatus, SystemMetric,
+    VlessEncryptionAuth, VlessEncryptionOptions, WebCertificateFiles, X25519KeyPair, XrayConfig,
+    XrayLogEntry, XrayLogEvent, XrayLogRequest, XrayMetric, XrayMetricsState, XrayObservatoryEntry,
+    XrayStatus,
 };
