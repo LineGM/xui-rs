@@ -15,6 +15,8 @@ absent from OpenAPI as well. Contract tests compare both sources with the SDK
 route inventory, because the published v3.6.0 document is useful but not
 complete.
 
-Do not edit vendored contract files by hand. When updating 3x-ui, replace the
-files from one exact tag, update this provenance block, and adjust the contract
-tests and typed modules in the same commit.
+The OpenAPI document is vendored verbatim. Per-domain `*-routes.json` files are
+small source snapshots maintained from the exact tagged Go routers; their
+contract tests detect drift against both sources. When updating 3x-ui, replace
+the OpenAPI file from one exact tag, regenerate the route snapshots, update this
+provenance block, and adjust the typed modules in the same commit.

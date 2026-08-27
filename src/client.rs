@@ -206,6 +206,16 @@ impl Client {
         crate::ServerApi::new(self)
     }
 
+    /// Accesses panel settings, credentials, notifications, and API tokens.
+    pub const fn settings(&self) -> crate::SettingsApi<'_> {
+        crate::SettingsApi::new(self)
+    }
+
+    /// Accesses Xray settings, integrations, tests, and outbound subscriptions.
+    pub const fn xray_settings(&self) -> crate::XraySettingsApi<'_> {
+        crate::XraySettingsApi::new(self)
+    }
+
     pub(crate) fn endpoint(&self, path: &str) -> Result<Url> {
         self.inner
             .base_url
@@ -244,6 +254,24 @@ impl Client {
     {
         self.execute_with(method, path, scope, |request| request.form(body))
             .await
+    }
+
+    pub(crate) async fn execute_response<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        scope: AuthenticationScope,
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.execute_response_with(method, path, scope, |request| match body {
+            Some(body) => request.json(body),
+            None => request,
+        })
+        .await
     }
 
     pub(crate) async fn execute_query<T, Q>(
@@ -332,56 +360,9 @@ impl Client {
         T: DeserializeOwned,
         F: Fn(RequestBuilder) -> RequestBuilder,
     {
-        let url = self.endpoint(path)?;
-        let is_unsafe = !matches!(
-            method,
-            Method::GET | Method::HEAD | Method::OPTIONS | Method::TRACE
-        );
-        let unsafe_session_request = is_unsafe
-            && match scope {
-                AuthenticationScope::Session => true,
-                AuthenticationScope::PanelApi => self.inner.bearer_token.is_none(),
-            };
-
-        let first = self
-            .execute_once(
-                method.clone(),
-                url.clone(),
-                scope,
-                unsafe_session_request,
-                &configure,
-            )
-            .await;
-        if unsafe_session_request && matches!(first, Err(Error::Forbidden { .. })) {
-            self.clear_csrf_token().await;
-            return self
-                .execute_once(method, url, scope, unsafe_session_request, &configure)
-                .await;
-        }
-        first
-    }
-
-    async fn execute_once<T, F>(
-        &self,
-        method: Method,
-        url: Url,
-        scope: AuthenticationScope,
-        csrf_required: bool,
-        configure: &F,
-    ) -> Result<ApiResponse<T>>
-    where
-        T: DeserializeOwned,
-        F: Fn(RequestBuilder) -> RequestBuilder,
-    {
-        let response = self
-            .execute_raw_once(method.clone(), url.clone(), scope, csrf_required, configure)
+        let (method, url, bytes) = self
+            .execute_configured(method, path, scope, configure)
             .await?;
-        let bytes = response.bytes().await.map_err(|source| Error::Transport {
-            method: method.clone(),
-            url: Box::new(url.clone()),
-            source,
-        })?;
-
         let envelope: ApiResponse<T> =
             serde_json::from_slice(&bytes).map_err(|source| Error::Decode {
                 method: method.clone(),
@@ -400,6 +381,77 @@ impl Client {
             });
         }
         Ok(envelope)
+    }
+
+    async fn execute_response_with<T, F>(
+        &self,
+        method: Method,
+        path: &str,
+        scope: AuthenticationScope,
+        configure: F,
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        F: Fn(RequestBuilder) -> RequestBuilder,
+    {
+        let (method, url, bytes) = self
+            .execute_configured(method, path, scope, configure)
+            .await?;
+        serde_json::from_slice(&bytes).map_err(|source| Error::Decode {
+            method,
+            url: Box::new(url),
+            source,
+        })
+    }
+
+    async fn execute_configured<F>(
+        &self,
+        method: Method,
+        path: &str,
+        scope: AuthenticationScope,
+        configure: F,
+    ) -> Result<(Method, Url, Vec<u8>)>
+    where
+        F: Fn(RequestBuilder) -> RequestBuilder,
+    {
+        let url = self.endpoint(path)?;
+        let is_unsafe = !matches!(
+            method,
+            Method::GET | Method::HEAD | Method::OPTIONS | Method::TRACE
+        );
+        let unsafe_session_request = is_unsafe
+            && match scope {
+                AuthenticationScope::Session => true,
+                AuthenticationScope::PanelApi => self.inner.bearer_token.is_none(),
+            };
+        let first = self
+            .execute_raw_once(
+                method.clone(),
+                url.clone(),
+                scope,
+                unsafe_session_request,
+                &configure,
+            )
+            .await;
+        let response = if unsafe_session_request && matches!(first, Err(Error::Forbidden { .. })) {
+            self.clear_csrf_token().await;
+            self.execute_raw_once(
+                method.clone(),
+                url.clone(),
+                scope,
+                unsafe_session_request,
+                &configure,
+            )
+            .await?
+        } else {
+            first?
+        };
+        let bytes = response.bytes().await.map_err(|source| Error::Transport {
+            method: method.clone(),
+            url: Box::new(url.clone()),
+            source,
+        })?;
+        Ok((method, url, bytes.to_vec()))
     }
 
     async fn execute_raw_once<F>(

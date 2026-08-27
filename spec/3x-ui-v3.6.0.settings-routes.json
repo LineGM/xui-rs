@@ -1,0 +1,43 @@
+{
+  "sources": [
+    "internal/web/controller/setting.go:initRouter",
+    "internal/web/controller/xray_setting.go:initRouter"
+  ],
+  "routes": [
+    { "method": "post", "path": "/panel/api/setting/all" },
+    { "method": "post", "path": "/panel/api/setting/defaultSettings" },
+    { "method": "post", "path": "/panel/api/setting/factoryDefaults", "openapi": false },
+    { "method": "post", "path": "/panel/api/setting/update" },
+    { "method": "post", "path": "/panel/api/setting/validateRegex", "openapi": false },
+    { "method": "post", "path": "/panel/api/setting/updateUser" },
+    { "method": "post", "path": "/panel/api/setting/restartPanel" },
+    { "method": "get", "path": "/panel/api/setting/getDefaultJsonConfig" },
+    { "method": "get", "path": "/panel/api/setting/apiTokens" },
+    { "method": "post", "path": "/panel/api/setting/apiTokens/create" },
+    { "method": "post", "path": "/panel/api/setting/apiTokens/delete/{id}" },
+    { "method": "post", "path": "/panel/api/setting/apiTokens/setEnabled/{id}" },
+    { "method": "post", "path": "/panel/api/setting/testSmtp" },
+    { "method": "post", "path": "/panel/api/setting/testTgBot" },
+    { "method": "get", "path": "/panel/api/xray/getDefaultJsonConfig" },
+    { "method": "get", "path": "/panel/api/xray/getOutboundsTraffic" },
+    { "method": "get", "path": "/panel/api/xray/getXrayResult" },
+    { "method": "post", "path": "/panel/api/xray/" },
+    { "method": "post", "path": "/panel/api/xray/warp/{action}" },
+    { "method": "post", "path": "/panel/api/xray/nord/{action}" },
+    { "method": "post", "path": "/panel/api/xray/update" },
+    { "method": "post", "path": "/panel/api/xray/resetOutboundsTraffic" },
+    { "method": "post", "path": "/panel/api/xray/testOutbound" },
+    { "method": "post", "path": "/panel/api/xray/testOutbounds" },
+    { "method": "post", "path": "/panel/api/xray/balancerStatus" },
+    { "method": "post", "path": "/panel/api/xray/balancerOverride" },
+    { "method": "post", "path": "/panel/api/xray/routeTest" },
+    { "method": "get", "path": "/panel/api/xray/outbound-subs" },
+    { "method": "post", "path": "/panel/api/xray/outbound-subs" },
+    { "method": "post", "path": "/panel/api/xray/outbound-subs/{id}/refresh" },
+    { "method": "post", "path": "/panel/api/xray/outbound-subs/{id}/move" },
+    { "method": "post", "path": "/panel/api/xray/outbound-subs/{id}" },
+    { "method": "delete", "path": "/panel/api/xray/outbound-subs/{id}" },
+    { "method": "post", "path": "/panel/api/xray/outbound-subs/{id}/del" },
+    { "method": "post", "path": "/panel/api/xray/outbound-subs/parse" }
+  ]
+}

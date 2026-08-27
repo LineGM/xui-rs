@@ -37,6 +37,12 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   multipart database restore.
 - A server source-route snapshot and exhaustive mocked route coverage that
   tracks the authoritative Go response shapes where OpenAPI examples differ.
+- Complete typed panel and Xray settings APIs across all 35 routes registered
+  by v3.6.0, including API tokens, WARP/NordVPN, outbound tests, routing tests,
+  and remote outbound subscriptions.
+- Ergonomic grouped panel settings that flatten to exact upstream wire names,
+  automatic encoding/decoding of nested Xray JSON, typed SMTP diagnostics, and
+  a settings source-route snapshot covering two operations absent from OpenAPI.
 
 ### Security
 
@@ -48,3 +54,6 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   material from `Debug`.
 - Redacted full Xray configuration and database backup bytes from `Debug` while
   retaining explicit accessors for callers that intentionally need them.
+- Redacted panel notification/LDAP credentials, integration payloads,
+  subscription URLs and outbounds, API-token plaintext, and secret panel paths
+  while retaining explicit accessors for intentional use.

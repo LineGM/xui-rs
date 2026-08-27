@@ -159,11 +159,38 @@ self-update, and Xray lifecycle methods are explicit operations and never run
 implicitly. Generated private material is redacted from `Debug`. See [the
 server API guide](docs/server.md).
 
+## Panel and Xray settings
+
+`Client::settings()` covers all 14 v3.6.0 panel-settings routes, including API
+tokens, notification tests, credential replacement, and the two source-only
+factory-default and regex-validation operations. `Client::xray_settings()`
+covers all 21 Xray settings, WARP/NordVPN, outbound-test, routing-test, and
+remote outbound-subscription routes.
+
+```rust,no_run
+use xui_rs::{Client, PanelSettingsUpdate};
+
+# async fn example(client: &Client) -> xui_rs::Result<()> {
+let view = client.settings().all().await?;
+let mut update = PanelSettingsUpdate::new(view.settings);
+update.settings.display.page_size = 100;
+
+// This endpoint is a full replacement; update the fetched settings object.
+client.settings().update(&update).await?;
+# Ok(())
+# }
+```
+
+The ergonomic grouped settings model flattens to exact upstream wire names.
+Nested Xray JSON is encoded and decoded automatically. Stored notification and
+LDAP secrets, integration payloads, subscription URLs/outbounds, and API-token
+plaintext are redacted from `Debug`. See [the settings API guide](docs/settings.md).
+
 ## Compatibility
 
 | xui-rs | 3x-ui | Status |
 |---|---|---|
-| `0.2.x` | `3.6.0` | Auth, inbounds, clients, and server APIs |
+| `0.2.x` | `3.6.0` | Auth, inbounds, clients, server, and settings/Xray APIs |
 | `0.1.x` | legacy API | Superseded |
 
 Rust 1.85.0 is the minimum supported compiler. Development and CI use the

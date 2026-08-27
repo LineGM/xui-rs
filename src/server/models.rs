@@ -109,6 +109,12 @@ impl XrayConfig {
     }
 }
 
+impl From<Value> for XrayConfig {
+    fn from(value: Value) -> Self {
+        Self(value)
+    }
+}
+
 impl fmt::Debug for XrayConfig {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
