@@ -221,6 +221,11 @@ impl Client {
         crate::HostsApi::new(self)
     }
 
+    /// Accesses remote node registration, health, discovery, and mTLS operations.
+    pub const fn nodes(&self) -> crate::NodesApi<'_> {
+        crate::NodesApi::new(self)
+    }
+
     pub(crate) fn endpoint(&self, path: &str) -> Result<Url> {
         self.inner
             .base_url

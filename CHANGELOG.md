@@ -48,6 +48,11 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   response distinction.
 - Typed forward-compatible host security, Mihomo IP preference, subscription
   format, VLESS route, and nested JSON override values.
+- Complete typed Nodes API across all 15 routes registered by v3.6.0, including
+  registration, probes, remote inbound discovery, metric history, remote panel
+  updates, certificate pinning, and node mTLS.
+- Source-accurate 41-field `NodeView`, forward-compatible node enums, typed
+  update channels/metrics, and explicit mutually exclusive API-token actions.
 
 ### Security
 
@@ -64,3 +69,5 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   while retaining explicit accessors for intentional use.
 - Redacted nested host JSON overrides from `Debug` while preserving explicit
   raw and parsed accessors.
+- Kept node API tokens write-only and redacted token replacements, remote panel
+  base paths, and internal egress tags from model `Debug` output.

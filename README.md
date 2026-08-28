@@ -212,11 +212,38 @@ Nested mux, sockopt, and final-mask JSON is encoded automatically, path values
 are segment-safe, and the source's nullable empty list is normalized. See [the
 Hosts API guide](docs/hosts.md).
 
+## Remote nodes
+
+`Client::nodes()` covers all 15 v3.6.0 node routes: registration and lifecycle,
+saved/unsaved probes, remote inbound discovery, health history, bulk panel
+updates, certificate pinning, and node mTLS.
+
+```rust,no_run
+use xui_rs::{Client, NodeRequest};
+
+# async fn example(client: &Client) -> xui_rs::Result<()> {
+let request = NodeRequest::new("edge-de", "node.example.com", 2053)
+    .with_api_token(std::env::var("NODE_API_TOKEN").unwrap());
+
+let probe = client.nodes().test_connection(&request).await?;
+println!("candidate node is {:?}", probe.status);
+
+// Registration is explicit because it persists and starts synchronization.
+// client.nodes().create(&request).await?;
+# Ok(())
+# }
+```
+
+Read models never expose write-only node API tokens. Credential retain/replace/
+clear states are mutually exclusive, legacy nullable tags are normalized, and
+unknown enum/protocol values remain forward-compatible. See [the Nodes API
+guide](docs/nodes.md).
+
 ## Compatibility
 
 | xui-rs | 3x-ui | Status |
 |---|---|---|
-| `0.2.x` | `3.6.0` | Auth, inbounds, clients, server, settings/Xray, and Hosts APIs |
+| `0.2.x` | `3.6.0` | Auth, inbounds, clients, server, settings/Xray, Hosts, and Nodes APIs |
 | `0.1.x` | legacy API | Superseded |
 
 Rust 1.85.0 is the minimum supported compiler. Development and CI use the

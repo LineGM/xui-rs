@@ -1,0 +1,20 @@
+{
+  "source": "internal/web/controller/node.go:initRouter",
+  "routes": [
+    { "method": "get", "path": "/panel/api/nodes/list" },
+    { "method": "get", "path": "/panel/api/nodes/get/{id}" },
+    { "method": "get", "path": "/panel/api/nodes/webCert/{id}" },
+    { "method": "post", "path": "/panel/api/nodes/add" },
+    { "method": "post", "path": "/panel/api/nodes/update/{id}" },
+    { "method": "post", "path": "/panel/api/nodes/del/{id}" },
+    { "method": "post", "path": "/panel/api/nodes/setEnable/{id}" },
+    { "method": "post", "path": "/panel/api/nodes/test" },
+    { "method": "post", "path": "/panel/api/nodes/certFingerprint" },
+    { "method": "post", "path": "/panel/api/nodes/inbounds" },
+    { "method": "post", "path": "/panel/api/nodes/probe/{id}" },
+    { "method": "post", "path": "/panel/api/nodes/updatePanel" },
+    { "method": "get", "path": "/panel/api/nodes/history/{id}/{metric}/{bucket}" },
+    { "method": "post", "path": "/panel/api/nodes/mtls/ca" },
+    { "method": "post", "path": "/panel/api/nodes/mtls/trustCA" }
+  ]
+}

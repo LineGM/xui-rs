@@ -9,6 +9,7 @@ mod clients;
 mod error;
 mod hosts;
 mod inbounds;
+mod nodes;
 mod response;
 mod server;
 mod settings;
@@ -34,6 +35,11 @@ pub use inbounds::{
     FallbackInput, FallbackParent, Inbound, InboundConfig, InboundFallback, InboundOption,
     InboundProtocol, InboundsApi, ShareAddressStrategy, SkippedClient, SkippedInbound,
     TrafficPushRequest, TrafficReset,
+};
+pub use nodes::{
+    NodeInboundSyncMode, NodeMetric, NodeMtlsCa, NodeProbeResult, NodeRequest, NodeScheme,
+    NodeStatus, NodeTlsVerifyMode, NodeUpdateChannel, NodeUpdateResult, NodeView, NodesApi,
+    RemoteInboundOption, RemoteInboundProtocol,
 };
 pub use server::{
     AppStats, ClientIpObservation, ClientIpRecord, DatabaseFile, DiskIo, EchKeyPair,
