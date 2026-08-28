@@ -14,8 +14,9 @@
 
 > [!IMPORTANT]
 > The `0.2` line is an active ground-up rewrite targeting the complete 3x-ui
-> v3.6.0 API. The authentication and transport foundation is ready; domain API
-> modules are being added incrementally. Do not expect compatibility with 0.1.
+> v3.6.0 API. The full tagged HTTP and WebSocket surface is now implemented;
+> stabilization toward 1.0 is still in progress. Do not expect compatibility
+> with 0.1.
 
 ## Why xui-rs?
 
@@ -24,6 +25,7 @@
 - API-token and cookie-session authentication with secrets redacted by default.
 - Correct base-path handling for panels installed below a custom URL prefix.
 - Contract tests derived from the upstream 3x-ui API surface.
+- A typed, forward-compatible real-time stream with explicit reconnect semantics.
 - Strict formatting, linting, documentation, MSRV, and cross-platform CI gates.
 
 ## Authentication
@@ -271,11 +273,44 @@ the runtime OpenAPI document and explicitly send a fresh database backup to
 configured Telegram administrators. See [the public subscription and
 panel-wide operations guide](docs/subscriptions.md).
 
+## Real-time events
+
+`Client::events()` covers the authenticated `/ws` handshake and all ten
+message names declared by the v3.6.0 source. Status, traffic, inbounds,
+outbounds, nodes, notifications, Xray transitions, client counters, reserved
+clients payloads, and invalidations have distinct typed variants.
+
+```rust,no_run
+use xui_rs::{Client, LoginRequest, PanelEventKind};
+
+# async fn example() -> xui_rs::Result<()> {
+let client = Client::new("https://panel.example.com/secret/")?;
+client
+    .auth()
+    .login(LoginRequest::new("admin", "password"))
+    .await?;
+
+let mut events = client.events().connect().await?;
+while let Some(event) = events.next_event().await? {
+    if let PanelEventKind::Invalidate(value) = event.kind {
+        println!("refresh {} through HTTP", value.target.as_str());
+    }
+}
+# Ok(())
+# }
+```
+
+The endpoint does not support bearer-token authentication. HTTP and WebSocket
+share one standards-compliant cookie jar, but cookie values are never exposed
+or copied manually. Control frames and the 10 MiB source limit are handled
+internally. Reconnect is explicit because 3x-ui does not replay events missed
+during a disconnect. See [the real-time events guide](docs/events.md).
+
 ## Compatibility
 
 | xui-rs | 3x-ui | Status |
 |---|---|---|
-| `0.2.x` | `3.6.0` | Complete HTTP API; WebSocket event streams in progress |
+| `0.2.x` | `3.6.0` | Complete HTTP and WebSocket API; pre-1.0 stabilization |
 | `0.1.x` | legacy API | Superseded |
 
 Rust 1.85.0 is the minimum supported compiler. Development and CI use the

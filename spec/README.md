@@ -26,3 +26,12 @@ the six routes on the separate subscription server. The runtime OpenAPI route
 and all three subscription `HEAD` handlers exist in the tagged routers but not
 in the published document. The OpenAPI count above also excludes four
 documentation-only WebSocket message pseudo-operations.
+
+`3x-ui-v3.6.0.websocket-contract.json` records the authenticated `/ws` route,
+actual `{type,payload,time}` envelope, limits, and all ten message constants
+from the tagged hub and broadcaster call sites. The published OpenAPI includes
+only four pseudo-message entries, calls one `xrayState` instead of the actual
+`xray_state`, and shows `data`/top-level notification fields rather than the
+source wire payload. WebSocket contract tests therefore treat the Go snapshot
+as authoritative while separately checking the documented handshake and four
+pseudo-operation IDs.

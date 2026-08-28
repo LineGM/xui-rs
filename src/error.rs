@@ -1,5 +1,5 @@
 use reqwest::{Method, StatusCode};
-use std::string::FromUtf8Error;
+use std::{string::FromUtf8Error, time::Duration};
 use thiserror::Error;
 use url::Url;
 
@@ -95,6 +95,45 @@ pub enum Error {
         /// Underlying UTF-8 decoding error.
         #[source]
         source: FromUtf8Error,
+    },
+
+    /// Establishing the authenticated WebSocket exceeded the configured
+    /// connection timeout.
+    #[error("WebSocket connection to {url} timed out after {timeout:?}")]
+    WebSocketConnectTimeout {
+        /// WebSocket endpoint.
+        url: Box<Url>,
+        /// Configured connection timeout.
+        timeout: Duration,
+    },
+
+    /// A WebSocket handshake or frame operation failed.
+    #[error("WebSocket operation on {url} failed: {source}")]
+    WebSocket {
+        /// WebSocket endpoint.
+        url: Box<Url>,
+        /// Underlying protocol/transport error.
+        #[source]
+        source: Box<tokio_tungstenite::tungstenite::Error>,
+    },
+
+    /// A WebSocket text message did not match its source-defined JSON shape.
+    #[error("could not decode WebSocket {message_type:?} event: {source}")]
+    EventDecode {
+        /// Message name when the envelope was valid enough to identify it.
+        message_type: Option<String>,
+        /// Underlying JSON decoding error.
+        #[source]
+        source: serde_json::Error,
+    },
+
+    /// The panel sent a data-frame format not used by the v3.6.0 protocol.
+    #[error("unexpected WebSocket {kind} frame from {url}")]
+    UnexpectedWebSocketFrame {
+        /// WebSocket endpoint.
+        url: Box<Url>,
+        /// Human-readable frame kind.
+        kind: &'static str,
     },
 
     /// A successful response omitted its documented `obj` value.

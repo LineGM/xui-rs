@@ -1,6 +1,10 @@
 use std::{sync::Arc, time::Duration};
 
-use reqwest::{Method, RequestBuilder, StatusCode, header};
+use reqwest::{
+    Method, RequestBuilder, StatusCode,
+    cookie::{CookieStore, Jar},
+    header,
+};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Serialize, de::DeserializeOwned};
 use tokio::sync::Mutex;
@@ -108,12 +112,13 @@ impl ClientBuilder {
             header::HeaderValue::from_static("XMLHttpRequest"),
         );
 
+        let cookie_jar = Arc::new(Jar::default());
         let http = reqwest::Client::builder()
-            .cookie_store(true)
+            .cookie_provider(Arc::clone(&cookie_jar))
             .default_headers(headers)
             .timeout(self.timeout)
             .connect_timeout(self.connect_timeout)
-            .user_agent(self.user_agent)
+            .user_agent(self.user_agent.clone())
             .danger_accept_invalid_certs(self.accept_invalid_certs)
             .build()
             .map_err(|error| Error::Configuration(error.to_string()))?;
@@ -123,7 +128,11 @@ impl ClientBuilder {
                 http,
                 base_url: self.base_url,
                 bearer_token: self.bearer_token,
+                cookie_jar,
                 csrf_token: Mutex::new(None),
+                connect_timeout: self.connect_timeout,
+                user_agent: self.user_agent,
+                accept_invalid_certs: self.accept_invalid_certs,
             }),
         })
     }
@@ -149,7 +158,11 @@ struct Inner {
     http: reqwest::Client,
     base_url: Url,
     bearer_token: Option<SecretString>,
+    cookie_jar: Arc<Jar>,
     csrf_token: Mutex<Option<SecretString>>,
+    connect_timeout: Duration,
+    user_agent: String,
+    accept_invalid_certs: bool,
 }
 
 impl Client {
@@ -231,11 +244,32 @@ impl Client {
         crate::PanelApi::new(self)
     }
 
+    /// Accesses the authenticated real-time event stream.
+    pub const fn events(&self) -> crate::EventsApi<'_> {
+        crate::EventsApi::new(self)
+    }
+
     pub(crate) fn endpoint(&self, path: &str) -> Result<Url> {
         self.inner
             .base_url
             .join(path.trim_start_matches('/'))
             .map_err(|error| Error::Configuration(format!("invalid endpoint path: {error}")))
+    }
+
+    pub(crate) fn cookie_header(&self, url: &Url) -> Option<header::HeaderValue> {
+        self.inner.cookie_jar.cookies(url)
+    }
+
+    pub(crate) fn connect_timeout(&self) -> Duration {
+        self.inner.connect_timeout
+    }
+
+    pub(crate) fn user_agent(&self) -> &str {
+        &self.inner.user_agent
+    }
+
+    pub(crate) fn accepts_invalid_certs(&self) -> bool {
+        self.inner.accept_invalid_certs
     }
 
     pub(crate) async fn execute<T, B>(

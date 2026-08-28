@@ -13,6 +13,9 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - Reimplemented cookie login around 3x-ui v3.6.0's CSRF lifecycle and a real
   cookie jar; removed credential retention and automatic re-login.
 - Introduced typed, contextual transport, HTTP, API, and decoding errors.
+- Replaced the opaque internal cookie store with one explicit shared
+  standards-compliant jar so HTTP and WebSocket handshakes use identical
+  domain, path, secure, replacement, and expiry rules.
 
 ### Added
 
@@ -61,6 +64,13 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   traffic/profile headers, base64 decoding, and the typed `format=info` view.
 - A source-route snapshot covering all eight operations outside the completed
   domain controllers, including four routes absent from upstream OpenAPI.
+- Complete v3.6.0 WebSocket support: authenticated handshake, typed stream and
+  all ten source-declared event names, including traffic/counter payloads,
+  resource invalidation, forward-compatible unknown events, close metadata,
+  explicit reconnect, ping/pong handling, and the source's 10 MiB limit.
+- A source-level WebSocket contract snapshot plus end-to-end HTTP login →
+  shared-cookie handshake → event decoding → close/reconnect tests that cover
+  the six message types omitted from upstream OpenAPI and its stale examples.
 
 ### Security
 
@@ -82,3 +92,6 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - Kept panel authentication out of public subscription requests and redacted
   subscription identifiers from URLs/errors plus documents, generated links,
   emails, profile URLs, and routing rules from `Debug` output.
+- Prevented API bearer tokens from reaching `/ws`; redacted notification/Xray
+  details, opaque event payloads, connection paths, cookie state, and socket
+  internals from `Debug` while preserving explicit typed access.

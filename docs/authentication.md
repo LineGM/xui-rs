@@ -15,7 +15,7 @@ the token has been verified. The token is held in `SecretString`, omitted from
 Cookie authentication follows the same sequence as the 3x-ui web client:
 
 1. `GET /csrf-token` creates a pre-auth session and returns its CSRF token.
-2. `POST /login` sends that token in `X-CSRF-Token`; the cookie jar sends the
+2. `POST /login` sends that token in `X-CSRF-Token`; the shared cookie jar sends the
    matching signed `3x-ui` cookie automatically.
 3. Successful login updates the same session cookie. Unsafe session requests
    continue to send the CSRF token.
@@ -33,6 +33,12 @@ creates a fresh pre-auth session, and retries once. Retrying is safe here
 because the 3x-ui CSRF middleware rejects the original request before its
 handler executes.
 
+The jar is stored explicitly and shared by all cloned HTTP clients and
+WebSocket handshakes. This is required because `/ws` accepts only an
+authenticated session cookie; 3x-ui does not apply API-token authentication to
+that route. Cookie selection still belongs entirely to `reqwest::cookie::Jar`,
+including domain/path/secure/expiry rules. See [the event-stream guide](events.md).
+
 ## Upstream references
 
 This design is based on the v3.6.0 implementations in:
@@ -42,3 +48,4 @@ This design is based on the v3.6.0 implementations in:
 - `internal/web/middleware/security.go`
 - `internal/web/session/csrf.go`
 - `internal/web/session/session.go`
+- `internal/web/controller/websocket.go`

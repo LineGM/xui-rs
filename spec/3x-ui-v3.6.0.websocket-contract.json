@@ -1,0 +1,32 @@
+{
+  "sources": [
+    "internal/web/web.go",
+    "internal/web/controller/websocket.go",
+    "internal/web/service/panel/websocket.go",
+    "internal/web/websocket/hub.go",
+    "internal/web/websocket/notifier.go",
+    "internal/web/job/xray_traffic_job.go",
+    "internal/web/job/node_traffic_sync_job.go"
+  ],
+  "route": {
+    "method": "get",
+    "path": "/ws",
+    "authentication": "session-cookie",
+    "bearerTokenSupported": false
+  },
+  "envelopeFields": ["type", "payload", "time"],
+  "maxMessageBytes": 10485760,
+  "clientReadLimitBytes": 512,
+  "messageTypes": [
+    { "type": "status", "payload": "ServerStatus", "directBroadcast": true },
+    { "type": "traffic", "payload": "TrafficUpdate", "directBroadcast": true },
+    { "type": "inbounds", "payload": "Inbound[]", "directBroadcast": true },
+    { "type": "outbounds", "payload": "OutboundTraffic[]", "directBroadcast": true },
+    { "type": "nodes", "payload": "NodeView[]", "directBroadcast": true },
+    { "type": "notification", "payload": "PanelNotification", "directBroadcast": true },
+    { "type": "xray_state", "payload": "XrayStateChange", "directBroadcast": true },
+    { "type": "client_stats", "payload": "ClientStatsUpdate", "directBroadcast": true },
+    { "type": "clients", "payload": "reserved", "directBroadcast": false },
+    { "type": "invalidate", "payload": "Invalidation", "directBroadcast": true }
+  ]
+}

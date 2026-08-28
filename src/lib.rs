@@ -7,6 +7,7 @@ mod auth;
 mod client;
 mod clients;
 mod error;
+mod events;
 mod hosts;
 mod inbounds;
 mod nodes;
@@ -32,6 +33,11 @@ pub use clients::{
     ClientsByGuid, DeletedCount, GroupName, GroupSummary, LastOnlineByEmail, SortOrder,
 };
 pub use error::{Error, Result};
+pub use events::{
+    ClientStatsUpdate, EventMessageType, EventStream, EventsApi, InboundTrafficSummary,
+    Invalidation, NotificationLevel, PanelEvent, PanelEventKind, PanelNotification, TrafficDelta,
+    TrafficUpdate, WebSocketClose, XrayStateChange,
+};
 pub use hosts::{
     HostGroup, HostJsonOverride, HostOptions, HostRow, HostSecurity, HostsApi, MihomoIpVersion,
     SubscriptionFormat, VlessRoute,
