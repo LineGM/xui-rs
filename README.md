@@ -186,11 +186,37 @@ Nested Xray JSON is encoded and decoded automatically. Stored notification and
 LDAP secrets, integration payloads, subscription URLs/outbounds, and API-token
 plaintext are redacted from `Debug`. See [the settings API guide](docs/settings.md).
 
+## Subscription hosts
+
+`Client::hosts()` covers all 12 host-override routes registered by v3.6.0,
+including the source-only bulk-create alias. Logical groups span multiple
+inbounds and addresses, while create/update results expose every physical row
+produced by that Cartesian expansion.
+
+```rust,no_run
+use xui_rs::{Client, HostGroup, HostSecurity};
+
+# async fn example(client: &Client) -> xui_rs::Result<()> {
+let mut group = HostGroup::new(vec![7, 9], "production CDN");
+group.hosts = vec!["cdn.example.com".into()];
+group.options.port = 443;
+group.options.security = HostSecurity::Tls;
+
+// Creation is explicit and persistent.
+// client.hosts().create(&group).await?;
+# Ok(())
+# }
+```
+
+Nested mux, sockopt, and final-mask JSON is encoded automatically, path values
+are segment-safe, and the source's nullable empty list is normalized. See [the
+Hosts API guide](docs/hosts.md).
+
 ## Compatibility
 
 | xui-rs | 3x-ui | Status |
 |---|---|---|
-| `0.2.x` | `3.6.0` | Auth, inbounds, clients, server, and settings/Xray APIs |
+| `0.2.x` | `3.6.0` | Auth, inbounds, clients, server, settings/Xray, and Hosts APIs |
 | `0.1.x` | legacy API | Superseded |
 
 Rust 1.85.0 is the minimum supported compiler. Development and CI use the

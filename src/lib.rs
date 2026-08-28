@@ -7,6 +7,7 @@ mod auth;
 mod client;
 mod clients;
 mod error;
+mod hosts;
 mod inbounds;
 mod response;
 mod server;
@@ -24,6 +25,10 @@ pub use clients::{
     ClientsByGuid, DeletedCount, GroupName, GroupSummary, LastOnlineByEmail, SortOrder,
 };
 pub use error::{Error, Result};
+pub use hosts::{
+    HostGroup, HostJsonOverride, HostOptions, HostRow, HostSecurity, HostsApi, MihomoIpVersion,
+    SubscriptionFormat, VlessRoute,
+};
 pub use inbounds::{
     BulkDeleteClientsResult, BulkDeleteInboundsResult, ClientTraffic, ClientTrafficUsage,
     FallbackInput, FallbackParent, Inbound, InboundConfig, InboundFallback, InboundOption,

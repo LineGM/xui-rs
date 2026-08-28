@@ -43,6 +43,11 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - Ergonomic grouped panel settings that flatten to exact upstream wire names,
   automatic encoding/decoding of nested Xray JSON, typed SMTP diagnostics, and
   a settings source-route snapshot covering two operations absent from OpenAPI.
+- Complete typed Hosts API across all 12 routes registered by v3.6.0, including
+  the source-only bulk-create alias and the controller's grouped-versus-row
+  response distinction.
+- Typed forward-compatible host security, Mihomo IP preference, subscription
+  format, VLESS route, and nested JSON override values.
 
 ### Security
 
@@ -57,3 +62,5 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - Redacted panel notification/LDAP credentials, integration payloads,
   subscription URLs and outbounds, API-token plaintext, and secret panel paths
   while retaining explicit accessors for intentional use.
+- Redacted nested host JSON overrides from `Debug` while preserving explicit
+  raw and parsed accessors.

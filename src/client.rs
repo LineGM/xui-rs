@@ -216,6 +216,11 @@ impl Client {
         crate::XraySettingsApi::new(self)
     }
 
+    /// Accesses per-inbound subscription host override operations.
+    pub const fn hosts(&self) -> crate::HostsApi<'_> {
+        crate::HostsApi::new(self)
+    }
+
     pub(crate) fn endpoint(&self, path: &str) -> Result<Url> {
         self.inner
             .base_url

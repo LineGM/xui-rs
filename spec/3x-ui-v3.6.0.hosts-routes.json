@@ -1,0 +1,17 @@
+{
+  "source": "internal/web/controller/host.go:initRouter",
+  "routes": [
+    { "method": "get", "path": "/panel/api/hosts/list" },
+    { "method": "get", "path": "/panel/api/hosts/get/{groupId}" },
+    { "method": "get", "path": "/panel/api/hosts/byInbound/{inboundId}" },
+    { "method": "get", "path": "/panel/api/hosts/tags" },
+    { "method": "post", "path": "/panel/api/hosts/add" },
+    { "method": "post", "path": "/panel/api/hosts/update/{groupId}" },
+    { "method": "post", "path": "/panel/api/hosts/del/{groupId}" },
+    { "method": "post", "path": "/panel/api/hosts/setEnable/{groupId}" },
+    { "method": "post", "path": "/panel/api/hosts/reorder" },
+    { "method": "post", "path": "/panel/api/hosts/bulk/add", "openapi": false },
+    { "method": "post", "path": "/panel/api/hosts/bulk/setEnable" },
+    { "method": "post", "path": "/panel/api/hosts/bulk/del" }
+  ]
+}
