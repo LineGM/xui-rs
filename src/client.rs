@@ -226,6 +226,11 @@ impl Client {
         crate::NodesApi::new(self)
     }
 
+    /// Accesses panel-wide metadata and backup operations.
+    pub const fn panel(&self) -> crate::PanelApi<'_> {
+        crate::PanelApi::new(self)
+    }
+
     pub(crate) fn endpoint(&self, path: &str) -> Result<Url> {
         self.inner
             .base_url
@@ -282,6 +287,24 @@ impl Client {
             None => request,
         })
         .await
+    }
+
+    pub(crate) async fn execute_empty<B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        scope: AuthenticationScope,
+    ) -> Result<()>
+    where
+        B: Serialize + ?Sized,
+    {
+        self.execute_configured(method, path, scope, |request| match body {
+            Some(body) => request.json(body),
+            None => request,
+        })
+        .await?;
+        Ok(())
     }
 
     pub(crate) async fn execute_query<T, Q>(

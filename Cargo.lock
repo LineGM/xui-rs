@@ -1925,6 +1925,7 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 name = "xui-rs"
 version = "0.2.0"
 dependencies = [
+ "base64",
  "percent-encoding",
  "reqwest",
  "secrecy",

@@ -20,3 +20,9 @@ small source snapshots maintained from the exact tagged Go routers; their
 contract tests detect drift against both sources. When updating 3x-ui, replace
 the OpenAPI file from one exact tag, regenerate the route snapshots, update this
 provenance block, and adjust the typed modules in the same commit.
+
+`3x-ui-v3.6.0.remaining-http-routes.json` records the two panel-wide routes and
+the six routes on the separate subscription server. The runtime OpenAPI route
+and all three subscription `HEAD` handlers exist in the tagged routers but not
+in the published document. The OpenAPI count above also excludes four
+documentation-only WebSocket message pseudo-operations.

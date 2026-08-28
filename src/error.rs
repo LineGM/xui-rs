@@ -1,4 +1,5 @@
 use reqwest::{Method, StatusCode};
+use std::string::FromUtf8Error;
 use thiserror::Error;
 use url::Url;
 
@@ -82,6 +83,18 @@ pub enum Error {
         /// JSON decoding error.
         #[source]
         source: serde_json::Error,
+    },
+
+    /// A text endpoint returned bytes that are not valid UTF-8.
+    #[error("response from {method} {url} was not valid UTF-8: {source}")]
+    Utf8 {
+        /// HTTP method used for the request.
+        method: Method,
+        /// Redacted request URL.
+        url: Box<Url>,
+        /// Underlying UTF-8 decoding error.
+        #[source]
+        source: FromUtf8Error,
     },
 
     /// A successful response omitted its documented `obj` value.

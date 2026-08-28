@@ -10,9 +10,15 @@ mod error;
 mod hosts;
 mod inbounds;
 mod nodes;
+mod panel;
 mod response;
+
+#[cfg(test)]
+mod remaining_http_contract_tests;
+
 mod server;
 mod settings;
+mod subscription;
 
 pub use auth::{AuthApi, CsrfToken, LoginRequest};
 pub use client::{AuthenticationKind, Client, ClientBuilder};
@@ -41,6 +47,7 @@ pub use nodes::{
     NodeStatus, NodeTlsVerifyMode, NodeUpdateChannel, NodeUpdateResult, NodeView, NodesApi,
     RemoteInboundOption, RemoteInboundProtocol,
 };
+pub use panel::{OpenApiDocument, PanelApi};
 pub use server::{
     AppStats, ClientIpObservation, ClientIpRecord, DatabaseFile, DiskIo, EchKeyPair,
     Fail2banStatus, HistoryBucket, LegacyCpuPoint, LogLevel, MetricPoint, Mldsa65KeyPair,
@@ -59,4 +66,9 @@ pub use settings::{
     SecuritySettings, SensitivePayload, SettingsApi, SmtpSettings, SmtpTestResult,
     SubscriptionSettings, TelegramSettings, TestEgressResult, TestEndpointResult,
     UserCredentialsUpdate, WarpRegistration, WebSettings, XraySettingsApi, XraySettingsSnapshot,
+};
+pub use subscription::{
+    SubscriptionClient, SubscriptionClientBuilder, SubscriptionDecodeError, SubscriptionDocument,
+    SubscriptionInfo, SubscriptionJson, SubscriptionMetadata, SubscriptionResponse,
+    SubscriptionTraffic,
 };

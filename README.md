@@ -239,11 +239,43 @@ clear states are mutually exclusive, legacy nullable tags are normalized, and
 unknown enum/protocol values remain forward-compatible. See [the Nodes API
 guide](docs/nodes.md).
 
+## Public subscriptions and panel metadata
+
+`SubscriptionClient` covers all six routes exposed by 3x-ui's separate public
+subscription server: `GET` and `HEAD` for raw, Xray JSON, and Clash/Mihomo
+formats. It intentionally carries no panel authentication because this server
+can run on another origin and port.
+
+```rust,no_run
+use xui_rs::SubscriptionClient;
+
+# async fn example() -> xui_rs::Result<()> {
+let subscriptions = SubscriptionClient::new("https://sub.example.com:2096")?;
+let metadata = subscriptions
+    .raw_metadata("secret-subscription-id")
+    .await?;
+
+println!("profile: {:?}; traffic: {:?}", metadata.profile_title, metadata.traffic);
+# Ok(())
+# }
+```
+
+Custom raw/JSON/Clash paths and construction from panel settings are supported.
+Subscription identifiers, documents, generated links, routing rules, and
+represented emails are redacted from `Debug` and request errors. The raw body
+can be decoded through `SubscriptionDocument::decode_base64` when `subEncrypt`
+is enabled.
+
+`Client::panel()` adds the two remaining panel-wide HTTP operations: retrieve
+the runtime OpenAPI document and explicitly send a fresh database backup to
+configured Telegram administrators. See [the public subscription and
+panel-wide operations guide](docs/subscriptions.md).
+
 ## Compatibility
 
 | xui-rs | 3x-ui | Status |
 |---|---|---|
-| `0.2.x` | `3.6.0` | Auth, inbounds, clients, server, settings/Xray, Hosts, and Nodes APIs |
+| `0.2.x` | `3.6.0` | Complete HTTP API; WebSocket event streams in progress |
 | `0.1.x` | legacy API | Superseded |
 
 Rust 1.85.0 is the minimum supported compiler. Development and CI use the

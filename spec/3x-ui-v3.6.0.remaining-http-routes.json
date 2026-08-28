@@ -1,0 +1,16 @@
+{
+  "sources": [
+    "internal/web/controller/api.go:initRouter",
+    "internal/sub/controller.go:initRouter"
+  ],
+  "routes": [
+    { "method": "get", "path": "/panel/api/openapi.json", "openapi": false },
+    { "method": "post", "path": "/panel/api/backuptotgbot" },
+    { "method": "get", "path": "/{subPath}{subid}" },
+    { "method": "head", "path": "/{subPath}{subid}", "openapi": false },
+    { "method": "get", "path": "/{jsonPath}{subid}" },
+    { "method": "head", "path": "/{jsonPath}{subid}", "openapi": false },
+    { "method": "get", "path": "/{clashPath}{subid}" },
+    { "method": "head", "path": "/{clashPath}{subid}", "openapi": false }
+  ]
+}

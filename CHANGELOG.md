@@ -53,6 +53,14 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   updates, certificate pinning, and node mTLS.
 - Source-accurate 41-field `NodeView`, forward-compatible node enums, typed
   update channels/metrics, and explicit mutually exclusive API-token actions.
+- Complete remaining v3.6.0 HTTP surface: the runtime OpenAPI and Telegram
+  backup panel routes plus `GET` and source-only `HEAD` operations for raw,
+  Xray JSON, and Clash/Mihomo public subscriptions.
+- A standalone no-auth subscription client with configurable public paths,
+  construction from panel settings, deterministic content negotiation, typed
+  traffic/profile headers, base64 decoding, and the typed `format=info` view.
+- A source-route snapshot covering all eight operations outside the completed
+  domain controllers, including four routes absent from upstream OpenAPI.
 
 ### Security
 
@@ -71,3 +79,6 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   raw and parsed accessors.
 - Kept node API tokens write-only and redacted token replacements, remote panel
   base paths, and internal egress tags from model `Debug` output.
+- Kept panel authentication out of public subscription requests and redacted
+  subscription identifiers from URLs/errors plus documents, generated links,
+  emails, profile URLs, and routing rules from `Debug` output.
