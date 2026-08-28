@@ -16,6 +16,8 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - Replaced the opaque internal cookie store with one explicit shared
   standards-compliant jar so HTTP and WebSocket handshakes use identical
   domain, path, secure, replacement, and expiry rules.
+- Exposed documented domain modules while retaining every concise crate-root
+  re-export, making the large API navigable without breaking existing imports.
 
 ### Added
 
@@ -71,6 +73,11 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - A source-level WebSocket contract snapshot plus end-to-end HTTP login →
   shared-cookie handshake → event decoding → close/reconnect tests that cover
   the six message types omitted from upstream OpenAPI and its stale examples.
+- Stable `ErrorKind` classification plus HTTP status/method/URL,
+  authentication, rate-limit, server-error, and cross-transport timeout
+  introspection helpers.
+- A compiled crate-level quick start, public API/trait contract tests, and an
+  idempotency-aware error and retry guide.
 
 ### Security
 

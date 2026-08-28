@@ -1,3 +1,5 @@
+//! Client lifecycle, traffic, bulk operations, grouping, and attachment APIs.
+
 mod api;
 mod models;
 

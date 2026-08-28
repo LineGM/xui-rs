@@ -14,6 +14,7 @@ Thanks for helping build a reliable Rust SDK for 3x-ui.
    cargo fmt --all -- --check
    cargo clippy --all-targets --all-features -- -D warnings
    cargo test --all-targets --all-features
+   cargo test --doc --all-features
    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
    ```
 

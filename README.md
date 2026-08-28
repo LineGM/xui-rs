@@ -306,6 +306,33 @@ or copied manually. Control frames and the 10 MiB source limit are handled
 internally. Reconnect is explicit because 3x-ui does not replay events missed
 during a disconnect. See [the real-time events guide](docs/events.md).
 
+## Errors and retry policy
+
+All operations return `xui_rs::Result<T>`. `ErrorKind` provides a stable,
+copyable classification for metrics and policy, while `status()`, `method()`,
+`url()`, and authentication/rate-limit/server/timeout helpers expose context
+without destructuring variants.
+
+```rust
+use xui_rs::Error;
+
+fn action(error: &Error) -> &'static str {
+    if error.is_unauthorized() {
+        "refresh credentials"
+    } else if error.is_rate_limited() {
+        "back off"
+    } else if error.is_timeout() || error.is_server_error() {
+        "reconcile and maybe retry"
+    } else {
+        "inspect the typed error"
+    }
+}
+```
+
+The SDK never retries API mutations implicitly: a timeout does not prove that
+the server failed to apply a request. See [the error and retry guide](docs/errors.md)
+for idempotency-aware recommendations and WebSocket recovery semantics.
+
 ## Compatibility
 
 | xui-rs | 3x-ui | Status |
@@ -321,8 +348,9 @@ pinned Rust 1.98.0 toolchain.
 ```console
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
-cargo test --all-targets
-RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
+cargo test --all-targets --all-features
+cargo test --doc --all-features
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and

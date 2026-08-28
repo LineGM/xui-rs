@@ -1,3 +1,5 @@
+//! Main panel client, authentication selection, and transport configuration.
+
 use std::{sync::Arc, time::Duration};
 
 use reqwest::{

@@ -1,3 +1,5 @@
+//! Cookie-session authentication, CSRF, and two-factor login operations.
+
 use std::fmt;
 
 use reqwest::Method;

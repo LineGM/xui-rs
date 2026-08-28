@@ -1,7 +1,75 @@
+//! Typed SDK errors and transport-independent error introspection.
+
 use reqwest::{Method, StatusCode};
-use std::{string::FromUtf8Error, time::Duration};
+use std::{fmt, string::FromUtf8Error, time::Duration};
 use thiserror::Error;
 use url::Url;
+
+/// Stable category for an [`enum@Error`] without exposing its variant fields.
+///
+/// This is useful for metrics and policy decisions that should not depend on
+/// the concrete error payload. Use [`Error::status`], [`Error::method`], and
+/// [`Error::url`] when the associated HTTP context is needed.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
+pub enum ErrorKind {
+    /// Invalid client or request configuration.
+    Configuration,
+    /// Missing or expired authentication.
+    Unauthorized,
+    /// Authorization or CSRF rejection.
+    Forbidden,
+    /// Non-success HTTP status other than 401 or 403.
+    HttpStatus,
+    /// HTTP transport or response-body IO failure.
+    Transport,
+    /// Request serialization failure.
+    Encode,
+    /// Application-level rejection in a successful HTTP response.
+    Api,
+    /// HTTP response JSON decoding failure.
+    Decode,
+    /// Invalid UTF-8 response body.
+    Utf8,
+    /// WebSocket connection timeout.
+    WebSocketConnectTimeout,
+    /// WebSocket handshake, transport, or protocol failure.
+    WebSocket,
+    /// WebSocket event JSON decoding failure.
+    EventDecode,
+    /// Unsupported WebSocket application frame.
+    UnexpectedWebSocketFrame,
+    /// Successful response missing its required object.
+    MissingObject,
+}
+
+impl ErrorKind {
+    /// Returns a stable snake-case label suitable for logs and metrics.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Configuration => "configuration",
+            Self::Unauthorized => "unauthorized",
+            Self::Forbidden => "forbidden",
+            Self::HttpStatus => "http_status",
+            Self::Transport => "transport",
+            Self::Encode => "encode",
+            Self::Api => "api",
+            Self::Decode => "decode",
+            Self::Utf8 => "utf8",
+            Self::WebSocketConnectTimeout => "websocket_connect_timeout",
+            Self::WebSocket => "websocket",
+            Self::EventDecode => "event_decode",
+            Self::UnexpectedWebSocketFrame => "unexpected_websocket_frame",
+            Self::MissingObject => "missing_object",
+        }
+    }
+}
+
+impl fmt::Display for ErrorKind {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
 
 /// Errors returned by the SDK.
 #[derive(Debug, Error)]
@@ -147,9 +215,105 @@ pub enum Error {
 }
 
 impl Error {
+    /// Returns the stable category of this error.
+    pub const fn kind(&self) -> ErrorKind {
+        match self {
+            Self::Configuration(_) => ErrorKind::Configuration,
+            Self::Unauthorized { .. } => ErrorKind::Unauthorized,
+            Self::Forbidden { .. } => ErrorKind::Forbidden,
+            Self::HttpStatus { .. } => ErrorKind::HttpStatus,
+            Self::Transport { .. } => ErrorKind::Transport,
+            Self::Encode { .. } => ErrorKind::Encode,
+            Self::Api { .. } => ErrorKind::Api,
+            Self::Decode { .. } => ErrorKind::Decode,
+            Self::Utf8 { .. } => ErrorKind::Utf8,
+            Self::WebSocketConnectTimeout { .. } => ErrorKind::WebSocketConnectTimeout,
+            Self::WebSocket { .. } => ErrorKind::WebSocket,
+            Self::EventDecode { .. } => ErrorKind::EventDecode,
+            Self::UnexpectedWebSocketFrame { .. } => ErrorKind::UnexpectedWebSocketFrame,
+            Self::MissingObject { .. } => ErrorKind::MissingObject,
+        }
+    }
+
+    /// Returns the HTTP status that caused this error, when available.
+    ///
+    /// Authentication errors report 401 or 403 even though they have dedicated
+    /// variants. Application-level [`Error::Api`] responses used HTTP success
+    /// and therefore return `None`.
+    pub const fn status(&self) -> Option<StatusCode> {
+        match self {
+            Self::Unauthorized { .. } => Some(StatusCode::UNAUTHORIZED),
+            Self::Forbidden { .. } => Some(StatusCode::FORBIDDEN),
+            Self::HttpStatus { status, .. } => Some(*status),
+            _ => None,
+        }
+    }
+
+    /// Returns the HTTP method associated with the failed operation.
+    pub const fn method(&self) -> Option<&Method> {
+        match self {
+            Self::Unauthorized { method, .. }
+            | Self::Forbidden { method, .. }
+            | Self::HttpStatus { method, .. }
+            | Self::Transport { method, .. }
+            | Self::Api { method, .. }
+            | Self::Decode { method, .. }
+            | Self::Utf8 { method, .. }
+            | Self::MissingObject { method, .. } => Some(method),
+            _ => None,
+        }
+    }
+
+    /// Returns the request or WebSocket URL associated with the failure.
+    pub fn url(&self) -> Option<&Url> {
+        match self {
+            Self::Unauthorized { url, .. }
+            | Self::Forbidden { url, .. }
+            | Self::HttpStatus { url, .. }
+            | Self::Transport { url, .. }
+            | Self::Api { url, .. }
+            | Self::Decode { url, .. }
+            | Self::Utf8 { url, .. }
+            | Self::WebSocketConnectTimeout { url, .. }
+            | Self::WebSocket { url, .. }
+            | Self::UnexpectedWebSocketFrame { url, .. }
+            | Self::MissingObject { url, .. } => Some(url),
+            Self::Configuration(_) | Self::Encode { .. } | Self::EventDecode { .. } => None,
+        }
+    }
+
     /// Returns `true` when authentication must be supplied or refreshed.
-    pub fn is_unauthorized(&self) -> bool {
+    pub const fn is_unauthorized(&self) -> bool {
         matches!(self, Self::Unauthorized { .. })
+    }
+
+    /// Returns `true` when the operation was rejected with HTTP 403.
+    pub const fn is_forbidden(&self) -> bool {
+        matches!(self, Self::Forbidden { .. })
+    }
+
+    /// Returns `true` when the panel asked the caller to slow down.
+    pub const fn is_rate_limited(&self) -> bool {
+        matches!(self.status(), Some(StatusCode::TOO_MANY_REQUESTS))
+    }
+
+    /// Returns `true` for an HTTP 5xx response.
+    pub fn is_server_error(&self) -> bool {
+        self.status().is_some_and(|status| status.is_server_error())
+    }
+
+    /// Returns `true` when an HTTP or WebSocket transport timed out.
+    pub fn is_timeout(&self) -> bool {
+        match self {
+            Self::Transport { source, .. } => source.is_timeout(),
+            Self::WebSocketConnectTimeout { .. } => true,
+            Self::WebSocket { source, .. } => matches!(
+                source.as_ref(),
+                tokio_tungstenite::tungstenite::Error::Io(error)
+                    if error.kind() == std::io::ErrorKind::TimedOut
+            ),
+            _ => false,
+        }
     }
 }
 

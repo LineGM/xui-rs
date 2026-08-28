@@ -1,3 +1,5 @@
+//! Server status, metrics, Xray lifecycle, maintenance, and utility APIs.
+
 mod api;
 mod models;
 
