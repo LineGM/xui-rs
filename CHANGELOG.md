@@ -100,6 +100,9 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - A reproducible rustdoc snapshot of the complete proposed 1.0 surface plus an
   exhaustive downstream contract for root re-exports, traits, constants, and
   multithreaded-runtime-safe endpoint futures.
+- A release-engineering pipeline with immutable Action pins, package and public
+  API gates, PR-base SemVer checks, protected tag releases, crates.io trusted
+  publishing, reproducible crate comparison, and signed SLSA provenance.
 
 ### Security
 
@@ -132,3 +135,5 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   cookies, tokens, and bodies from transport tracing.
 - Reduced panel client and builder `Debug` output to the server origin so a
   deployment's secret base path is not exposed.
+- Enforced RustSec advisory, license, source-registry, wildcard-version, and
+  rustls-only dependency policies across Linux, macOS, and Windows graphs.

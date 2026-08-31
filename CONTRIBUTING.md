@@ -16,6 +16,9 @@ Thanks for helping build a reliable Rust SDK for 3x-ui.
    cargo test --all-targets --all-features
    cargo test --doc --all-features
    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
+   actionlint
+   cargo deny check
+   cargo package --locked --allow-dirty
    ```
 
 5. Check the proposed 1.0 public contract when changing any public item:
@@ -57,3 +60,4 @@ and the redacted request/response shape. Report security-sensitive bugs through
 the private process in [SECURITY.md](SECURITY.md).
 
 Participation is governed by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+Release maintainers must additionally follow [docs/releasing.md](docs/releasing.md).

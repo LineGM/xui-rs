@@ -26,6 +26,7 @@
 - Correct base-path handling for panels installed below a custom URL prefix.
 - Contract tests derived from the upstream 3x-ui API surface.
 - A reviewed rustdoc API baseline and exhaustive downstream re-export contract.
+- RustSec, license, dependency-source, package, and SemVer release gates.
 - A typed, forward-compatible real-time stream with explicit reconnect semantics.
 - One explicit HTTP/HTTPS/SOCKS5 proxy configuration shared by HTTP,
   subscriptions, and WebSocket transports.
@@ -422,10 +423,16 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-targets --all-features
 cargo test --doc --all-features
 RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
+actionlint
+cargo deny check
+scripts/public-api.sh check
+cargo package --locked --allow-dirty
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and
-[SECURITY.md](SECURITY.md) for private vulnerability reporting.
+[SECURITY.md](SECURITY.md) for private vulnerability reporting. Maintainers
+should follow the [OIDC-based release procedure](docs/releasing.md); releases
+never require a long-lived crates.io token.
 
 ## License
 
