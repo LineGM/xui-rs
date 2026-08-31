@@ -8,7 +8,7 @@ use super::{
     SubscriptionDocument, SubscriptionInfo, SubscriptionJson, SubscriptionMetadata,
     SubscriptionResponse,
 };
-use crate::{Error, Result, SubscriptionSettings};
+use crate::{Error, ProxyConfig, Result, SubscriptionSettings};
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 const DEFAULT_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -24,6 +24,7 @@ pub struct SubscriptionClientBuilder {
     timeout: Duration,
     connect_timeout: Duration,
     accept_invalid_certs: bool,
+    proxy: Option<ProxyConfig>,
 }
 
 impl SubscriptionClientBuilder {
@@ -36,6 +37,7 @@ impl SubscriptionClientBuilder {
             timeout: DEFAULT_TIMEOUT,
             connect_timeout: DEFAULT_CONNECT_TIMEOUT,
             accept_invalid_certs: false,
+            proxy: None,
         })
     }
 
@@ -78,6 +80,29 @@ impl SubscriptionClientBuilder {
         self
     }
 
+    /// Routes subscription HTTP requests through an explicit proxy.
+    ///
+    /// Environment proxy variables are never consulted.
+    pub fn proxy(mut self, proxy: ProxyConfig) -> Self {
+        self.proxy = Some(proxy);
+        self
+    }
+
+    /// Parses and configures a credential-free proxy URL.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Configuration`] for an invalid proxy URL.
+    pub fn proxy_url(self, proxy_url: impl AsRef<str>) -> Result<Self> {
+        Ok(self.proxy(ProxyConfig::new(proxy_url)?))
+    }
+
+    /// Removes a previously configured explicit proxy.
+    pub fn no_proxy(mut self) -> Self {
+        self.proxy = None;
+        self
+    }
+
     /// Builds the standalone client.
     ///
     /// # Errors
@@ -95,6 +120,7 @@ impl SubscriptionClientBuilder {
             self.timeout,
             self.connect_timeout,
             self.accept_invalid_certs,
+            self.proxy.as_ref(),
         )
     }
 }
@@ -110,6 +136,7 @@ impl std::fmt::Debug for SubscriptionClientBuilder {
             .field("timeout", &self.timeout)
             .field("connect_timeout", &self.connect_timeout)
             .field("accept_invalid_certs", &self.accept_invalid_certs)
+            .field("proxy", &self.proxy.as_ref().map(ProxyConfig::scheme))
             .finish()
     }
 }
@@ -174,6 +201,7 @@ impl SubscriptionClient {
             DEFAULT_TIMEOUT,
             DEFAULT_CONNECT_TIMEOUT,
             false,
+            None,
         )
     }
 
@@ -184,12 +212,18 @@ impl SubscriptionClient {
         timeout: Duration,
         connect_timeout: Duration,
         accept_invalid_certs: bool,
+        proxy: Option<&ProxyConfig>,
     ) -> Result<Self> {
-        let http = reqwest::Client::builder()
+        let mut http_builder = reqwest::Client::builder()
+            .no_proxy()
             .timeout(timeout)
             .connect_timeout(connect_timeout)
             .user_agent(DEFAULT_USER_AGENT)
-            .danger_accept_invalid_certs(accept_invalid_certs)
+            .danger_accept_invalid_certs(accept_invalid_certs);
+        if let Some(proxy) = proxy {
+            http_builder = http_builder.proxy(proxy.reqwest_proxy()?);
+        }
+        let http = http_builder
             .build()
             .map_err(|error| Error::Configuration(error.to_string()))?;
         Ok(Self {

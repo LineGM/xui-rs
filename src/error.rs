@@ -5,6 +5,8 @@ use std::{fmt, string::FromUtf8Error, time::Duration};
 use thiserror::Error;
 use url::Url;
 
+use crate::{ProxyError, ProxyScheme};
+
 /// Stable category for an [`enum@Error`] without exposing its variant fields.
 ///
 /// This is useful for metrics and policy decisions that should not depend on
@@ -35,6 +37,8 @@ pub enum ErrorKind {
     WebSocketConnectTimeout,
     /// WebSocket handshake, transport, or protocol failure.
     WebSocket,
+    /// Explicit outbound proxy connection or negotiation failure.
+    Proxy,
     /// WebSocket event JSON decoding failure.
     EventDecode,
     /// Unsupported WebSocket application frame.
@@ -58,6 +62,7 @@ impl ErrorKind {
             Self::Utf8 => "utf8",
             Self::WebSocketConnectTimeout => "websocket_connect_timeout",
             Self::WebSocket => "websocket",
+            Self::Proxy => "proxy",
             Self::EventDecode => "event_decode",
             Self::UnexpectedWebSocketFrame => "unexpected_websocket_frame",
             Self::MissingObject => "missing_object",
@@ -185,6 +190,18 @@ pub enum Error {
         source: Box<tokio_tungstenite::tungstenite::Error>,
     },
 
+    /// An explicit proxy could not establish a WebSocket tunnel.
+    #[error("{scheme} proxy could not connect WebSocket to {url}: {source}")]
+    Proxy {
+        /// Proxy protocol in use. The proxy endpoint is deliberately omitted.
+        scheme: ProxyScheme,
+        /// Target WebSocket endpoint, never the proxy endpoint.
+        url: Box<Url>,
+        /// Underlying proxy transport or negotiation failure.
+        #[source]
+        source: Box<ProxyError>,
+    },
+
     /// A WebSocket text message did not match its source-defined JSON shape.
     #[error("could not decode WebSocket {message_type:?} event: {source}")]
     EventDecode {
@@ -229,6 +246,7 @@ impl Error {
             Self::Utf8 { .. } => ErrorKind::Utf8,
             Self::WebSocketConnectTimeout { .. } => ErrorKind::WebSocketConnectTimeout,
             Self::WebSocket { .. } => ErrorKind::WebSocket,
+            Self::Proxy { .. } => ErrorKind::Proxy,
             Self::EventDecode { .. } => ErrorKind::EventDecode,
             Self::UnexpectedWebSocketFrame { .. } => ErrorKind::UnexpectedWebSocketFrame,
             Self::MissingObject { .. } => ErrorKind::MissingObject,
@@ -276,6 +294,7 @@ impl Error {
             | Self::Utf8 { url, .. }
             | Self::WebSocketConnectTimeout { url, .. }
             | Self::WebSocket { url, .. }
+            | Self::Proxy { url, .. }
             | Self::UnexpectedWebSocketFrame { url, .. }
             | Self::MissingObject { url, .. } => Some(url),
             Self::Configuration(_) | Self::Encode { .. } | Self::EventDecode { .. } => None,
@@ -312,6 +331,7 @@ impl Error {
                 tokio_tungstenite::tungstenite::Error::Io(error)
                     if error.kind() == std::io::ErrorKind::TimedOut
             ),
+            Self::Proxy { source, .. } => source.is_timeout(),
             _ => false,
         }
     }

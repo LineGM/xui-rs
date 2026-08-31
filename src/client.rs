@@ -13,7 +13,7 @@ use tokio::sync::Mutex;
 use tracing::debug;
 use url::Url;
 
-use crate::{AuthApi, Error, Result, response::ApiResponse};
+use crate::{AuthApi, Error, ProxyConfig, Result, response::ApiResponse};
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 const DEFAULT_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -45,6 +45,7 @@ pub struct ClientBuilder {
     connect_timeout: Duration,
     user_agent: String,
     accept_invalid_certs: bool,
+    proxy: Option<ProxyConfig>,
 }
 
 impl ClientBuilder {
@@ -56,6 +57,7 @@ impl ClientBuilder {
             connect_timeout: DEFAULT_CONNECT_TIMEOUT,
             user_agent: DEFAULT_USER_AGENT.to_owned(),
             accept_invalid_certs: false,
+            proxy: None,
         })
     }
 
@@ -92,6 +94,33 @@ impl ClientBuilder {
         self
     }
 
+    /// Routes panel HTTP requests and WebSocket connections through an
+    /// explicit proxy.
+    ///
+    /// Environment proxy variables are never consulted. Use
+    /// [`ProxyScheme::Socks5h`](crate::ProxyScheme::Socks5h) when target DNS
+    /// resolution must happen on the proxy.
+    pub fn proxy(mut self, proxy: ProxyConfig) -> Self {
+        self.proxy = Some(proxy);
+        self
+    }
+
+    /// Parses and configures a credential-free proxy URL.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Configuration`] for an invalid proxy URL. Configure
+    /// credentials with [`ProxyConfig::with_basic_auth`] and [`Self::proxy`].
+    pub fn proxy_url(self, proxy_url: impl AsRef<str>) -> Result<Self> {
+        Ok(self.proxy(ProxyConfig::new(proxy_url)?))
+    }
+
+    /// Removes a previously configured explicit proxy.
+    pub fn no_proxy(mut self) -> Self {
+        self.proxy = None;
+        self
+    }
+
     /// Builds the configured client.
     ///
     /// # Errors
@@ -115,13 +144,18 @@ impl ClientBuilder {
         );
 
         let cookie_jar = Arc::new(Jar::default());
-        let http = reqwest::Client::builder()
+        let mut http_builder = reqwest::Client::builder()
+            .no_proxy()
             .cookie_provider(Arc::clone(&cookie_jar))
             .default_headers(headers)
             .timeout(self.timeout)
             .connect_timeout(self.connect_timeout)
             .user_agent(self.user_agent.clone())
-            .danger_accept_invalid_certs(self.accept_invalid_certs)
+            .danger_accept_invalid_certs(self.accept_invalid_certs);
+        if let Some(proxy) = &self.proxy {
+            http_builder = http_builder.proxy(proxy.reqwest_proxy()?);
+        }
+        let http = http_builder
             .build()
             .map_err(|error| Error::Configuration(error.to_string()))?;
 
@@ -135,6 +169,7 @@ impl ClientBuilder {
                 connect_timeout: self.connect_timeout,
                 user_agent: self.user_agent,
                 accept_invalid_certs: self.accept_invalid_certs,
+                proxy: self.proxy,
             }),
         })
     }
@@ -152,6 +187,7 @@ impl std::fmt::Debug for Client {
             .debug_struct("Client")
             .field("base_url", &self.inner.base_url)
             .field("authentication", &self.authentication_kind())
+            .field("proxy", &self.inner.proxy.as_ref().map(ProxyConfig::scheme))
             .finish_non_exhaustive()
     }
 }
@@ -165,6 +201,7 @@ struct Inner {
     connect_timeout: Duration,
     user_agent: String,
     accept_invalid_certs: bool,
+    proxy: Option<ProxyConfig>,
 }
 
 impl Client {
@@ -272,6 +309,10 @@ impl Client {
 
     pub(crate) fn accepts_invalid_certs(&self) -> bool {
         self.inner.accept_invalid_certs
+    }
+
+    pub(crate) fn proxy(&self) -> Option<&ProxyConfig> {
+        self.inner.proxy.as_ref()
     }
 
     pub(crate) async fn execute<T, B>(

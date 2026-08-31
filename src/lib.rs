@@ -38,6 +38,7 @@ pub mod hosts;
 pub mod inbounds;
 pub mod nodes;
 pub mod panel;
+pub mod proxy;
 mod response;
 
 #[cfg(test)]
@@ -80,6 +81,7 @@ pub use nodes::{
     RemoteInboundOption, RemoteInboundProtocol,
 };
 pub use panel::{OpenApiDocument, PanelApi};
+pub use proxy::{ProxyConfig, ProxyError, ProxyScheme};
 pub use server::{
     AppStats, ClientIpObservation, ClientIpRecord, DatabaseFile, DiskIo, EchKeyPair,
     Fail2banStatus, HistoryBucket, LegacyCpuPoint, LogLevel, MetricPoint, Mldsa65KeyPair,

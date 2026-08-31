@@ -1,35 +1,49 @@
 use std::{
+    borrow::Cow,
     fmt,
     pin::Pin,
     sync::Arc,
     task::{Context, Poll},
 };
 
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
 use futures_util::{SinkExt, Stream, StreamExt, stream::FusedStream};
 use reqwest::{Method, StatusCode};
 use rustls::{
-    DigitallySignedStruct, SignatureScheme,
+    ClientConfig, DigitallySignedStruct, RootCertStore, SignatureScheme,
     client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier},
     pki_types::{CertificateDer, ServerName, UnixTime},
 };
-use tokio::{net::TcpStream, time::timeout};
+use tokio::{
+    io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
+    net::{TcpStream, lookup_host},
+    time::timeout,
+};
+use tokio_rustls::TlsConnector;
+use tokio_socks::{TargetAddr, tcp::Socks5Stream};
 use tokio_tungstenite::{
-    Connector, MaybeTlsStream, WebSocketStream, connect_async_tls_with_config,
+    Connector, MaybeTlsStream, WebSocketStream, client_async_tls_with_config,
     tungstenite::{
         Message,
         client::IntoClientRequest,
         protocol::{WebSocketConfig, frame::CloseFrame, frame::coding::CloseCode},
     },
 };
-use url::Url;
+use url::{Host, Url};
 
 use super::PanelEvent;
-use crate::{Client, Error, Result};
+use crate::{Client, Error, ProxyConfig, ProxyError, ProxyScheme, Result};
 
 const MAX_MESSAGE_SIZE: usize = 10 * 1024 * 1024;
 const CLIENT_CLOSE_REASON: &str = "xui-rs disconnect";
+const MAX_CONNECT_RESPONSE_SIZE: usize = 16 * 1024;
 
-type Socket = WebSocketStream<MaybeTlsStream<TcpStream>>;
+trait AsyncIo: AsyncRead + AsyncWrite {}
+
+impl<T> AsyncIo for T where T: AsyncRead + AsyncWrite + ?Sized {}
+
+type BoxedIo = Box<dyn AsyncIo + Send + Unpin>;
+type Socket = WebSocketStream<MaybeTlsStream<BoxedIo>>;
 
 /// Accessor for the panel's authenticated WebSocket endpoint.
 #[derive(Clone, Copy, Debug)]
@@ -305,19 +319,225 @@ async fn connect_socket(client: &Client) -> Result<(Url, Socket)> {
     let config = WebSocketConfig::default()
         .max_message_size(Some(MAX_MESSAGE_SIZE))
         .max_frame_size(Some(MAX_MESSAGE_SIZE));
-    let connector = client
-        .accepts_invalid_certs()
-        .then(insecure_rustls_connector);
-    let connect = connect_async_tls_with_config(request, Some(config), false, connector);
     let duration = client.connect_timeout();
-    let (socket, _) = timeout(duration, connect)
-        .await
-        .map_err(|_| Error::WebSocketConnectTimeout {
-            url: Box::new(endpoint.clone()),
-            timeout: duration,
-        })?
-        .map_err(|source| handshake_error(endpoint.clone(), source))?;
+    let connect = async {
+        let transport = open_transport(client, &endpoint).await?;
+        let connector = client
+            .accepts_invalid_certs()
+            .then(insecure_rustls_connector);
+        client_async_tls_with_config(request, transport, Some(config), connector)
+            .await
+            .map_err(|source| handshake_error(endpoint.clone(), source))
+    };
+    let (socket, _) =
+        timeout(duration, connect)
+            .await
+            .map_err(|_| Error::WebSocketConnectTimeout {
+                url: Box::new(endpoint.clone()),
+                timeout: duration,
+            })??;
     Ok((endpoint, socket))
+}
+
+async fn open_transport(client: &Client, endpoint: &Url) -> Result<BoxedIo> {
+    let Some(proxy) = client.proxy() else {
+        return TcpStream::connect(target_address(endpoint)?)
+            .await
+            .map(|stream| Box::new(stream) as BoxedIo)
+            .map_err(|source| {
+                socket_error(
+                    endpoint.clone(),
+                    tokio_tungstenite::tungstenite::Error::Io(source),
+                )
+            });
+    };
+
+    let result = match proxy.scheme() {
+        ProxyScheme::Http | ProxyScheme::Https => open_http_tunnel(proxy, endpoint, client).await,
+        ProxyScheme::Socks5 | ProxyScheme::Socks5h => open_socks_tunnel(proxy, endpoint).await,
+    };
+    result.map_err(|source| Error::Proxy {
+        scheme: proxy.scheme(),
+        url: Box::new(endpoint.clone()),
+        source: Box::new(source),
+    })
+}
+
+async fn open_http_tunnel(
+    proxy: &ProxyConfig,
+    endpoint: &Url,
+    client: &Client,
+) -> std::result::Result<BoxedIo, ProxyError> {
+    let tcp = TcpStream::connect((proxy.host(), proxy.port()))
+        .await
+        .map_err(ProxyError::Io)?;
+    let mut transport: BoxedIo = if proxy.scheme() == ProxyScheme::Https {
+        let config = proxy_tls_config(client.accepts_invalid_certs())?;
+        let server_name = ServerName::try_from(proxy.host().to_owned()).map_err(|_| {
+            ProxyError::TlsConfiguration("proxy host is not a valid TLS server name".to_owned())
+        })?;
+        let tls = TlsConnector::from(config)
+            .connect(server_name, tcp)
+            .await
+            .map_err(ProxyError::Io)?;
+        Box::new(tls)
+    } else {
+        Box::new(tcp)
+    };
+
+    let authority = target_authority(endpoint)?;
+    let authentication = proxy
+        .credentials()
+        .map_or_else(String::new, |(username, password)| {
+            let encoded = BASE64_STANDARD.encode(format!("{username}:{password}"));
+            format!("Proxy-Authorization: Basic {encoded}\r\n")
+        });
+    let request = format!(
+        "CONNECT {authority} HTTP/1.1\r\nHost: {authority}\r\nUser-Agent: {}\r\n{authentication}\r\n",
+        client.user_agent()
+    );
+    transport
+        .write_all(request.as_bytes())
+        .await
+        .map_err(ProxyError::Io)?;
+    transport.flush().await.map_err(ProxyError::Io)?;
+    read_connect_response(&mut transport).await?;
+    Ok(transport)
+}
+
+async fn read_connect_response(transport: &mut BoxedIo) -> std::result::Result<(), ProxyError> {
+    let mut response = Vec::with_capacity(1024);
+    while !response.windows(4).any(|window| window == b"\r\n\r\n") {
+        if response.len() == MAX_CONNECT_RESPONSE_SIZE {
+            return Err(ProxyError::HttpResponseTooLarge {
+                limit: MAX_CONNECT_RESPONSE_SIZE,
+            });
+        }
+        let remaining = MAX_CONNECT_RESPONSE_SIZE - response.len();
+        let mut buffer = [0_u8; 1024];
+        let capacity = remaining.min(buffer.len());
+        let read = transport
+            .read(&mut buffer[..capacity])
+            .await
+            .map_err(ProxyError::Io)?;
+        if read == 0 {
+            return Err(ProxyError::InvalidHttpResponse);
+        }
+        response.extend_from_slice(&buffer[..read]);
+    }
+
+    let mut headers = [httparse::EMPTY_HEADER; 32];
+    let mut parsed = httparse::Response::new(&mut headers);
+    match parsed.parse(&response) {
+        Ok(httparse::Status::Complete(_)) => {}
+        Ok(httparse::Status::Partial) | Err(_) => return Err(ProxyError::InvalidHttpResponse),
+    }
+    let status = parsed
+        .code
+        .and_then(|code| StatusCode::from_u16(code).ok())
+        .ok_or(ProxyError::InvalidHttpResponse)?;
+    if !status.is_success() {
+        return Err(ProxyError::HttpStatus(status));
+    }
+    Ok(())
+}
+
+async fn open_socks_tunnel(
+    proxy: &ProxyConfig,
+    endpoint: &Url,
+) -> std::result::Result<BoxedIo, ProxyError> {
+    let host = endpoint.host_str().ok_or(ProxyError::InvalidHttpResponse)?;
+    let port = endpoint
+        .port_or_known_default()
+        .ok_or(ProxyError::InvalidHttpResponse)?;
+    if proxy.scheme().resolves_remotely() {
+        let target = TargetAddr::Domain(Cow::Owned(host.to_owned()), port);
+        return connect_socks(proxy, target)
+            .await
+            .map(|stream| Box::new(stream) as BoxedIo);
+    }
+
+    let addresses = lookup_host((host, port)).await.map_err(ProxyError::Io)?;
+    let mut last_error = None;
+    for address in addresses {
+        match connect_socks(proxy, TargetAddr::Ip(address)).await {
+            Ok(stream) => return Ok(Box::new(stream)),
+            Err(error) => last_error = Some(error),
+        }
+    }
+    Err(last_error.unwrap_or_else(|| {
+        ProxyError::Io(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "target hostname did not resolve",
+        ))
+    }))
+}
+
+async fn connect_socks(
+    proxy: &ProxyConfig,
+    target: TargetAddr<'_>,
+) -> std::result::Result<Socks5Stream<TcpStream>, ProxyError> {
+    let stream = match proxy.credentials() {
+        Some((username, password)) => {
+            Socks5Stream::connect_with_password(
+                (proxy.host(), proxy.port()),
+                target,
+                username,
+                password,
+            )
+            .await
+        }
+        None => Socks5Stream::connect((proxy.host(), proxy.port()), target).await,
+    }
+    .map_err(|source| ProxyError::Socks5(Box::new(source)))?;
+    Ok(stream)
+}
+
+fn target_address(endpoint: &Url) -> Result<(&str, u16)> {
+    let host = endpoint
+        .host_str()
+        .ok_or_else(|| Error::Configuration("WebSocket URL must contain a host".to_owned()))?;
+    let port = endpoint.port_or_known_default().ok_or_else(|| {
+        Error::Configuration("WebSocket URL must contain or imply a port".to_owned())
+    })?;
+    Ok((host, port))
+}
+
+fn target_authority(endpoint: &Url) -> std::result::Result<String, ProxyError> {
+    let host = endpoint.host().ok_or(ProxyError::InvalidHttpResponse)?;
+    let port = endpoint
+        .port_or_known_default()
+        .ok_or(ProxyError::InvalidHttpResponse)?;
+    Ok(match host {
+        Host::Ipv6(address) => format!("[{address}]:{port}"),
+        Host::Ipv4(address) => format!("{address}:{port}"),
+        Host::Domain(domain) => format!("{domain}:{port}"),
+    })
+}
+
+fn proxy_tls_config(
+    accept_invalid_certs: bool,
+) -> std::result::Result<Arc<ClientConfig>, ProxyError> {
+    if accept_invalid_certs {
+        return Ok(match insecure_rustls_connector() {
+            Connector::Rustls(config) => config,
+            _ => unreachable!("insecure connector is always rustls"),
+        });
+    }
+
+    let loaded = rustls_native_certs::load_native_certs();
+    if loaded.certs.is_empty() {
+        return Err(ProxyError::TlsConfiguration(
+            "no native root CA certificates were found".to_owned(),
+        ));
+    }
+    let mut roots = RootCertStore::empty();
+    roots.add_parsable_certificates(loaded.certs);
+    Ok(Arc::new(
+        ClientConfig::builder()
+            .with_root_certificates(roots)
+            .with_no_client_auth(),
+    ))
 }
 
 fn handshake_error(endpoint: Url, source: tokio_tungstenite::tungstenite::Error) -> Error {

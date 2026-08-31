@@ -18,6 +18,8 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   domain, path, secure, replacement, and expiry rules.
 - Exposed documented domain modules while retaining every concise crate-root
   re-export, making the large API navigable without breaking existing imports.
+- Raised the MSRV from Rust 1.85 to 1.88 so the cookie stack can use the
+  `time` release that fixes RUSTSEC-2026-0009.
 
 ### Added
 
@@ -78,6 +80,13 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   introspection helpers.
 - A compiled crate-level quick start, public API/trait contract tests, and an
   idempotency-aware error and retry guide.
+- A shared explicit outbound proxy API for panel HTTP, public subscriptions,
+  and WebSocket connections with HTTP, HTTPS, SOCKS5, and proxy-resolved
+  `socks5h` support, authentication, deterministic no-ambient-proxy behavior,
+  and stable proxy error introspection.
+- Protocol-level proxy tests covering panel CSRF/login cookies, subscription
+  downloads, authenticated HTTP CONNECT, SOCKS5 authentication, remote DNS,
+  and WebSocket events through real local tunnels.
 
 ### Security
 
@@ -102,3 +111,6 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - Prevented API bearer tokens from reaching `/ws`; redacted notification/Xray
   details, opaque event payloads, connection paths, cookie state, and socket
   internals from `Debug` while preserving explicit typed access.
+- Rejected credentials embedded in proxy URLs and kept proxy endpoints,
+  usernames, and passwords out of client/proxy `Debug` and WebSocket proxy
+  errors.

@@ -6,8 +6,8 @@ use reqwest::{Method, StatusCode};
 use url::Url;
 use xui_rs::{
     Client, ClientBuilder, ClientConfig, Error, ErrorKind, EventStream, InboundConfig, NodeRequest,
-    PanelEvent, PanelSettingsUpdate, Result, ServerStatus, SubscriptionClient,
-    SubscriptionClientBuilder, WebSocketClose,
+    PanelEvent, PanelSettingsUpdate, ProxyConfig, ProxyError, ProxyScheme, Result, ServerStatus,
+    SubscriptionClient, SubscriptionClientBuilder, WebSocketClose,
     auth::{AuthApi, LoginRequest},
     clients::{ClientPageRequest, ClientsApi},
     events::{EventMessageType, EventsApi},
@@ -32,8 +32,10 @@ fn core_and_accessor_types_keep_their_async_trait_contracts() {
     assert_send_sync::<ClientBuilder>();
     assert_send_sync::<SubscriptionClient>();
     assert_send_sync::<SubscriptionClientBuilder>();
+    assert_send_sync::<ProxyConfig>();
     assert_send_unpin::<EventStream>();
     assert_error::<Error>();
+    assert_error::<ProxyError>();
 
     assert_copy::<AuthApi<'static>>();
     assert_copy::<InboundsApi<'static>>();
@@ -50,6 +52,8 @@ fn core_and_accessor_types_keep_their_async_trait_contracts() {
     assert_debug::<PanelEvent>();
     assert_debug::<WebSocketClose>();
     assert_debug::<SubscriptionMetadata>();
+    assert_debug::<ProxyConfig>();
+    assert_copy::<ProxyScheme>();
 }
 
 #[test]

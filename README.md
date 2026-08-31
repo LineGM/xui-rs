@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/LineGM/xui-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/LineGM/xui-rs/actions/workflows/ci.yml)
 [![Coverage](https://coveralls.io/repos/github/LineGM/xui-rs/badge.svg?branch=main)](https://coveralls.io/github/LineGM/xui-rs?branch=main)
-[![MSRV](https://img.shields.io/badge/MSRV-1.85.0-dea584.svg)](https://www.rust-lang.org)
+[![MSRV](https://img.shields.io/badge/MSRV-1.88.0-dea584.svg)](https://www.rust-lang.org)
 [![3x-ui](https://img.shields.io/badge/3x--ui-v3.6.0-0ea5e9.svg)](https://github.com/MHSanaei/3x-ui/releases/tag/v3.6.0)
 [![License](https://img.shields.io/badge/license-Unlicense-blue.svg)](LICENSE)
 
@@ -26,6 +26,8 @@
 - Correct base-path handling for panels installed below a custom URL prefix.
 - Contract tests derived from the upstream 3x-ui API surface.
 - A typed, forward-compatible real-time stream with explicit reconnect semantics.
+- One explicit HTTP/HTTPS/SOCKS5 proxy configuration shared by HTTP,
+  subscriptions, and WebSocket transports.
 - Strict formatting, linting, documentation, MSRV, and cross-platform CI gates.
 
 ## Authentication
@@ -273,6 +275,33 @@ the runtime OpenAPI document and explicitly send a fresh database backup to
 configured Telegram administrators. See [the public subscription and
 panel-wide operations guide](docs/subscriptions.md).
 
+## Outbound proxies
+
+Panel HTTP, public subscriptions, and WebSocket connections support the same
+typed `ProxyConfig`. HTTP, HTTPS, SOCKS5 with local DNS, and `socks5h` with
+proxy-side DNS are supported, including Basic/username-password authentication.
+
+```rust,no_run
+use xui_rs::{Client, ProxyConfig};
+
+# fn example() -> xui_rs::Result<()> {
+let proxy = ProxyConfig::new("socks5h://proxy.example.com:1080")?
+    .with_basic_auth("service", "proxy-password")?;
+let client = Client::builder("https://panel.example.com/secret/")?
+    .proxy(proxy)
+    .build()?;
+# let _ = client;
+# Ok(())
+# }
+```
+
+Proxy credentials are separate from the credential-free URL and redacted from
+`Debug` and errors. Environment proxy variables are intentionally ignored, so
+HTTP and WebSocket routing stays deterministic. Cookies remain scoped to the
+target panel and continue to use the same standards-compliant jar through the
+proxy. See [the outbound proxy guide](docs/proxies.md) for DNS, TLS, timeout,
+and security behavior.
+
 ## Real-time events
 
 `Client::events()` covers the authenticated `/ws` handshake and all ten
@@ -340,7 +369,7 @@ for idempotency-aware recommendations and WebSocket recovery semantics.
 | `0.2.x` | `3.6.0` | Complete HTTP and WebSocket API; pre-1.0 stabilization |
 | `0.1.x` | legacy API | Superseded |
 
-Rust 1.85.0 is the minimum supported compiler. Development and CI use the
+Rust 1.88.0 is the minimum supported compiler. Development and CI use the
 pinned Rust 1.98.0 toolchain.
 
 ## Development
