@@ -10,14 +10,23 @@ use reqwest::{
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Serialize, de::DeserializeOwned};
 use tokio::sync::Mutex;
-use tracing::debug;
 use url::Url;
 
-use crate::{AuthApi, Error, ProxyConfig, Result, response::ApiResponse};
+use crate::{
+    AuthApi, Error, ProxyConfig, Result,
+    response::ApiResponse,
+    transport::{self, ErrorUrlPolicy},
+};
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 const DEFAULT_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const DEFAULT_USER_AGENT: &str = concat!("xui-rs/", env!("CARGO_PKG_VERSION"));
+
+/// Default maximum size of an ordinary panel API response body: 64 MiB.
+pub const DEFAULT_API_RESPONSE_BODY_LIMIT: usize = 64 * 1024 * 1024;
+
+/// Default maximum size of an explicit database or migration download: 512 MiB.
+pub const DEFAULT_DOWNLOAD_RESPONSE_BODY_LIMIT: usize = 512 * 1024 * 1024;
 
 #[derive(Clone, Copy)]
 pub(crate) enum AuthenticationScope {
@@ -36,7 +45,6 @@ pub enum AuthenticationKind {
 }
 
 /// Builder for [`Client`].
-#[derive(Debug)]
 #[must_use]
 pub struct ClientBuilder {
     base_url: Url,
@@ -46,6 +54,31 @@ pub struct ClientBuilder {
     user_agent: String,
     accept_invalid_certs: bool,
     proxy: Option<ProxyConfig>,
+    response_body_limit: usize,
+    download_body_limit: usize,
+}
+
+impl std::fmt::Debug for ClientBuilder {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("ClientBuilder")
+            .field("server_origin", &origin(&self.base_url))
+            .field(
+                "authentication",
+                &self
+                    .bearer_token
+                    .as_ref()
+                    .map(|_| AuthenticationKind::BearerToken),
+            )
+            .field("timeout", &self.timeout)
+            .field("connect_timeout", &self.connect_timeout)
+            .field("user_agent", &self.user_agent)
+            .field("accept_invalid_certs", &self.accept_invalid_certs)
+            .field("proxy", &self.proxy.as_ref().map(ProxyConfig::scheme))
+            .field("response_body_limit", &self.response_body_limit)
+            .field("download_body_limit", &self.download_body_limit)
+            .finish()
+    }
 }
 
 impl ClientBuilder {
@@ -58,6 +91,8 @@ impl ClientBuilder {
             user_agent: DEFAULT_USER_AGENT.to_owned(),
             accept_invalid_certs: false,
             proxy: None,
+            response_body_limit: DEFAULT_API_RESPONSE_BODY_LIMIT,
+            download_body_limit: DEFAULT_DOWNLOAD_RESPONSE_BODY_LIMIT,
         })
     }
 
@@ -121,6 +156,27 @@ impl ClientBuilder {
         self
     }
 
+    /// Sets the maximum in-memory size of an ordinary panel API response.
+    ///
+    /// Both declared `Content-Length` and actually received chunked or
+    /// decompressed bytes are checked. Set a deliberately larger value for
+    /// deployments whose client lists, logs, or runtime `OpenAPI` exceed the
+    /// safe 64 MiB default.
+    pub const fn response_body_limit(mut self, limit: usize) -> Self {
+        self.response_body_limit = limit;
+        self
+    }
+
+    /// Sets the maximum in-memory size of explicit database and migration
+    /// downloads.
+    ///
+    /// This is separate from [`Self::response_body_limit`] because backups are
+    /// expected to be substantially larger than structured API responses.
+    pub const fn download_body_limit(mut self, limit: usize) -> Self {
+        self.download_body_limit = limit;
+        self
+    }
+
     /// Builds the configured client.
     ///
     /// # Errors
@@ -170,6 +226,8 @@ impl ClientBuilder {
                 user_agent: self.user_agent,
                 accept_invalid_certs: self.accept_invalid_certs,
                 proxy: self.proxy,
+                response_body_limit: self.response_body_limit,
+                download_body_limit: self.download_body_limit,
             }),
         })
     }
@@ -185,9 +243,11 @@ impl std::fmt::Debug for Client {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("Client")
-            .field("base_url", &self.inner.base_url)
+            .field("server_origin", &origin(&self.inner.base_url))
             .field("authentication", &self.authentication_kind())
             .field("proxy", &self.inner.proxy.as_ref().map(ProxyConfig::scheme))
+            .field("response_body_limit", &self.inner.response_body_limit)
+            .field("download_body_limit", &self.inner.download_body_limit)
             .finish_non_exhaustive()
     }
 }
@@ -202,6 +262,8 @@ struct Inner {
     user_agent: String,
     accept_invalid_certs: bool,
     proxy: Option<ProxyConfig>,
+    response_body_limit: usize,
+    download_body_limit: usize,
 }
 
 impl Client {
@@ -236,6 +298,16 @@ impl Client {
         } else {
             AuthenticationKind::Session
         }
+    }
+
+    /// Returns the configured maximum ordinary API response body size.
+    pub fn response_body_limit(&self) -> usize {
+        self.inner.response_body_limit
+    }
+
+    /// Returns the configured maximum database/migration download size.
+    pub fn download_body_limit(&self) -> usize {
+        self.inner.download_body_limit
     }
 
     /// Accesses login, logout, 2FA, and CSRF operations.
@@ -451,12 +523,15 @@ impl Client {
             .execute_raw_once(method.clone(), url.clone(), scope, false, |request| request)
             .await?;
         let headers = response.headers().clone();
-        let bytes = response.bytes().await.map_err(|source| Error::Transport {
-            method,
-            url: Box::new(url),
-            source,
-        })?;
-        Ok((headers, bytes.to_vec()))
+        let bytes = transport::read_response_body(
+            response,
+            &method,
+            &url,
+            self.inner.download_body_limit,
+            ErrorUrlPolicy::Preserve,
+        )
+        .await?;
+        Ok((headers, bytes))
     }
 
     async fn execute_with<T, F>(
@@ -556,12 +631,15 @@ impl Client {
         } else {
             first?
         };
-        let bytes = response.bytes().await.map_err(|source| Error::Transport {
-            method: method.clone(),
-            url: Box::new(url.clone()),
-            source,
-        })?;
-        Ok((method, url, bytes.to_vec()))
+        let bytes = transport::read_response_body(
+            response,
+            &method,
+            &url,
+            self.inner.response_body_limit,
+            ErrorUrlPolicy::Preserve,
+        )
+        .await?;
+        Ok((method, url, bytes))
     }
 
     async fn execute_raw_once<F>(
@@ -585,12 +663,8 @@ impl Client {
         }
         request = configure(request);
 
-        debug!(%method, %url, "sending 3x-ui request");
-        let response = request.send().await.map_err(|source| Error::Transport {
-            method: method.clone(),
-            url: Box::new(url.clone()),
-            source,
-        })?;
+        let response =
+            transport::send_request(request, &method, &url, ErrorUrlPolicy::Preserve).await?;
         let status = response.status();
         match status {
             StatusCode::UNAUTHORIZED => Err(Error::Unauthorized {
@@ -625,17 +699,13 @@ impl Client {
 
         let method = Method::GET;
         let url = self.endpoint("csrf-token")?;
-        let response = self
-            .inner
-            .http
-            .get(url.clone())
-            .send()
-            .await
-            .map_err(|source| Error::Transport {
-                method: method.clone(),
-                url: Box::new(url.clone()),
-                source,
-            })?;
+        let response = transport::send_request(
+            self.inner.http.get(url.clone()),
+            &method,
+            &url,
+            ErrorUrlPolicy::Preserve,
+        )
+        .await?;
         let status = response.status();
         if !status.is_success() {
             return Err(Error::HttpStatus {
@@ -644,11 +714,14 @@ impl Client {
                 status,
             });
         }
-        let bytes = response.bytes().await.map_err(|source| Error::Transport {
-            method: method.clone(),
-            url: Box::new(url.clone()),
-            source,
-        })?;
+        let bytes = transport::read_response_body(
+            response,
+            &method,
+            &url,
+            self.inner.response_body_limit,
+            ErrorUrlPolicy::Preserve,
+        )
+        .await?;
         let envelope: ApiResponse<String> =
             serde_json::from_slice(&bytes).map_err(|source| Error::Decode {
                 method: method.clone(),
@@ -701,6 +774,14 @@ fn normalize_base_url(value: &str) -> Result<Url> {
     Ok(url)
 }
 
+fn origin(url: &Url) -> String {
+    let mut value = url.clone();
+    value.set_path("");
+    value.set_query(None);
+    value.set_fragment(None);
+    value.to_string().trim_end_matches('/').to_owned()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -744,14 +825,21 @@ mod tests {
     }
 
     #[test]
-    fn debug_output_never_contains_bearer_token() {
-        let client = Client::builder("https://panel.example.com")
+    fn debug_output_never_contains_bearer_token_or_secret_base_path() {
+        let builder = Client::builder("https://panel.example.com/private-panel-path")
             .unwrap()
-            .bearer_token("super-secret-token")
-            .build()
-            .unwrap();
+            .bearer_token("super-secret-token");
+        let builder_debug = format!("{builder:?}");
+        assert!(!builder_debug.contains("super-secret-token"));
+        assert!(!builder_debug.contains("private-panel-path"));
+        assert!(builder_debug.contains("panel.example.com"));
+        assert!(builder_debug.contains("BearerToken"));
+
+        let client = builder.build().unwrap();
         let debug = format!("{client:?}");
         assert!(!debug.contains("super-secret-token"));
+        assert!(!debug.contains("private-panel-path"));
+        assert!(debug.contains("panel.example.com"));
         assert!(debug.contains("BearerToken"));
     }
 

@@ -25,6 +25,10 @@ Thanks for helping build a reliable Rust SDK for 3x-ui.
   open-ended Xray configuration fragments.
 - Never include credentials, API tokens, cookies, CSRF tokens, or secret model
   fields in `Debug`, `Display`, tracing fields, or error response bodies.
+- Never read a response body without the shared bounded reader. Keep ordinary
+  API, explicit download, and public subscription limits semantically separate.
+- Transport tracing must not include origins, paths, queries, headers, bodies,
+  cookies, subscription identifiers, or other caller-controlled URL data.
 - Preserve custom panel base paths and percent-encode user-controlled path
   segments.
 - Mutating endpoints require both success and error contract tests.

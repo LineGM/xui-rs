@@ -87,6 +87,11 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - Protocol-level proxy tests covering panel CSRF/login cookies, subscription
   downloads, authenticated HTTP CONNECT, SOCKS5 authentication, remote DNS,
   and WebSocket events through real local tunnels.
+- Independently configurable response-body limits for ordinary panel APIs,
+  database downloads, and public subscriptions, with stable oversized-body
+  error introspection and safe defaults.
+- Correlated HTTP transport tracing with request IDs, methods, statuses,
+  outcomes, and response-header latency.
 
 ### Security
 
@@ -114,3 +119,8 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - Rejected credentials embedded in proxy URLs and kept proxy endpoints,
   usernames, and passwords out of client/proxy `Debug` and WebSocket proxy
   errors.
+- Bounded both declared and actually received HTTP response bytes, including
+  chunked and decompressed bodies, and omitted URLs, paths, queries, headers,
+  cookies, tokens, and bodies from transport tracing.
+- Reduced panel client and builder `Debug` output to the server origin so a
+  deployment's secret base path is not exposed.

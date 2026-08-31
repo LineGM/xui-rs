@@ -17,6 +17,9 @@ context consistently across HTTP and WebSocket operations:
 - `is_unauthorized()` and `is_forbidden()` identify authentication and CSRF or
   authorization failures;
 - `is_rate_limited()` identifies HTTP 429;
+- `is_response_too_large()`, `response_body_limit()`, and
+  `advertised_content_length()` expose bounded-body failures without matching
+  their variant;
 - `is_server_error()` identifies HTTP 5xx;
 - `is_timeout()` covers both `reqwest` timeouts and the WebSocket connection
   timeout.
@@ -83,3 +86,6 @@ provides structured access. Treat error values as diagnostic data and apply the
 application's privacy policy before sending them to shared logs or telemetry.
 Standalone subscription-client errors replace the secret subscription
 identifier with a fixed redacted segment.
+
+See the [transport guide](transport.md) for response-body limits and the
+privacy contract of SDK-generated `tracing` events.

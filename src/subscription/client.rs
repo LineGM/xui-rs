@@ -8,11 +8,17 @@ use super::{
     SubscriptionDocument, SubscriptionInfo, SubscriptionJson, SubscriptionMetadata,
     SubscriptionResponse,
 };
-use crate::{Error, ProxyConfig, Result, SubscriptionSettings};
+use crate::{
+    Error, ProxyConfig, Result, SubscriptionSettings,
+    transport::{self, ErrorUrlPolicy},
+};
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 const DEFAULT_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const DEFAULT_USER_AGENT: &str = concat!("xui-rs/", env!("CARGO_PKG_VERSION"));
+
+/// Default maximum public subscription response body size: 64 MiB.
+pub const DEFAULT_SUBSCRIPTION_RESPONSE_BODY_LIMIT: usize = 64 * 1024 * 1024;
 
 /// Builder for a public standalone [`SubscriptionClient`].
 #[must_use]
@@ -25,6 +31,7 @@ pub struct SubscriptionClientBuilder {
     connect_timeout: Duration,
     accept_invalid_certs: bool,
     proxy: Option<ProxyConfig>,
+    response_body_limit: usize,
 }
 
 impl SubscriptionClientBuilder {
@@ -38,6 +45,7 @@ impl SubscriptionClientBuilder {
             connect_timeout: DEFAULT_CONNECT_TIMEOUT,
             accept_invalid_certs: false,
             proxy: None,
+            response_body_limit: DEFAULT_SUBSCRIPTION_RESPONSE_BODY_LIMIT,
         })
     }
 
@@ -103,6 +111,15 @@ impl SubscriptionClientBuilder {
         self
     }
 
+    /// Sets the maximum in-memory size of a subscription response body.
+    ///
+    /// Both declared `Content-Length` and actually received chunked or
+    /// decompressed bytes are checked.
+    pub const fn response_body_limit(mut self, limit: usize) -> Self {
+        self.response_body_limit = limit;
+        self
+    }
+
     /// Builds the standalone client.
     ///
     /// # Errors
@@ -117,10 +134,13 @@ impl SubscriptionClientBuilder {
             raw_prefix,
             json_prefix,
             clash_prefix,
-            self.timeout,
-            self.connect_timeout,
-            self.accept_invalid_certs,
-            self.proxy.as_ref(),
+            SubscriptionTransportConfig {
+                timeout: self.timeout,
+                connect_timeout: self.connect_timeout,
+                accept_invalid_certs: self.accept_invalid_certs,
+                proxy: self.proxy.as_ref(),
+                response_body_limit: self.response_body_limit,
+            },
         )
     }
 }
@@ -137,6 +157,7 @@ impl std::fmt::Debug for SubscriptionClientBuilder {
             .field("connect_timeout", &self.connect_timeout)
             .field("accept_invalid_certs", &self.accept_invalid_certs)
             .field("proxy", &self.proxy.as_ref().map(ProxyConfig::scheme))
+            .field("response_body_limit", &self.response_body_limit)
             .finish()
     }
 }
@@ -152,6 +173,7 @@ pub struct SubscriptionClient {
     raw_prefix: Url,
     json_prefix: Url,
     clash_prefix: Url,
+    response_body_limit: usize,
 }
 
 impl SubscriptionClient {
@@ -198,10 +220,7 @@ impl SubscriptionClient {
             raw_prefix,
             json_prefix,
             clash_prefix,
-            DEFAULT_TIMEOUT,
-            DEFAULT_CONNECT_TIMEOUT,
-            false,
-            None,
+            SubscriptionTransportConfig::default(),
         )
     }
 
@@ -209,18 +228,15 @@ impl SubscriptionClient {
         raw_prefix: Url,
         json_prefix: Url,
         clash_prefix: Url,
-        timeout: Duration,
-        connect_timeout: Duration,
-        accept_invalid_certs: bool,
-        proxy: Option<&ProxyConfig>,
+        transport: SubscriptionTransportConfig<'_>,
     ) -> Result<Self> {
         let mut http_builder = reqwest::Client::builder()
             .no_proxy()
-            .timeout(timeout)
-            .connect_timeout(connect_timeout)
+            .timeout(transport.timeout)
+            .connect_timeout(transport.connect_timeout)
             .user_agent(DEFAULT_USER_AGENT)
-            .danger_accept_invalid_certs(accept_invalid_certs);
-        if let Some(proxy) = proxy {
+            .danger_accept_invalid_certs(transport.accept_invalid_certs);
+        if let Some(proxy) = transport.proxy {
             http_builder = http_builder.proxy(proxy.reqwest_proxy()?);
         }
         let http = http_builder
@@ -231,7 +247,13 @@ impl SubscriptionClient {
             raw_prefix,
             json_prefix,
             clash_prefix,
+            response_body_limit: transport.response_body_limit,
         })
+    }
+
+    /// Returns the configured maximum subscription response body size.
+    pub const fn response_body_limit(&self) -> usize {
+        self.response_body_limit
     }
 
     /// Fetches the raw subscription body.
@@ -420,17 +442,15 @@ impl SubscriptionClient {
             url.query_pairs_mut().append_pair(key, value);
             redacted_url.query_pairs_mut().append_pair(key, value);
         }
-        let response = self
-            .http
-            .request(method.clone(), url)
-            .header(header::ACCEPT, accept)
-            .send()
-            .await
-            .map_err(|source| Error::Transport {
-                method: method.clone(),
-                url: Box::new(redacted_url.clone()),
-                source: source.without_url(),
-            })?;
+        let response = transport::send_request(
+            self.http
+                .request(method.clone(), url)
+                .header(header::ACCEPT, accept),
+            &method,
+            &redacted_url,
+            ErrorUrlPolicy::Redact,
+        )
+        .await?;
         let status = response.status();
         if !status.is_success() {
             return Err(Error::HttpStatus {
@@ -440,12 +460,36 @@ impl SubscriptionClient {
             });
         }
         let headers = response.headers().clone();
-        let bytes = response.bytes().await.map_err(|source| Error::Transport {
-            method: method.clone(),
-            url: Box::new(redacted_url.clone()),
-            source: source.without_url(),
-        })?;
-        Ok((headers, bytes.to_vec(), method, redacted_url))
+        let bytes = transport::read_response_body(
+            response,
+            &method,
+            &redacted_url,
+            self.response_body_limit,
+            ErrorUrlPolicy::Redact,
+        )
+        .await?;
+        Ok((headers, bytes, method, redacted_url))
+    }
+}
+
+#[derive(Clone, Copy)]
+struct SubscriptionTransportConfig<'proxy> {
+    timeout: Duration,
+    connect_timeout: Duration,
+    accept_invalid_certs: bool,
+    proxy: Option<&'proxy ProxyConfig>,
+    response_body_limit: usize,
+}
+
+impl Default for SubscriptionTransportConfig<'_> {
+    fn default() -> Self {
+        Self {
+            timeout: DEFAULT_TIMEOUT,
+            connect_timeout: DEFAULT_CONNECT_TIMEOUT,
+            accept_invalid_certs: false,
+            proxy: None,
+            response_body_limit: DEFAULT_SUBSCRIPTION_RESPONSE_BODY_LIMIT,
+        }
     }
 }
 
@@ -455,6 +499,7 @@ impl std::fmt::Debug for SubscriptionClient {
             .debug_struct("SubscriptionClient")
             .field("server_origin", &origin(&self.raw_prefix))
             .field("paths", &"[REDACTED]")
+            .field("response_body_limit", &self.response_body_limit)
             .finish_non_exhaustive()
     }
 }

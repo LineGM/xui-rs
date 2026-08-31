@@ -25,6 +25,8 @@ pub enum ErrorKind {
     HttpStatus,
     /// HTTP transport or response-body IO failure.
     Transport,
+    /// HTTP response body exceeded its configured memory limit.
+    ResponseTooLarge,
     /// Request serialization failure.
     Encode,
     /// Application-level rejection in a successful HTTP response.
@@ -56,6 +58,7 @@ impl ErrorKind {
             Self::Forbidden => "forbidden",
             Self::HttpStatus => "http_status",
             Self::Transport => "transport",
+            Self::ResponseTooLarge => "response_too_large",
             Self::Encode => "encode",
             Self::Api => "api",
             Self::Decode => "decode",
@@ -123,6 +126,19 @@ pub enum Error {
         /// Underlying HTTP client error.
         #[source]
         source: reqwest::Error,
+    },
+
+    /// The response body exceeded the configured in-memory size limit.
+    #[error("response from {method} {url} exceeded the {limit}-byte body limit")]
+    ResponseTooLarge {
+        /// HTTP method used for the request.
+        method: Method,
+        /// Request URL, redacted for public subscription routes.
+        url: Box<Url>,
+        /// Configured maximum response body size in bytes.
+        limit: usize,
+        /// Server-advertised body size, when a `Content-Length` was present.
+        content_length: Option<u64>,
     },
 
     /// A request value could not be encoded in the endpoint's wire format.
@@ -240,6 +256,7 @@ impl Error {
             Self::Forbidden { .. } => ErrorKind::Forbidden,
             Self::HttpStatus { .. } => ErrorKind::HttpStatus,
             Self::Transport { .. } => ErrorKind::Transport,
+            Self::ResponseTooLarge { .. } => ErrorKind::ResponseTooLarge,
             Self::Encode { .. } => ErrorKind::Encode,
             Self::Api { .. } => ErrorKind::Api,
             Self::Decode { .. } => ErrorKind::Decode,
@@ -274,6 +291,7 @@ impl Error {
             | Self::Forbidden { method, .. }
             | Self::HttpStatus { method, .. }
             | Self::Transport { method, .. }
+            | Self::ResponseTooLarge { method, .. }
             | Self::Api { method, .. }
             | Self::Decode { method, .. }
             | Self::Utf8 { method, .. }
@@ -289,6 +307,7 @@ impl Error {
             | Self::Forbidden { url, .. }
             | Self::HttpStatus { url, .. }
             | Self::Transport { url, .. }
+            | Self::ResponseTooLarge { url, .. }
             | Self::Api { url, .. }
             | Self::Decode { url, .. }
             | Self::Utf8 { url, .. }
@@ -314,6 +333,27 @@ impl Error {
     /// Returns `true` when the panel asked the caller to slow down.
     pub const fn is_rate_limited(&self) -> bool {
         matches!(self.status(), Some(StatusCode::TOO_MANY_REQUESTS))
+    }
+
+    /// Returns `true` when the response body exceeded its configured limit.
+    pub const fn is_response_too_large(&self) -> bool {
+        matches!(self, Self::ResponseTooLarge { .. })
+    }
+
+    /// Returns the configured response body limit that was exceeded.
+    pub const fn response_body_limit(&self) -> Option<usize> {
+        match self {
+            Self::ResponseTooLarge { limit, .. } => Some(*limit),
+            _ => None,
+        }
+    }
+
+    /// Returns the server-advertised `Content-Length` for an oversized body.
+    pub const fn advertised_content_length(&self) -> Option<u64> {
+        match self {
+            Self::ResponseTooLarge { content_length, .. } => *content_length,
+            _ => None,
+        }
     }
 
     /// Returns `true` for an HTTP 5xx response.

@@ -116,6 +116,20 @@ fn error_introspection_does_not_require_destructuring_variants() {
     };
     assert!(unavailable.is_server_error());
 
+    let oversized = Error::ResponseTooLarge {
+        method: Method::GET,
+        url: Box::new(url.clone()),
+        limit: 1024,
+        content_length: Some(2048),
+    };
+    assert_eq!(oversized.kind(), ErrorKind::ResponseTooLarge);
+    assert_eq!(oversized.kind().as_str(), "response_too_large");
+    assert!(oversized.is_response_too_large());
+    assert_eq!(oversized.response_body_limit(), Some(1024));
+    assert_eq!(oversized.advertised_content_length(), Some(2048));
+    assert_eq!(oversized.method(), Some(&Method::GET));
+    assert_eq!(oversized.url(), Some(&url));
+
     let timeout = Error::WebSocketConnectTimeout {
         url: Box::new(url),
         timeout: Duration::from_secs(10),

@@ -46,6 +46,7 @@ url = "2.5.8"
 
 [dev-dependencies]
 tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }
+tracing-subscriber = { version = "0.3.23", features = ["fmt"] }
 wiremock = "0.6.5"
 
 [package.metadata.docs.rs]

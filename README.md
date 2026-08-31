@@ -302,6 +302,36 @@ target panel and continue to use the same standards-compliant jar through the
 proxy. See [the outbound proxy guide](docs/proxies.md) for DNS, TLS, timeout,
 and security behavior.
 
+## Transport safety and observability
+
+Response bodies are bounded in memory even when a server uses chunked transfer
+encoding or reports an incorrect length. Ordinary panel API and public
+subscription responses default to 64 MiB; explicit database downloads have an
+independent 512 MiB default. All three limits are configurable.
+
+```rust,no_run
+use xui_rs::{Client, SubscriptionClient};
+
+# fn example() -> xui_rs::Result<()> {
+let panel = Client::builder("https://panel.example.com/secret/")?
+    .response_body_limit(16 * 1024 * 1024)
+    .download_body_limit(1024 * 1024 * 1024)
+    .build()?;
+let subscriptions = SubscriptionClient::builder("https://panel.example.com")?
+    .response_body_limit(32 * 1024 * 1024)
+    .build()?;
+# let _ = (panel, subscriptions);
+# Ok(())
+# }
+```
+
+Oversized responses return the typed `ErrorKind::ResponseTooLarge`. Optional
+`tracing` events correlate a request with its response headers using a request
+ID, method, status, outcome, and latency while deliberately omitting URLs,
+paths, queries, headers, cookies, tokens, and bodies. See the
+[transport safety and observability guide](docs/transport.md) for exact
+semantics and introspection.
+
 ## Real-time events
 
 `Client::events()` covers the authenticated `/ws` handshake and all ten

@@ -40,6 +40,7 @@ pub mod nodes;
 pub mod panel;
 pub mod proxy;
 mod response;
+mod transport;
 
 #[cfg(test)]
 mod remaining_http_contract_tests;
@@ -49,7 +50,10 @@ pub mod settings;
 pub mod subscription;
 
 pub use auth::{AuthApi, CsrfToken, LoginRequest};
-pub use client::{AuthenticationKind, Client, ClientBuilder};
+pub use client::{
+    AuthenticationKind, Client, ClientBuilder, DEFAULT_API_RESPONSE_BODY_LIMIT,
+    DEFAULT_DOWNLOAD_RESPONSE_BODY_LIMIT,
+};
 pub use clients::{
     ActiveInboundsByGuid, AffectedCount, BulkAdjustRequest, BulkAdjustResult, BulkAttachResult,
     BulkClientIssue, BulkCreateResult, BulkDeleteResult, BulkDetachResult, BulkFlowAdjustment,
@@ -102,7 +106,7 @@ pub use settings::{
     UserCredentialsUpdate, WarpRegistration, WebSettings, XraySettingsApi, XraySettingsSnapshot,
 };
 pub use subscription::{
-    SubscriptionClient, SubscriptionClientBuilder, SubscriptionDecodeError, SubscriptionDocument,
-    SubscriptionInfo, SubscriptionJson, SubscriptionMetadata, SubscriptionResponse,
-    SubscriptionTraffic,
+    DEFAULT_SUBSCRIPTION_RESPONSE_BODY_LIMIT, SubscriptionClient, SubscriptionClientBuilder,
+    SubscriptionDecodeError, SubscriptionDocument, SubscriptionInfo, SubscriptionJson,
+    SubscriptionMetadata, SubscriptionResponse, SubscriptionTraffic,
 };
