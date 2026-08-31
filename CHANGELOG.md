@@ -102,7 +102,8 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   multithreaded-runtime-safe endpoint futures.
 - A release-engineering pipeline with immutable Action pins, package and public
   API gates, PR-base SemVer checks, protected tag releases, crates.io trusted
-  publishing, reproducible crate comparison, and signed SLSA provenance.
+  publishing, checksum-verified workflow tooling, reproducible crate
+  comparison, and signed SLSA provenance.
 
 ### Security
 

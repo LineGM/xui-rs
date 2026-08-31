@@ -29,7 +29,6 @@ jobs:
       - name: Install Rust 1.98.0
         uses: dtolnay/rust-toolchain@f8be11a05b1d4f3fcebe6410cc16743212b999b0 # 1.98.0
         with:
-          toolchain: 1.98.0
           components: clippy,rustfmt
       - name: Cache Rust build data
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -57,8 +56,6 @@ jobs:
           persist-credentials: false
       - name: Install Rust 1.98.0
         uses: dtolnay/rust-toolchain@f8be11a05b1d4f3fcebe6410cc16743212b999b0 # 1.98.0
-        with:
-          toolchain: 1.98.0
       - name: Cache Rust build data
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: Test all targets
@@ -74,9 +71,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install Rust 1.88.0
-        uses: dtolnay/rust-toolchain@f8be11a05b1d4f3fcebe6410cc16743212b999b0 # 1.98.0 action
-        with:
-          toolchain: 1.88.0
+        uses: dtolnay/rust-toolchain@2eae45db285e407f22119950686d47e1101e071b # 1.88.0
       - name: Cache Rust build data
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: Check library on the MSRV
@@ -93,12 +88,8 @@ jobs:
           persist-credentials: false
       - name: Install Rust 1.98.0
         uses: dtolnay/rust-toolchain@f8be11a05b1d4f3fcebe6410cc16743212b999b0 # 1.98.0
-        with:
-          toolchain: 1.98.0
       - name: Install pinned nightly
-        uses: dtolnay/rust-toolchain@f8be11a05b1d4f3fcebe6410cc16743212b999b0 # 1.98.0 action
-        with:
-          toolchain: nightly-2026-08-31
+        run: rustup toolchain install nightly-2026-08-31 --profile minimal
       - name: Cache Rust build data
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: Install cargo-public-api
@@ -136,9 +127,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install actionlint
-        uses: taiki-e/install-action@1ed6d7be6168f6c9046541087ff549b6bc581fdf # v2.87.2
-        with:
-          tool: actionlint@1.7.12
+        run: sh scripts/install-actionlint.sh
       - name: Lint GitHub Actions workflows
         run: actionlint
       - name: Check advisories, licenses, bans, and sources
@@ -156,7 +145,6 @@ jobs:
       - name: Install Rust 1.98.0
         uses: dtolnay/rust-toolchain@f8be11a05b1d4f3fcebe6410cc16743212b999b0 # 1.98.0
         with:
-          toolchain: 1.98.0
           components: llvm-tools-preview
       - name: Cache Rust build data
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
