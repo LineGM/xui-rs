@@ -99,7 +99,7 @@ jobs:
       - name: Check public API snapshot
         run: scripts/public-api.sh check
       - name: Verify publishable package
-        run: cargo package --locked
+        run: cargo package --locked --target-dir "$RUNNER_TEMP/package-target"
 
   semver:
     name: SemVer compatibility

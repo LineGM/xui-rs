@@ -72,12 +72,12 @@ jobs:
       - name: Check advisories, licenses, bans, and sources
         uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
       - name: Build publishable crate
-        run: cargo package --locked
+        run: cargo package --locked --target-dir "$RUNNER_TEMP/package-target"
       - name: Upload crate artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: xui-rs-${{ steps.version.outputs.version }}
-          path: target/package/xui-rs-${{ steps.version.outputs.version }}.crate
+          path: ${{ runner.temp }}/package-target/package/xui-rs-${{ steps.version.outputs.version }}.crate
           if-no-files-found: error
           retention-days: 30
 
