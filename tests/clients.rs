@@ -312,6 +312,7 @@ async fn every_v360_client_and_group_route_is_wired() {
         .build()
         .unwrap();
     let emails = vec!["alice".to_owned()];
+    let email_refs = ["alice"];
     let config = ClientConfig::new("alice");
     let create = ClientCreateRequest::new(config.clone(), vec![7]);
 
@@ -413,13 +414,9 @@ async fn every_v360_client_and_group_route_is_wired() {
         1
     );
     assert_eq!(
-        client.clients().bulk_enable(&emails).await.unwrap().changed,
-        1
-    );
-    assert_eq!(
         client
             .clients()
-            .bulk_disable(&emails)
+            .bulk_enable(&email_refs)
             .await
             .unwrap()
             .changed,
@@ -428,7 +425,16 @@ async fn every_v360_client_and_group_route_is_wired() {
     assert_eq!(
         client
             .clients()
-            .bulk_delete(&emails, false)
+            .bulk_disable(&email_refs)
+            .await
+            .unwrap()
+            .changed,
+        1
+    );
+    assert_eq!(
+        client
+            .clients()
+            .bulk_delete(&email_refs, false)
             .await
             .unwrap()
             .deleted,
@@ -446,7 +452,7 @@ async fn every_v360_client_and_group_route_is_wired() {
     assert_eq!(
         client
             .clients()
-            .bulk_attach(&emails, &[7])
+            .bulk_attach(&email_refs, &[7])
             .await
             .unwrap()
             .attached,
@@ -455,7 +461,7 @@ async fn every_v360_client_and_group_route_is_wired() {
     assert_eq!(
         client
             .clients()
-            .bulk_detach(&emails, &[7])
+            .bulk_detach(&email_refs, &[7])
             .await
             .unwrap()
             .detached,
@@ -464,7 +470,7 @@ async fn every_v360_client_and_group_route_is_wired() {
     assert_eq!(
         client
             .clients()
-            .bulk_reset_traffic(&emails)
+            .bulk_reset_traffic(&email_refs)
             .await
             .unwrap()
             .affected,
@@ -528,7 +534,7 @@ async fn every_v360_client_and_group_route_is_wired() {
     assert_eq!(
         client
             .clients()
-            .add_to_group(&emails, "tier")
+            .add_to_group(&email_refs, "tier")
             .await
             .unwrap()
             .affected,
@@ -537,7 +543,7 @@ async fn every_v360_client_and_group_route_is_wired() {
     assert_eq!(
         client
             .clients()
-            .remove_from_group(&emails)
+            .remove_from_group(&email_refs)
             .await
             .unwrap()
             .affected,

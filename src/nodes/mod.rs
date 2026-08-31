@@ -7,4 +7,8 @@ mod models;
 mod contract_tests;
 
 pub use api::NodesApi;
-pub use models::*;
+pub use models::{
+    NodeInboundSyncMode, NodeMetric, NodeMtlsCa, NodeProbeResult, NodeRequest, NodeScheme,
+    NodeStatus, NodeTlsVerifyMode, NodeUpdateChannel, NodeUpdateResult, NodeView,
+    RemoteInboundOption, RemoteInboundProtocol,
+};

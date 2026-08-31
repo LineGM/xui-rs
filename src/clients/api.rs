@@ -330,8 +330,9 @@ impl<'client> ClientsApi<'client> {
     /// # Errors
     ///
     /// Returns an error when the bulk operation or decoding fails.
-    pub async fn bulk_enable(self, emails: &[String]) -> Result<BulkSetEnabledResult> {
-        self.post_object("bulkEnable", Some(&EmailsBody { emails }))
+    pub async fn bulk_enable(self, emails: &[impl AsRef<str>]) -> Result<BulkSetEnabledResult> {
+        let emails = owned_strings(emails);
+        self.post_object("bulkEnable", Some(&EmailsBody { emails: &emails }))
             .await
     }
 
@@ -340,8 +341,9 @@ impl<'client> ClientsApi<'client> {
     /// # Errors
     ///
     /// Returns an error when the bulk operation or decoding fails.
-    pub async fn bulk_disable(self, emails: &[String]) -> Result<BulkSetEnabledResult> {
-        self.post_object("bulkDisable", Some(&EmailsBody { emails }))
+    pub async fn bulk_disable(self, emails: &[impl AsRef<str>]) -> Result<BulkSetEnabledResult> {
+        let emails = owned_strings(emails);
+        self.post_object("bulkDisable", Some(&EmailsBody { emails: &emails }))
             .await
     }
 
@@ -352,7 +354,7 @@ impl<'client> ClientsApi<'client> {
     /// Returns an error when the bulk operation or decoding fails.
     pub async fn bulk_delete(
         self,
-        emails: &[String],
+        emails: &[impl AsRef<str>],
         keep_traffic: bool,
     ) -> Result<BulkDeleteResult> {
         #[derive(Serialize)]
@@ -362,10 +364,11 @@ impl<'client> ClientsApi<'client> {
             keep_traffic: bool,
         }
 
+        let emails = owned_strings(emails);
         self.post_object(
             "bulkDel",
             Some(&Body {
-                emails,
+                emails: &emails,
                 keep_traffic,
             }),
         )
@@ -388,13 +391,14 @@ impl<'client> ClientsApi<'client> {
     /// Returns an error when the bulk operation or decoding fails.
     pub async fn bulk_attach(
         self,
-        emails: &[String],
+        emails: &[impl AsRef<str>],
         inbound_ids: &[i64],
     ) -> Result<BulkAttachResult> {
+        let emails = owned_strings(emails);
         self.post_object(
             "bulkAttach",
             Some(&BulkAttachmentBody {
-                emails,
+                emails: &emails,
                 inbound_ids,
             }),
         )
@@ -408,13 +412,14 @@ impl<'client> ClientsApi<'client> {
     /// Returns an error when the bulk operation or decoding fails.
     pub async fn bulk_detach(
         self,
-        emails: &[String],
+        emails: &[impl AsRef<str>],
         inbound_ids: &[i64],
     ) -> Result<BulkDetachResult> {
+        let emails = owned_strings(emails);
         self.post_object(
             "bulkDetach",
             Some(&BulkAttachmentBody {
-                emails,
+                emails: &emails,
                 inbound_ids,
             }),
         )
@@ -426,8 +431,9 @@ impl<'client> ClientsApi<'client> {
     /// # Errors
     ///
     /// Returns an error when the bulk reset or decoding fails.
-    pub async fn bulk_reset_traffic(self, emails: &[String]) -> Result<AffectedCount> {
-        self.post_object("bulkResetTraffic", Some(&EmailsBody { emails }))
+    pub async fn bulk_reset_traffic(self, emails: &[impl AsRef<str>]) -> Result<AffectedCount> {
+        let emails = owned_strings(emails);
+        self.post_object("bulkResetTraffic", Some(&EmailsBody { emails: &emails }))
             .await
     }
 
@@ -617,15 +623,26 @@ impl<'client> ClientsApi<'client> {
     /// # Errors
     ///
     /// Returns an error when validation, update, or decoding fails.
-    pub async fn add_to_group(self, emails: &[String], group: &str) -> Result<AffectedCount> {
+    pub async fn add_to_group(
+        self,
+        emails: &[impl AsRef<str>],
+        group: &str,
+    ) -> Result<AffectedCount> {
         #[derive(Serialize)]
         struct Body<'a> {
             emails: &'a [String],
             group: &'a str,
         }
 
-        self.post_object("groups/bulkAdd", Some(&Body { emails, group }))
-            .await
+        let emails = owned_strings(emails);
+        self.post_object(
+            "groups/bulkAdd",
+            Some(&Body {
+                emails: &emails,
+                group,
+            }),
+        )
+        .await
     }
 
     /// Removes the group label from multiple clients.
@@ -633,8 +650,9 @@ impl<'client> ClientsApi<'client> {
     /// # Errors
     ///
     /// Returns an error when update or decoding fails.
-    pub async fn remove_from_group(self, emails: &[String]) -> Result<AffectedCount> {
-        self.post_object("groups/bulkRemove", Some(&EmailsBody { emails }))
+    pub async fn remove_from_group(self, emails: &[impl AsRef<str>]) -> Result<AffectedCount> {
+        let emails = owned_strings(emails);
+        self.post_object("groups/bulkRemove", Some(&EmailsBody { emails: &emails }))
             .await
     }
 
@@ -716,6 +734,13 @@ struct EmailsBody<'a> {
 struct BulkAttachmentBody<'a> {
     emails: &'a [String],
     inbound_ids: &'a [i64],
+}
+
+fn owned_strings(values: &[impl AsRef<str>]) -> Vec<String> {
+    values
+        .iter()
+        .map(|value| value.as_ref().to_owned())
+        .collect()
 }
 
 #[derive(Serialize)]

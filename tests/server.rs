@@ -240,15 +240,25 @@ async fn every_v360_server_route_is_wired() {
             "/panel/api/server/scanRealityTarget",
             Some(reality_json()),
         ),
-        (
-            Method::POST,
-            "/panel/api/server/scanRealityTargets",
-            Some(json!([reality_json()])),
-        ),
         (Method::POST, "/panel/api/server/clientIps", None),
     ];
     for (method, path, object) in routes {
         mount_json(&server, method, path, object).await;
+    }
+
+    for body in ["targets=example.com%3A443", "targets="] {
+        Mock::given(matchers::method("POST"))
+            .and(matchers::path("/panel/api/server/scanRealityTargets"))
+            .and(matchers::header("authorization", "Bearer api-secret"))
+            .and(matchers::body_string(body))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "success": true,
+                "msg": "success",
+                "obj": [reality_json()]
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
     }
 
     for (path, filename, bytes) in [
@@ -384,9 +394,10 @@ async fn every_v360_server_route_is_wired() {
         .await
         .unwrap();
     assert!(scan.tls13);
-    api.scan_reality_targets(&["example.com:443".to_owned()])
+    api.scan_reality_targets(&["example.com:443"])
         .await
         .unwrap();
+    api.scan_default_reality_targets().await.unwrap();
     api.merge_client_ips(&[ClientIpRecord {
         id: 0,
         client_email: "alice@example.com".to_owned(),

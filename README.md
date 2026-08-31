@@ -25,6 +25,7 @@
 - API-token and cookie-session authentication with secrets redacted by default.
 - Correct base-path handling for panels installed below a custom URL prefix.
 - Contract tests derived from the upstream 3x-ui API surface.
+- A reviewed rustdoc API baseline and exhaustive downstream re-export contract.
 - A typed, forward-compatible real-time stream with explicit reconnect semantics.
 - One explicit HTTP/HTTPS/SOCKS5 proxy configuration shared by HTTP,
   subscriptions, and WebSocket transports.
@@ -391,6 +392,17 @@ fn action(error: &Error) -> &'static str {
 The SDK never retries API mutations implicitly: a timeout does not prove that
 the server failed to apply a request. See [the error and retry guide](docs/errors.md)
 for idempotency-aware recommendations and WebSocket recovery semantics.
+
+## API stability
+
+The complete proposed 1.0 Rust surface is recorded in a reproducible rustdoc
+snapshot. Downstream contract tests compile every concise crate-root re-export,
+important trait guarantee, and representative multithreaded-runtime future.
+Extensible enums are non-exhaustive, so matches should retain a wildcard arm.
+
+See the [API stability policy](docs/api-stability.md) for the exact 1.x SemVer
+guarantees and the boundary between Rust source compatibility and upstream
+3x-ui server behavior.
 
 ## Compatibility
 

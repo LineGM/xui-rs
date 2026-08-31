@@ -969,6 +969,7 @@ impl fmt::Debug for OutboundSubscriptionInput {
 
 /// Direction used to reorder an outbound subscription.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
 pub enum MoveDirection {
     /// Move toward lower priority numbers.
     Up,

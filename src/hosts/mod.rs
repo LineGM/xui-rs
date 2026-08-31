@@ -7,4 +7,7 @@ mod models;
 mod contract_tests;
 
 pub use api::HostsApi;
-pub use models::*;
+pub use models::{
+    HostGroup, HostJsonOverride, HostOptions, HostRow, HostSecurity, MihomoIpVersion,
+    SubscriptionFormat, VlessRoute,
+};

@@ -18,9 +18,24 @@ Thanks for helping build a reliable Rust SDK for 3x-ui.
    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
    ```
 
+5. Check the proposed 1.0 public contract when changing any public item:
+
+   ```console
+   cargo +1.98.0 install cargo-public-api --version 0.52.0 --locked
+   rustup toolchain install nightly-2026-08-31 --profile minimal
+   scripts/public-api.sh check
+   ```
+
+   Only run `scripts/public-api.sh update` after reviewing the complete diff
+   and deciding that the change belongs in the next compatible release.
+
 ## API implementation rules
 
 - Treat the pinned 3x-ui OpenAPI document and v3.6.0 source as the contract.
+- Use explicit domain re-exports; a glob can accidentally make a helper part of
+  the permanent public API.
+- Mark enums that may gain variants `#[non_exhaustive]`, and prefer generic
+  borrowed inputs such as `&[impl AsRef<str>]` over forcing caller allocations.
 - Prefer explicit Rust types; use `serde_json::Value` only for intentionally
   open-ended Xray configuration fragments.
 - Never include credentials, API tokens, cookies, CSRF tokens, or secret model

@@ -20,6 +20,11 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   re-export, making the large API navigable without breaking existing imports.
 - Raised the MSRV from Rust 1.85 to 1.88 so the cookie stack can use the
   `time` release that fixes RUSTSEC-2026-0009.
+- Made every extensible public enum non-exhaustive and replaced domain glob
+  re-exports with explicit, reviewed export lists before the 1.0 API freeze.
+- Generalized client bulk operations and REALITY batch scans to accept borrowed
+  string-like slices instead of requiring caller-owned `String` values, with a
+  dedicated empty-seed REALITY convenience method.
 
 ### Added
 
@@ -92,6 +97,9 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   error introspection and safe defaults.
 - Correlated HTTP transport tracing with request IDs, methods, statuses,
   outcomes, and response-header latency.
+- A reproducible rustdoc snapshot of the complete proposed 1.0 surface plus an
+  exhaustive downstream contract for root re-exports, traits, constants, and
+  multithreaded-runtime-safe endpoint futures.
 
 ### Security
 

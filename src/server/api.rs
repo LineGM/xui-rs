@@ -353,7 +353,10 @@ impl<'client> ServerApi<'client> {
     /// # Errors
     ///
     /// Returns an error when live probes or decoding fail.
-    pub async fn scan_reality_targets(self, targets: &[String]) -> Result<Vec<RealityScanResult>> {
+    pub async fn scan_reality_targets(
+        self,
+        targets: &[impl AsRef<str>],
+    ) -> Result<Vec<RealityScanResult>> {
         #[derive(Serialize)]
         struct Form {
             targets: String,
@@ -362,10 +365,26 @@ impl<'client> ServerApi<'client> {
         self.post_form_object(
             "scanRealityTargets",
             &Form {
-                targets: targets.join(","),
+                targets: targets
+                    .iter()
+                    .map(AsRef::as_ref)
+                    .collect::<Vec<_>>()
+                    .join(","),
             },
         )
         .await
+    }
+
+    /// Probes the panel's built-in REALITY target seed list.
+    ///
+    /// This is the unambiguous convenience form of
+    /// [`Self::scan_reality_targets`] for the upstream empty-list behavior.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when live probes or decoding fail.
+    pub async fn scan_default_reality_targets(self) -> Result<Vec<RealityScanResult>> {
+        self.scan_reality_targets(&[] as &[&str]).await
     }
 
     /// Returns the cluster-wide recently observed client IP table.

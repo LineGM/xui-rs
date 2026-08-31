@@ -14,9 +14,11 @@ documentation = "https://docs.rs/xui-rs"
 keywords = ["3x-ui", "xray", "sdk", "api", "async"]
 categories = ["api-bindings", "web-programming::http-client"]
 include = [
+    "api/**",
     "src/**",
     "docs/**",
     "examples/**",
+    "scripts/public-api.sh",
     "tests/**",
     "spec/**",
     "Cargo.toml",

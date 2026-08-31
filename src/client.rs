@@ -37,6 +37,7 @@ pub(crate) enum AuthenticationScope {
 
 /// Authentication mechanism used for protected panel endpoints.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum AuthenticationKind {
     /// Signed session cookies obtained through `/login`.
     Session,
