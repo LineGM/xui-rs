@@ -429,6 +429,16 @@ scripts/public-api.sh check
 cargo package --locked --allow-dirty
 ```
 
+The opt-in real-panel gate runs the ignored integration target against an
+isolated, digest-pinned 3x-ui v3.6.0 container:
+
+```console
+scripts/live-test.sh
+```
+
+See [the live-testing guide](docs/live-testing.md) for its isolation model,
+cookie/WebSocket coverage, mutation guard, and manual target configuration.
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and
 [SECURITY.md](SECURITY.md) for private vulnerability reporting. Maintainers
 should follow the [OIDC-based release procedure](docs/releasing.md); releases

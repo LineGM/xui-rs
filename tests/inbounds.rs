@@ -49,6 +49,29 @@ async fn mount_endpoint(server: &MockServer, method: Method, path: &str, object:
 }
 
 #[tokio::test]
+async fn empty_all_links_normalizes_the_upstream_null_slice() {
+    let server = MockServer::start().await;
+    Mock::given(matchers::method("GET"))
+        .and(matchers::path("/panel/api/inbounds/allLinks"))
+        .and(matchers::header("authorization", "Bearer api-secret"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "success": true,
+            "msg": "success",
+            "obj": null
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = Client::builder(server.uri())
+        .unwrap()
+        .bearer_token("api-secret")
+        .build()
+        .unwrap();
+    assert!(client.inbounds().all_links().await.unwrap().is_empty());
+}
+
+#[tokio::test]
 #[allow(clippy::too_many_lines)]
 async fn every_v360_inbound_route_is_wired() {
     let server = MockServer::start().await;

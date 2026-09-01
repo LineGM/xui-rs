@@ -8,12 +8,20 @@ This directory pins the contract used to build and test `xui-rs`.
 - OpenAPI source: `web/html/xui/openapi.json`
 - OpenAPI SHA-256: `1dd51816003c3ea28efda48bcdab1f3b117aa9fb74461981195263d75bb8a519`
 - OpenAPI operations: 160
+- Official container runtime OpenAPI operations: 170
 
 `3x-ui-v3.6.0.openapi.json` is an unmodified copy from that release. The
 smaller per-domain route snapshots record endpoints found in the Go routers but
 absent from OpenAPI as well. Contract tests compare both sources with the SDK
 route inventory, because the published v3.6.0 document is useful but not
 complete.
+
+The official v3.6.0 container's runtime document augments the 160 static
+operations with exactly the ten source-only panel routes recorded by the route
+snapshots. Its four Hosts templates also rename `{id}` to `{groupId}` without
+changing the matched URL. The live test compares normalized method/path sets
+against that union, so runtime drift is detected without treating placeholder
+names as different routes.
 
 The OpenAPI document is vendored verbatim. Per-domain `*-routes.json` files are
 small source snapshots maintained from the exact tagged Go routers; their

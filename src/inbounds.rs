@@ -516,13 +516,19 @@ impl<'client> InboundsApi<'client> {
     /// Returns every generated inbound share link.
     ///
     /// This endpoint exists in 3x-ui v3.6.0 source but is missing from its
-    /// published `OpenAPI` document.
+    /// published `OpenAPI` document. An empty panel encodes its nil Go slice as
+    /// `obj: null`; the SDK normalizes that response to an empty vector.
     ///
     /// # Errors
     ///
     /// Returns an error when the request fails or the response is invalid.
     pub async fn all_links(self) -> Result<Vec<String>> {
-        self.get_object("allLinks").await
+        let path = format!("{ROOT}/allLinks");
+        let envelope = self
+            .client
+            .execute::<Vec<String>, ()>(Method::GET, &path, None, AuthenticationScope::PanelApi)
+            .await?;
+        Ok(envelope.obj.unwrap_or_default())
     }
 
     /// Fetches one inbound by identifier.

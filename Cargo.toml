@@ -18,7 +18,7 @@ include = [
     "src/**",
     "docs/**",
     "examples/**",
-    "scripts/public-api.sh",
+    "scripts/**",
     "tests/**",
     "spec/**",
     "Cargo.toml",

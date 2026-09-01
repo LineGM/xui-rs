@@ -12,6 +12,8 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 - Made API-token authentication the recommended automation path.
 - Reimplemented cookie login around 3x-ui v3.6.0's CSRF lifecycle and a real
   cookie jar; removed credential retention and automatic re-login.
+- Normalized the successful `null` returned by an empty panel's source-only
+  `allLinks` endpoint to an empty vector.
 - Introduced typed, contextual transport, HTTP, API, and decoding errors.
 - Replaced the opaque internal cookie store with one explicit shared
   standards-compliant jar so HTTP and WebSocket handshakes use identical
@@ -104,6 +106,12 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   API gates, PR-base SemVer checks, protected tag releases, crates.io trusted
   publishing, checksum-verified workflow tooling, reproducible crate
   comparison, and signed SLSA provenance.
+- A digest-pinned disposable 3x-ui v3.6.0 container harness covering real CSRF,
+  cookie login/logout, the shared authenticated WebSocket cookie, API-token
+  bearer authentication, runtime OpenAPI parity, and an inbound CRUD round
+  trip with guarded mutations and layered cleanup.
+- A manual and weekly live-integration workflow that runs the isolated panel
+  harness independently of deterministic mocked CI.
 
 ### Security
 

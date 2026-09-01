@@ -32,6 +32,16 @@ Thanks for helping build a reliable Rust SDK for 3x-ui.
    Only run `scripts/public-api.sh update` after reviewing the complete diff
    and deciding that the change belongs in the next compatible release.
 
+6. Changes to authentication, transport, endpoint paths, or wire models should
+   also pass the disposable real-panel harness:
+
+   ```console
+   scripts/live-test.sh
+   ```
+
+   See [docs/live-testing.md](docs/live-testing.md). Never opt into its mutation
+   test against a panel containing data that must be preserved.
+
 ## API implementation rules
 
 - Treat the pinned 3x-ui OpenAPI document and v3.6.0 source as the contract.
