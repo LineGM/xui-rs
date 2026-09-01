@@ -18,8 +18,12 @@ Thanks for helping build a reliable Rust SDK for 3x-ui.
    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
    actionlint
    cargo deny check
-   cargo package --locked --allow-dirty
+   scripts/package-check.sh --allow-dirty
    ```
+
+   CI additionally enforces at least 80% line coverage across all targets. New
+   endpoint behavior still requires focused success and failure assertions;
+   aggregate coverage is a regression floor, not a substitute for contracts.
 
 5. Check the proposed 1.0 public contract when changing any public item:
 

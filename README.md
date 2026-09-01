@@ -5,7 +5,10 @@
 **A modern, typed async Rust SDK for 3x-ui**
 
 [![CI](https://github.com/LineGM/xui-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/LineGM/xui-rs/actions/workflows/ci.yml)
+[![3x-ui live](https://github.com/LineGM/xui-rs/actions/workflows/live.yml/badge.svg)](https://github.com/LineGM/xui-rs/actions/workflows/live.yml)
 [![Coverage](https://coveralls.io/repos/github/LineGM/xui-rs/badge.svg?branch=main)](https://coveralls.io/github/LineGM/xui-rs?branch=main)
+[![crates.io](https://img.shields.io/crates/v/xui-rs.svg)](https://crates.io/crates/xui-rs)
+[![docs.rs](https://docs.rs/xui-rs/badge.svg)](https://docs.rs/xui-rs)
 [![MSRV](https://img.shields.io/badge/MSRV-1.88.0-dea584.svg)](https://www.rust-lang.org)
 [![3x-ui](https://img.shields.io/badge/3x--ui-v3.6.0-0ea5e9.svg)](https://github.com/MHSanaei/3x-ui/releases/tag/v3.6.0)
 [![License](https://img.shields.io/badge/license-Unlicense-blue.svg)](LICENSE)
@@ -426,7 +429,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
 actionlint
 cargo deny check
 scripts/public-api.sh check
-cargo package --locked --allow-dirty
+scripts/package-check.sh --allow-dirty
 ```
 
 The opt-in real-panel gate runs the ignored integration target against an

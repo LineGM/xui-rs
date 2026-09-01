@@ -112,6 +112,14 @@ the project adheres to [Semantic Versioning](https://semver.org/).
   trip with guarded mutations and layered cleanup.
 - A manual and weekly live-integration workflow that runs the isolated panel
   harness independently of deterministic mocked CI.
+- A release-candidate package gate that extracts the exact `.crate` archive and
+  runs its packaged tests, examples, doctests, and documentation rather than
+  assuming an in-repository build proves the published artifact.
+- Mandatory MSRV, macOS, Windows, and real 3x-ui jobs in the protected release
+  workflow, plus annotated-tag, `main` ancestry, and dated-changelog checks
+  before any publish job can start.
+- An enforced 80% all-target line-coverage floor, while retaining explicit
+  route, wire-format, error, and live-panel assertions as the primary contract.
 
 ### Security
 

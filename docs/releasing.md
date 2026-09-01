@@ -42,7 +42,8 @@ must retain the full SHA and its human-readable release comment.
    actionlint
    cargo deny check
    scripts/public-api.sh check
-   cargo package --locked --allow-dirty
+   scripts/package-check.sh --allow-dirty
+   scripts/live-test.sh
    ```
 
 4. Merge the release-preparation commit and wait for all required `main` CI
@@ -57,10 +58,12 @@ must retain the full SHA and its human-readable release comment.
    ```
 
 7. Review and approve the protected `release` deployment. The workflow checks
-   that the tag equals the Cargo package version, repeats every release gate,
-   reproduces the verified package across jobs, records signed SLSA provenance,
-   publishes through crates.io trusted publishing, and finally creates the
-   GitHub release.
+   that the tag equals the Cargo package version, proves the annotated tag is
+   reachable from `main`, tests the extracted `.crate` with its packaged tests,
+   examples, doctests, and documentation, repeats MSRV and macOS/Windows
+   portability checks, exercises the official 3x-ui container, reproduces the
+   verified package across jobs, records signed SLSA provenance, publishes
+   through crates.io trusted publishing, and finally creates the GitHub release.
 
 The publish job is safe to rerun after a partial external failure. If the
 version already exists on crates.io, the workflow continues only when its

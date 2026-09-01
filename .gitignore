@@ -1,4 +1,5 @@
 /target
+/lcov.info
 .env
 .env.*
 !.env.example
