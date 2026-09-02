@@ -88,6 +88,56 @@ pub struct XrayStatus {
     pub version: String,
 }
 
+/// Live activity for one peer of an embedded `AmneziaWG` interface.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct AmneziaWgPeerActivity {
+    /// Kernel interface name.
+    #[serde(rename = "interface")]
+    pub interface_name: String,
+    /// Xray-compatible inbound tag.
+    pub tag: String,
+    /// Parent inbound identifier.
+    pub inbound_id: i64,
+    /// Client email/name.
+    pub email: String,
+    /// Most recently observed remote endpoint.
+    pub endpoint: String,
+    /// Peer tunnel addresses.
+    #[serde(rename = "allowedIPs")]
+    pub allowed_ips: String,
+    /// Latest handshake timestamp in Unix milliseconds.
+    pub handshake: i64,
+    /// Received bytes, exposed as upload traffic by 3x-ui.
+    pub up: i64,
+    /// Transmitted bytes, exposed as download traffic by 3x-ui.
+    pub down: i64,
+    /// Whether the handshake is within the panel's three-minute window.
+    pub online: bool,
+}
+
+/// `AmneziaWG` peer activity and recent panel lifecycle events.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct AmneziaWgLogs {
+    /// Live peer rows, newest handshake first.
+    pub peers: Vec<AmneziaWgPeerActivity>,
+    /// Recent panel log lines related to `AmneziaWG`.
+    pub events: Vec<String>,
+    /// Whether at least one embedded interface is running.
+    pub running: bool,
+}
+
+/// Embedded `AmneziaWG` subsystem state included in [`ServerStatus`].
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct AmneziaWgStatus {
+    /// At least one `AmneziaWG` inbound exists.
+    pub configured: bool,
+    /// At least one embedded `AmneziaWG` interface is running.
+    pub running: bool,
+}
+
 /// Complete assembled Xray configuration.
 ///
 /// The inner JSON remains open-ended because it depends on the installed
@@ -171,6 +221,8 @@ pub struct ServerStatus {
     pub disk_traffic: DiskIo,
     /// Xray state.
     pub xray: XrayStatus,
+    /// Embedded `AmneziaWG` subsystem state.
+    pub amneziawg: AmneziaWgStatus,
     /// Running panel version.
     pub panel_version: String,
     /// Stable panel identifier.
@@ -196,7 +248,7 @@ pub struct ServerStatus {
     pub app_stats: AppStats,
 }
 
-/// History windows accepted by v3.6.0 history endpoints.
+/// History windows accepted by v3.7.0 history endpoints.
 ///
 /// Every response contains at most 60 points. The wire value is the bucket size
 /// in seconds, while variant names describe the resulting history window shown

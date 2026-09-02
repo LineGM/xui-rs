@@ -18,7 +18,11 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
         "/panel/api/clients/get/{email}",
         Some("get_panel_api_clients_get_email"),
     ),
-    ("get", "/panel/api/clients/get/tgId/{tgId}", None),
+    (
+        "get",
+        "/panel/api/clients/get/tgId/{tgId}",
+        Some("get_panel_api_clients_get_tgId_tgId"),
+    ),
     (
         "get",
         "/panel/api/clients/traffic/{email}",
@@ -151,6 +155,21 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
     ),
     (
         "post",
+        "/panel/api/clients/hwids/{email}",
+        Some("post_panel_api_clients_hwids_email"),
+    ),
+    (
+        "delete",
+        "/panel/api/clients/hwids/{email}",
+        Some("delete_panel_api_clients_hwids_email"),
+    ),
+    (
+        "delete",
+        "/panel/api/clients/hwids/{email}/{id}",
+        Some("delete_panel_api_clients_hwids_email_id"),
+    ),
+    (
+        "post",
         "/panel/api/clients/onlines",
         Some("post_panel_api_clients_onlines"),
     ),
@@ -199,7 +218,11 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
         "/panel/api/clients/groups/delete",
         Some("post_panel_api_clients_groups_delete"),
     ),
-    ("post", "/panel/api/clients/groups/resetTraffic", None),
+    (
+        "post",
+        "/panel/api/clients/groups/resetTraffic",
+        Some("post_panel_api_clients_groups_resetTraffic"),
+    ),
     (
         "post",
         "/panel/api/clients/groups/bulkAdd",
@@ -215,7 +238,7 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
 #[test]
 fn sdk_covers_openapi_and_source_routes() {
     let openapi: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.6.0.openapi.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
     let paths = openapi["paths"].as_object().unwrap();
     let documented = paths
         .iter()
@@ -244,11 +267,11 @@ fn sdk_covers_openapi_and_source_routes() {
             operation.map(|operation| (*method, *path, operation))
         })
         .collect::<BTreeSet<_>>();
-    assert_eq!(documented.len(), 41);
+    assert_eq!(documented.len(), 46);
     assert_eq!(documented, implemented_openapi);
 
     let source: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.6.0.clients-routes.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.clients-routes.json")).unwrap();
     let source_routes = source["routes"]
         .as_array()
         .unwrap()
@@ -264,6 +287,6 @@ fn sdk_covers_openapi_and_source_routes() {
         .iter()
         .map(|(method, path, _)| (*method, *path))
         .collect::<BTreeSet<_>>();
-    assert_eq!(source_routes.len(), 43);
+    assert_eq!(source_routes.len(), 46);
     assert_eq!(source_routes, implemented_routes);
 }

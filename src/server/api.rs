@@ -4,11 +4,11 @@ use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
 
 use super::models::{
-    ClientIpRecord, DatabaseFile, EchKeyPair, Fail2banStatus, HistoryBucket, LegacyCpuPoint,
-    MetricPoint, Mldsa65KeyPair, Mlkem768KeyPair, NodeSummary, PanelLogRequest, PanelUpdateInfo,
-    PanelUpdateRun, PanelUpdateStatus, RealityScanRequest, RealityScanResult, ServerStatus,
-    SystemMetric, VlessEncryptionOptions, WebCertificateFiles, X25519KeyPair, XrayConfig,
-    XrayLogEntry, XrayLogRequest, XrayMetric, XrayMetricsState, XrayObservatoryEntry,
+    AmneziaWgLogs, ClientIpRecord, DatabaseFile, EchKeyPair, Fail2banStatus, HistoryBucket,
+    LegacyCpuPoint, MetricPoint, Mldsa65KeyPair, Mlkem768KeyPair, NodeSummary, PanelLogRequest,
+    PanelUpdateInfo, PanelUpdateRun, PanelUpdateStatus, RealityScanRequest, RealityScanResult,
+    ServerStatus, SystemMetric, VlessEncryptionOptions, WebCertificateFiles, X25519KeyPair,
+    XrayConfig, XrayLogEntry, XrayLogRequest, XrayMetric, XrayMetricsState, XrayObservatoryEntry,
 };
 use crate::{Client, Error, Result, client::AuthenticationScope, response::ApiResponse};
 
@@ -135,8 +135,6 @@ impl<'client> ServerApi<'client> {
     }
 
     /// Returns the latest panel self-update status.
-    ///
-    /// This source-defined v3.6.0 endpoint is absent from upstream `OpenAPI`.
     ///
     /// # Errors
     ///
@@ -321,8 +319,6 @@ impl<'client> ServerApi<'client> {
 
     /// Probes one REALITY target and returns its feasibility verdict.
     ///
-    /// This source-defined v3.6.0 endpoint is absent from upstream `OpenAPI`.
-    ///
     /// # Errors
     ///
     /// Returns an error when the live probe or decoding fails.
@@ -347,8 +343,6 @@ impl<'client> ServerApi<'client> {
     }
 
     /// Probes comma-separated REALITY targets, or the panel seed list when empty.
-    ///
-    /// This source-defined v3.6.0 endpoint is absent from upstream `OpenAPI`.
     ///
     /// # Errors
     ///
@@ -490,7 +484,7 @@ impl<'client> ServerApi<'client> {
     /// Refreshes one named Xray geo file.
     ///
     /// The filename is encoded as one path segment; the server additionally
-    /// enforces its v3.6.0 safe-filename allowlist.
+    /// enforces its v3.7.0 safe-filename allowlist.
     ///
     /// # Errors
     ///
@@ -548,6 +542,24 @@ impl<'client> ServerApi<'client> {
             },
         )
         .await
+    }
+
+    /// Returns live `AmneziaWG` peer activity and recent lifecycle log lines.
+    ///
+    /// The server caps invalid or out-of-range counts to 100 and applies the
+    /// case-insensitive filter to both peer metadata and event text.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when retrieval or response decoding fails.
+    pub async fn amneziawg_logs(self, count: u32, filter: &str) -> Result<AmneziaWgLogs> {
+        #[derive(Serialize)]
+        struct Form<'a> {
+            filter: &'a str,
+        }
+
+        self.post_form_object(&format!("amneziawglogs/{count}"), &Form { filter })
+            .await
     }
 
     async fn certificate_hashes(

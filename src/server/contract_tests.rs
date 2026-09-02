@@ -83,7 +83,11 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
         "/panel/api/server/getPanelUpdateInfo",
         Some("get_panel_api_server_getPanelUpdateInfo"),
     ),
-    ("get", "/panel/api/server/getUpdateStatus", None),
+    (
+        "get",
+        "/panel/api/server/getUpdateStatus",
+        Some("get_panel_api_server_getUpdateStatus"),
+    ),
     (
         "post",
         "/panel/api/server/getRemoteCertHash",
@@ -124,8 +128,16 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
         "/panel/api/server/restartXrayService",
         Some("post_panel_api_server_restartXrayService"),
     ),
-    ("post", "/panel/api/server/scanRealityTarget", None),
-    ("post", "/panel/api/server/scanRealityTargets", None),
+    (
+        "post",
+        "/panel/api/server/scanRealityTarget",
+        Some("post_panel_api_server_scanRealityTarget"),
+    ),
+    (
+        "post",
+        "/panel/api/server/scanRealityTargets",
+        Some("post_panel_api_server_scanRealityTargets"),
+    ),
     (
         "post",
         "/panel/api/server/setUpdateChannel",
@@ -181,12 +193,17 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
         "/panel/api/server/xraylogs/{count}",
         Some("post_panel_api_server_xraylogs_count"),
     ),
+    (
+        "post",
+        "/panel/api/server/amneziawglogs/{count}",
+        Some("post_panel_api_server_amneziawglogs_count"),
+    ),
 ];
 
 #[test]
 fn sdk_covers_openapi_and_source_routes() {
     let openapi: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.6.0.openapi.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
     let paths = openapi["paths"].as_object().unwrap();
     let documented = paths
         .iter()
@@ -195,9 +212,10 @@ fn sdk_covers_openapi_and_source_routes() {
                 operations
                     .iter()
                     .filter(|(_, operation)| {
-                        operation["tags"]
-                            .as_array()
-                            .is_some_and(|tags| tags.iter().any(|tag| tag == "Server"))
+                        path.starts_with("/panel/api/server/")
+                            && operation["tags"]
+                                .as_array()
+                                .is_some_and(|tags| tags.iter().any(|tag| tag == "Server"))
                     })
                     .map(move |(method, operation)| {
                         (
@@ -215,11 +233,11 @@ fn sdk_covers_openapi_and_source_routes() {
             operation.map(|operation| (*method, *path, operation))
         })
         .collect::<BTreeSet<_>>();
-    assert_eq!(documented.len(), 35);
+    assert_eq!(documented.len(), 39);
     assert_eq!(documented, implemented_openapi);
 
     let source: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.6.0.server-routes.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.server-routes.json")).unwrap();
     let source_routes = source["routes"]
         .as_array()
         .unwrap()
@@ -235,6 +253,6 @@ fn sdk_covers_openapi_and_source_routes() {
         .iter()
         .map(|(method, path, _)| (*method, *path))
         .collect::<BTreeSet<_>>();
-    assert_eq!(source_routes.len(), 38);
+    assert_eq!(source_routes.len(), 39);
     assert_eq!(source_routes, implemented_routes);
 }

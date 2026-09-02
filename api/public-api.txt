@@ -39,6 +39,7 @@ pub const fn xui_rs::client::Client::panel(&self) -> xui_rs::PanelApi<'_>
 pub fn xui_rs::client::Client::response_body_limit(&self) -> usize
 pub const fn xui_rs::client::Client::server(&self) -> xui_rs::ServerApi<'_>
 pub const fn xui_rs::client::Client::settings(&self) -> xui_rs::SettingsApi<'_>
+pub const fn xui_rs::client::Client::subscription_balancers(&self) -> xui_rs::SubscriptionBalancersApi<'_>
 pub const fn xui_rs::client::Client::xray_settings(&self) -> xui_rs::XraySettingsApi<'_>
 impl core::fmt::Debug for xui_rs::client::Client
 pub fn xui_rs::client::Client::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -120,6 +121,7 @@ pub xui_rs::clients::BulkSetEnabledResult::skipped: alloc::vec::Vec<xui_rs::Bulk
 pub struct xui_rs::clients::ClientConfig
 pub xui_rs::clients::ClientConfig::ad_tag: alloc::string::String
 pub xui_rs::clients::ClientConfig::allowed_ips: alloc::vec::Vec<alloc::string::String>
+pub xui_rs::clients::ClientConfig::allowed_ips_by_inbound: std::collections::hash::map::HashMap<i64, alloc::vec::Vec<alloc::string::String>>
 pub xui_rs::clients::ClientConfig::auth: alloc::string::String
 pub xui_rs::clients::ClientConfig::comment: alloc::string::String
 pub xui_rs::clients::ClientConfig::created_at: i64
@@ -127,8 +129,10 @@ pub xui_rs::clients::ClientConfig::email: alloc::string::String
 pub xui_rs::clients::ClientConfig::enable: bool
 pub xui_rs::clients::ClientConfig::expiry_time: i64
 pub xui_rs::clients::ClientConfig::flow: alloc::string::String
+pub xui_rs::clients::ClientConfig::forwarded_ports: alloc::string::String
 pub xui_rs::clients::ClientConfig::group: alloc::string::String
 pub xui_rs::clients::ClientConfig::keep_alive: i32
+pub xui_rs::clients::ClientConfig::limit_hwid: i32
 pub xui_rs::clients::ClientConfig::limit_ip: i32
 pub xui_rs::clients::ClientConfig::password: alloc::string::String
 pub xui_rs::clients::ClientConfig::pre_shared_key: alloc::string::String
@@ -136,12 +140,16 @@ pub xui_rs::clients::ClientConfig::private_key: alloc::string::String
 pub xui_rs::clients::ClientConfig::protocol_id: alloc::string::String
 pub xui_rs::clients::ClientConfig::public_key: alloc::string::String
 pub xui_rs::clients::ClientConfig::reset: i32
+pub xui_rs::clients::ClientConfig::reset_day: i32
+pub xui_rs::clients::ClientConfig::reset_max: i32
 pub xui_rs::clients::ClientConfig::reverse: core::option::Option<xui_rs::ClientReverse>
 pub xui_rs::clients::ClientConfig::secret: alloc::string::String
 pub xui_rs::clients::ClientConfig::security: alloc::string::String
 pub xui_rs::clients::ClientConfig::sub_id: alloc::string::String
 pub xui_rs::clients::ClientConfig::tg_id: i64
 pub xui_rs::clients::ClientConfig::total_gb: i64
+pub xui_rs::clients::ClientConfig::traffic_reset: core::option::Option<xui_rs::inbounds::TrafficReset>
+pub xui_rs::clients::ClientConfig::traffic_reset_day: i32
 pub xui_rs::clients::ClientConfig::updated_at: i64
 impl xui_rs::ClientConfig
 pub fn xui_rs::ClientConfig::new(impl core::convert::Into<alloc::string::String>) -> Self
@@ -160,6 +168,7 @@ pub struct xui_rs::clients::ClientDetails
 pub xui_rs::clients::ClientDetails::client: xui_rs::ClientRecord
 pub xui_rs::clients::ClientDetails::external_links: alloc::vec::Vec<xui_rs::ClientExternalLink>
 pub xui_rs::clients::ClientDetails::inbound_ids: alloc::vec::Vec<i64>
+pub xui_rs::clients::ClientDetails::tunnel_allowed_ips: std::collections::hash::map::HashMap<i64, alloc::vec::Vec<alloc::string::String>>
 pub xui_rs::clients::ClientDetails::used_traffic: i64
 pub struct xui_rs::clients::ClientExternalLink
 pub xui_rs::clients::ClientExternalLink::client_id: i64
@@ -177,6 +186,14 @@ pub xui_rs::clients::ClientExternalLinkInput::remark: alloc::string::String
 pub xui_rs::clients::ClientExternalLinkInput::value: alloc::string::String
 impl core::fmt::Debug for xui_rs::ClientExternalLinkInput
 pub fn xui_rs::ClientExternalLinkInput::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct xui_rs::clients::ClientHwidDevice
+pub xui_rs::clients::ClientHwidDevice::device_model: alloc::string::String
+pub xui_rs::clients::ClientHwidDevice::device_os: alloc::string::String
+pub xui_rs::clients::ClientHwidDevice::first_seen: i64
+pub xui_rs::clients::ClientHwidDevice::id: i64
+pub xui_rs::clients::ClientHwidDevice::last_seen: i64
+pub xui_rs::clients::ClientHwidDevice::os_version: alloc::string::String
+pub xui_rs::clients::ClientHwidDevice::user_agent: alloc::string::String
 pub struct xui_rs::clients::ClientIpEntry
 pub xui_rs::clients::ClientIpEntry::ip: alloc::string::String
 pub xui_rs::clients::ClientIpEntry::timestamp: i64
@@ -223,21 +240,27 @@ pub xui_rs::clients::ClientRecord::email: alloc::string::String
 pub xui_rs::clients::ClientRecord::enable: bool
 pub xui_rs::clients::ClientRecord::expiry_time: i64
 pub xui_rs::clients::ClientRecord::flow: alloc::string::String
+pub xui_rs::clients::ClientRecord::forwarded_ports: alloc::string::String
 pub xui_rs::clients::ClientRecord::group: alloc::string::String
 pub xui_rs::clients::ClientRecord::id: i64
 pub xui_rs::clients::ClientRecord::keep_alive: i32
+pub xui_rs::clients::ClientRecord::limit_hwid: i32
 pub xui_rs::clients::ClientRecord::limit_ip: i32
 pub xui_rs::clients::ClientRecord::password: alloc::string::String
 pub xui_rs::clients::ClientRecord::pre_shared_key: alloc::string::String
 pub xui_rs::clients::ClientRecord::private_key: alloc::string::String
 pub xui_rs::clients::ClientRecord::public_key: alloc::string::String
 pub xui_rs::clients::ClientRecord::reset: i32
+pub xui_rs::clients::ClientRecord::reset_day: i32
+pub xui_rs::clients::ClientRecord::reset_max: i32
 pub xui_rs::clients::ClientRecord::reverse: core::option::Option<xui_rs::ClientReverse>
 pub xui_rs::clients::ClientRecord::secret: alloc::string::String
 pub xui_rs::clients::ClientRecord::security: alloc::string::String
 pub xui_rs::clients::ClientRecord::sub_id: alloc::string::String
 pub xui_rs::clients::ClientRecord::tg_id: i64
 pub xui_rs::clients::ClientRecord::total_gb: i64
+pub xui_rs::clients::ClientRecord::traffic_reset: alloc::string::String
+pub xui_rs::clients::ClientRecord::traffic_reset_day: i32
 pub xui_rs::clients::ClientRecord::updated_at: i64
 pub xui_rs::clients::ClientRecord::uuid: alloc::string::String
 impl xui_rs::ClientRecord
@@ -290,6 +313,7 @@ pub async fn xui_rs::ClientsApi<'client>::bulk_detach(self, &[impl core::convert
 pub async fn xui_rs::ClientsApi<'client>::bulk_disable(self, &[impl core::convert::AsRef<str>]) -> xui_rs::error::Result<xui_rs::BulkSetEnabledResult>
 pub async fn xui_rs::ClientsApi<'client>::bulk_enable(self, &[impl core::convert::AsRef<str>]) -> xui_rs::error::Result<xui_rs::BulkSetEnabledResult>
 pub async fn xui_rs::ClientsApi<'client>::bulk_reset_traffic(self, &[impl core::convert::AsRef<str>]) -> xui_rs::error::Result<xui_rs::AffectedCount>
+pub async fn xui_rs::ClientsApi<'client>::clear_hwid_devices(self, &str) -> xui_rs::error::Result<()>
 pub async fn xui_rs::ClientsApi<'client>::clear_ips(self, &str) -> xui_rs::error::Result<()>
 pub async fn xui_rs::ClientsApi<'client>::client_ips_by_guid(self) -> xui_rs::error::Result<xui_rs::ClientIpsByGuid>
 pub async fn xui_rs::ClientsApi<'client>::create(self, &xui_rs::ClientCreateRequest) -> xui_rs::error::Result<xui_rs::ClientMutationStatus>
@@ -297,6 +321,7 @@ pub async fn xui_rs::ClientsApi<'client>::create_group(self, &str) -> xui_rs::er
 pub async fn xui_rs::ClientsApi<'client>::delete(self, &str, bool) -> xui_rs::error::Result<()>
 pub async fn xui_rs::ClientsApi<'client>::delete_depleted(self) -> xui_rs::error::Result<xui_rs::DeletedCount>
 pub async fn xui_rs::ClientsApi<'client>::delete_group(self, &str) -> xui_rs::error::Result<xui_rs::AffectedCount>
+pub async fn xui_rs::ClientsApi<'client>::delete_hwid_device(self, &str, i64) -> xui_rs::error::Result<()>
 pub async fn xui_rs::ClientsApi<'client>::delete_orphans(self) -> xui_rs::error::Result<xui_rs::DeletedCount>
 pub async fn xui_rs::ClientsApi<'client>::detach(self, &str, &[i64]) -> xui_rs::error::Result<xui_rs::ClientMutationStatus>
 pub async fn xui_rs::ClientsApi<'client>::export(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::ClientCreateRequest>>
@@ -304,6 +329,7 @@ pub async fn xui_rs::ClientsApi<'client>::get(self, &str) -> xui_rs::error::Resu
 pub async fn xui_rs::ClientsApi<'client>::get_by_telegram_id(self, i64) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::ClientDetails>>
 pub async fn xui_rs::ClientsApi<'client>::group_emails(self, &str) -> xui_rs::error::Result<alloc::vec::Vec<alloc::string::String>>
 pub async fn xui_rs::ClientsApi<'client>::groups(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::GroupSummary>>
+pub async fn xui_rs::ClientsApi<'client>::hwid_devices(self, &str) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::ClientHwidDevice>>
 pub async fn xui_rs::ClientsApi<'client>::import(self, &[xui_rs::ClientCreateRequest]) -> xui_rs::error::Result<xui_rs::BulkCreateResult>
 pub async fn xui_rs::ClientsApi<'client>::ips(self, &str) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::ClientIpInfo>>
 pub async fn xui_rs::ClientsApi<'client>::last_online(self) -> xui_rs::error::Result<xui_rs::LastOnlineByEmail>
@@ -662,6 +688,7 @@ impl<'de> serde_core::de::Deserialize<'de> for xui_rs::VlessRoute
 pub fn xui_rs::VlessRoute::deserialize<D>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
 pub mod xui_rs::inbounds
 #[non_exhaustive] pub enum xui_rs::inbounds::InboundProtocol
+pub xui_rs::inbounds::InboundProtocol::Amneziawg
 pub xui_rs::inbounds::InboundProtocol::Http
 pub xui_rs::inbounds::InboundProtocol::Hysteria
 pub xui_rs::inbounds::InboundProtocol::Mixed
@@ -685,6 +712,44 @@ pub xui_rs::inbounds::TrafficReset::Hourly
 pub xui_rs::inbounds::TrafficReset::Monthly
 pub xui_rs::inbounds::TrafficReset::Never
 pub xui_rs::inbounds::TrafficReset::Weekly
+pub struct xui_rs::inbounds::AmneziaWgServerSettings
+pub xui_rs::inbounds::AmneziaWgServerSettings::content_padding_addition: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::disable_cookies: bool
+pub xui_rs::inbounds::AmneziaWgServerSettings::external_interface: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::h1: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::h2: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::h3: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::h4: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::header_protection_key: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::i1: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::i2: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::i3: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::i4: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::i5: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::ipv6_enabled: bool
+pub xui_rs::inbounds::AmneziaWgServerSettings::ipv6_external_interface: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::ipv6_subnet: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::jc: i32
+pub xui_rs::inbounds::AmneziaWgServerSettings::jmax: i32
+pub xui_rs::inbounds::AmneziaWgServerSettings::jmin: i32
+pub xui_rs::inbounds::AmneziaWgServerSettings::keepalive_timeout: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::max_handshake_attempts: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::mtu: i32
+pub xui_rs::inbounds::AmneziaWgServerSettings::primary_dns: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::private_key: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::public_key: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::random_trailers: bool
+pub xui_rs::inbounds::AmneziaWgServerSettings::reject_after_time: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::rekey_after_time: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::rekey_timeout: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::route_through_xray: bool
+pub xui_rs::inbounds::AmneziaWgServerSettings::s1: i32
+pub xui_rs::inbounds::AmneziaWgServerSettings::s2: i32
+pub xui_rs::inbounds::AmneziaWgServerSettings::s3: i32
+pub xui_rs::inbounds::AmneziaWgServerSettings::s4: i32
+pub xui_rs::inbounds::AmneziaWgServerSettings::secondary_dns: alloc::string::String
+pub xui_rs::inbounds::AmneziaWgServerSettings::subnet_cidr: u8
+pub xui_rs::inbounds::AmneziaWgServerSettings::subnet_ip: alloc::string::String
 pub struct xui_rs::inbounds::BulkDeleteClientsResult
 pub xui_rs::inbounds::BulkDeleteClientsResult::deleted: u64
 pub xui_rs::inbounds::BulkDeleteClientsResult::skipped: alloc::vec::Vec<xui_rs::inbounds::SkippedClient>
@@ -699,7 +764,11 @@ pub xui_rs::inbounds::ClientTraffic::expiry_time: i64
 pub xui_rs::inbounds::ClientTraffic::id: i64
 pub xui_rs::inbounds::ClientTraffic::inbound_id: i64
 pub xui_rs::inbounds::ClientTraffic::last_online: i64
+pub xui_rs::inbounds::ClientTraffic::last_sub_fetch: i64
 pub xui_rs::inbounds::ClientTraffic::reset: i32
+pub xui_rs::inbounds::ClientTraffic::reset_count: i32
+pub xui_rs::inbounds::ClientTraffic::reset_day: i32
+pub xui_rs::inbounds::ClientTraffic::reset_max: i32
 pub xui_rs::inbounds::ClientTraffic::sub_id: alloc::string::String
 pub xui_rs::inbounds::ClientTraffic::total: i64
 pub xui_rs::inbounds::ClientTraffic::up: i64
@@ -733,6 +802,7 @@ impl core::fmt::Debug for xui_rs::inbounds::Inbound
 pub fn xui_rs::inbounds::Inbound::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub struct xui_rs::inbounds::InboundConfig
 pub xui_rs::inbounds::InboundConfig::client_stats: alloc::vec::Vec<xui_rs::inbounds::ClientTraffic>
+pub xui_rs::inbounds::InboundConfig::disable_flow: bool
 pub xui_rs::inbounds::InboundConfig::down: i64
 pub xui_rs::inbounds::InboundConfig::enable: bool
 pub xui_rs::inbounds::InboundConfig::expiry_time: i64
@@ -768,6 +838,7 @@ pub xui_rs::inbounds::InboundFallback::path: alloc::string::String
 pub xui_rs::inbounds::InboundFallback::sort_order: i32
 pub xui_rs::inbounds::InboundFallback::xver: i32
 pub struct xui_rs::inbounds::InboundOption
+pub xui_rs::inbounds::InboundOption::awg_server: core::option::Option<xui_rs::inbounds::AmneziaWgServerSettings>
 pub xui_rs::inbounds::InboundOption::enable: bool
 pub xui_rs::inbounds::InboundOption::id: i64
 pub xui_rs::inbounds::InboundOption::listen: alloc::string::String
@@ -803,6 +874,7 @@ pub async fn xui_rs::inbounds::InboundsApi<'client>::reset_all_traffic(self) -> 
 pub async fn xui_rs::inbounds::InboundsApi<'client>::reset_traffic(self, i64) -> xui_rs::error::Result<()>
 pub async fn xui_rs::inbounds::InboundsApi<'client>::set_enabled(self, i64, bool) -> xui_rs::error::Result<()>
 pub async fn xui_rs::inbounds::InboundsApi<'client>::set_fallbacks(self, i64, &[xui_rs::inbounds::FallbackInput]) -> xui_rs::error::Result<()>
+pub async fn xui_rs::inbounds::InboundsApi<'client>::set_subscription_sort_index(self, i64, i32) -> xui_rs::error::Result<()>
 pub async fn xui_rs::inbounds::InboundsApi<'client>::update(self, i64, &xui_rs::inbounds::InboundConfig) -> xui_rs::error::Result<xui_rs::inbounds::Inbound>
 pub struct xui_rs::inbounds::SkippedClient
 pub xui_rs::inbounds::SkippedClient::email: alloc::string::String
@@ -986,6 +1058,7 @@ pub async fn xui_rs::NodesApi<'client>::history(self, i64, xui_rs::NodeMetric, x
 pub async fn xui_rs::NodesApi<'client>::list(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::NodeView>>
 pub async fn xui_rs::NodesApi<'client>::mtls_ca(self) -> xui_rs::error::Result<xui_rs::NodeMtlsCa>
 pub async fn xui_rs::NodesApi<'client>::probe(self, i64) -> xui_rs::error::Result<xui_rs::NodeProbeResult>
+pub async fn xui_rs::NodesApi<'client>::reload_mtls_client(self) -> xui_rs::error::Result<()>
 pub async fn xui_rs::NodesApi<'client>::remote_inbounds(self, &xui_rs::NodeRequest) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::RemoteInboundOption>>
 pub async fn xui_rs::NodesApi<'client>::set_enabled(self, i64, bool) -> xui_rs::error::Result<()>
 pub async fn xui_rs::NodesApi<'client>::set_mtls_trust_ca(self, &str) -> xui_rs::error::Result<()>
@@ -1112,6 +1185,24 @@ pub xui_rs::server::XrayMetric::HeapObjects
 pub xui_rs::server::XrayMetric::NumGc
 pub xui_rs::server::XrayMetric::PauseNs
 pub xui_rs::server::XrayMetric::Sys
+pub struct xui_rs::server::AmneziaWgLogs
+pub xui_rs::server::AmneziaWgLogs::events: alloc::vec::Vec<alloc::string::String>
+pub xui_rs::server::AmneziaWgLogs::peers: alloc::vec::Vec<xui_rs::AmneziaWgPeerActivity>
+pub xui_rs::server::AmneziaWgLogs::running: bool
+pub struct xui_rs::server::AmneziaWgPeerActivity
+pub xui_rs::server::AmneziaWgPeerActivity::allowed_ips: alloc::string::String
+pub xui_rs::server::AmneziaWgPeerActivity::down: i64
+pub xui_rs::server::AmneziaWgPeerActivity::email: alloc::string::String
+pub xui_rs::server::AmneziaWgPeerActivity::endpoint: alloc::string::String
+pub xui_rs::server::AmneziaWgPeerActivity::handshake: i64
+pub xui_rs::server::AmneziaWgPeerActivity::inbound_id: i64
+pub xui_rs::server::AmneziaWgPeerActivity::interface_name: alloc::string::String
+pub xui_rs::server::AmneziaWgPeerActivity::online: bool
+pub xui_rs::server::AmneziaWgPeerActivity::tag: alloc::string::String
+pub xui_rs::server::AmneziaWgPeerActivity::up: i64
+pub struct xui_rs::server::AmneziaWgStatus
+pub xui_rs::server::AmneziaWgStatus::configured: bool
+pub xui_rs::server::AmneziaWgStatus::running: bool
 pub struct xui_rs::server::AppStats
 pub xui_rs::server::AppStats::mem: u64
 pub xui_rs::server::AppStats::threads: u32
@@ -1232,6 +1323,7 @@ pub xui_rs::server::ResourceUsage::current: u64
 pub xui_rs::server::ResourceUsage::total: u64
 pub struct xui_rs::server::ServerApi<'client>
 impl<'client> xui_rs::ServerApi<'client>
+pub async fn xui_rs::ServerApi<'client>::amneziawg_logs(self, u32, &str) -> xui_rs::error::Result<xui_rs::AmneziaWgLogs>
 pub async fn xui_rs::ServerApi<'client>::certificate_content_hashes(self, &str) -> xui_rs::error::Result<alloc::vec::Vec<alloc::string::String>>
 pub async fn xui_rs::ServerApi<'client>::certificate_file_hashes(self, &str) -> xui_rs::error::Result<alloc::vec::Vec<alloc::string::String>>
 pub async fn xui_rs::ServerApi<'client>::client_ips(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::ClientIpRecord>>
@@ -1273,6 +1365,7 @@ pub async fn xui_rs::ServerApi<'client>::xray_observatory(self) -> xui_rs::error
 pub async fn xui_rs::ServerApi<'client>::xray_observatory_history(self, &str, xui_rs::HistoryBucket) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::MetricPoint>>
 pub async fn xui_rs::ServerApi<'client>::xray_versions(self) -> xui_rs::error::Result<alloc::vec::Vec<alloc::string::String>>
 pub struct xui_rs::server::ServerStatus
+pub xui_rs::server::ServerStatus::amneziawg: xui_rs::AmneziaWgStatus
 pub xui_rs::server::ServerStatus::app_stats: xui_rs::AppStats
 pub xui_rs::server::ServerStatus::cpu: f64
 pub xui_rs::server::ServerStatus::cpu_cores: i32
@@ -1348,6 +1441,10 @@ pub xui_rs::server::XrayStatus::error_msg: alloc::string::String
 pub xui_rs::server::XrayStatus::state: xui_rs::ProcessState
 pub xui_rs::server::XrayStatus::version: alloc::string::String
 pub mod xui_rs::settings
+#[non_exhaustive] pub enum xui_rs::settings::ApiTokenScope
+pub xui_rs::settings::ApiTokenScope::Admin
+pub xui_rs::settings::ApiTokenScope::Monitor
+pub xui_rs::settings::ApiTokenScope::NodeSync
 #[non_exhaustive] pub enum xui_rs::settings::MoveDirection
 pub xui_rs::settings::MoveDirection::Down
 pub xui_rs::settings::MoveDirection::Up
@@ -1355,11 +1452,19 @@ pub xui_rs::settings::MoveDirection::Up
 pub xui_rs::settings::OutboundTestMode::Http
 pub xui_rs::settings::OutboundTestMode::Real
 pub xui_rs::settings::OutboundTestMode::Tcp
+pub struct xui_rs::settings::ApiTokenCreateRequest
+pub xui_rs::settings::ApiTokenCreateRequest::expires_at: i64
+pub xui_rs::settings::ApiTokenCreateRequest::name: alloc::string::String
+pub xui_rs::settings::ApiTokenCreateRequest::scope: xui_rs::ApiTokenScope
+impl xui_rs::ApiTokenCreateRequest
+pub fn xui_rs::ApiTokenCreateRequest::new(impl core::convert::Into<alloc::string::String>) -> Self
 pub struct xui_rs::settings::ApiTokenMetadata
 pub xui_rs::settings::ApiTokenMetadata::created_at: i64
 pub xui_rs::settings::ApiTokenMetadata::enabled: bool
+pub xui_rs::settings::ApiTokenMetadata::expires_at: i64
 pub xui_rs::settings::ApiTokenMetadata::id: i64
 pub xui_rs::settings::ApiTokenMetadata::name: alloc::string::String
+pub xui_rs::settings::ApiTokenMetadata::scope: xui_rs::ApiTokenScope
 pub struct xui_rs::settings::BalancerStatus
 pub xui_rs::settings::BalancerStatus::override_target: alloc::string::String
 pub xui_rs::settings::BalancerStatus::running: bool
@@ -1368,8 +1473,10 @@ pub xui_rs::settings::BalancerStatus::tag: alloc::string::String
 pub struct xui_rs::settings::CreatedApiToken
 pub xui_rs::settings::CreatedApiToken::created_at: i64
 pub xui_rs::settings::CreatedApiToken::enabled: bool
+pub xui_rs::settings::CreatedApiToken::expires_at: i64
 pub xui_rs::settings::CreatedApiToken::id: i64
 pub xui_rs::settings::CreatedApiToken::name: alloc::string::String
+pub xui_rs::settings::CreatedApiToken::scope: xui_rs::ApiTokenScope
 pub xui_rs::settings::CreatedApiToken::token: alloc::string::String
 impl core::fmt::Debug for xui_rs::CreatedApiToken
 pub fn xui_rs::CreatedApiToken::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1402,6 +1509,31 @@ pub xui_rs::settings::EffectiveDefaults::sub_uri: alloc::string::String
 pub xui_rs::settings::EffectiveDefaults::tg_bot_enable: bool
 pub xui_rs::settings::EffectiveDefaults::traffic_diff: i64
 pub xui_rs::settings::EffectiveDefaults::web_domain: alloc::string::String
+pub struct xui_rs::settings::GeoCategory
+pub xui_rs::settings::GeoCategory::attributes: alloc::vec::Vec<alloc::string::String>
+pub xui_rs::settings::GeoCategory::code: alloc::string::String
+pub xui_rs::settings::GeoCategory::entries: i32
+pub struct xui_rs::settings::GeoCategoryPage
+pub xui_rs::settings::GeoCategoryPage::items: alloc::vec::Vec<xui_rs::GeoCategory>
+pub xui_rs::settings::GeoCategoryPage::total: i32
+pub struct xui_rs::settings::GeoEntry
+pub xui_rs::settings::GeoEntry::kind: alloc::string::String
+pub xui_rs::settings::GeoEntry::value: alloc::string::String
+pub struct xui_rs::settings::GeoEntryPage
+pub xui_rs::settings::GeoEntryPage::items: alloc::vec::Vec<xui_rs::GeoEntry>
+pub xui_rs::settings::GeoEntryPage::total: i32
+pub struct xui_rs::settings::GeoFile
+pub xui_rs::settings::GeoFile::categories: i32
+pub xui_rs::settings::GeoFile::error: alloc::string::String
+pub xui_rs::settings::GeoFile::kind: alloc::string::String
+pub xui_rs::settings::GeoFile::modified_at: i64
+pub xui_rs::settings::GeoFile::name: alloc::string::String
+pub xui_rs::settings::GeoFile::size: i64
+pub struct xui_rs::settings::GeodataTokenIssue
+pub xui_rs::settings::GeodataTokenIssue::code: alloc::string::String
+pub xui_rs::settings::GeodataTokenIssue::file: alloc::string::String
+pub xui_rs::settings::GeodataTokenIssue::reason: alloc::string::String
+pub xui_rs::settings::GeodataTokenIssue::token: alloc::string::String
 pub struct xui_rs::settings::LdapSettings
 pub xui_rs::settings::LdapSettings::ldap_auto_create: bool
 pub xui_rs::settings::LdapSettings::ldap_auto_delete: bool
@@ -1507,6 +1639,31 @@ pub xui_rs::settings::PanelSettingsView::has_tg_bot_token: bool
 pub xui_rs::settings::PanelSettingsView::has_two_factor_token: bool
 pub xui_rs::settings::PanelSettingsView::has_warp_secret: bool
 pub xui_rs::settings::PanelSettingsView::settings: xui_rs::PanelSettings
+pub struct xui_rs::settings::PiaAccount
+pub xui_rs::settings::PiaAccount::account_hint: alloc::string::String
+pub xui_rs::settings::PiaAccount::username: alloc::string::String
+pub struct xui_rs::settings::PiaCountry
+pub xui_rs::settings::PiaCountry::code: alloc::string::String
+pub struct xui_rs::settings::PiaKey
+pub xui_rs::settings::PiaKey::address: alloc::string::String
+pub xui_rs::settings::PiaKey::endpoint: alloc::string::String
+pub xui_rs::settings::PiaKey::hostname: alloc::string::String
+pub xui_rs::settings::PiaKey::public_key: alloc::string::String
+pub xui_rs::settings::PiaKey::secret_key: alloc::string::String
+pub xui_rs::settings::PiaKey::tag: alloc::string::String
+impl core::fmt::Debug for xui_rs::PiaKey
+pub fn xui_rs::PiaKey::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct xui_rs::settings::PiaRegion
+pub xui_rs::settings::PiaRegion::id: alloc::string::String
+pub xui_rs::settings::PiaRegion::name: alloc::string::String
+pub struct xui_rs::settings::PiaServer
+pub xui_rs::settings::PiaServer::hostname: alloc::string::String
+pub xui_rs::settings::PiaServer::ip: alloc::string::String
+pub xui_rs::settings::PiaServer::region_id: alloc::string::String
+pub xui_rs::settings::PiaServer::region_name: alloc::string::String
+pub struct xui_rs::settings::PiaServers
+pub xui_rs::settings::PiaServers::regions: alloc::vec::Vec<xui_rs::PiaRegion>
+pub xui_rs::settings::PiaServers::servers: alloc::vec::Vec<xui_rs::PiaServer>
 pub struct xui_rs::settings::RouteTestRequest
 pub xui_rs::settings::RouteTestRequest::domain: alloc::string::String
 pub xui_rs::settings::RouteTestRequest::email: alloc::string::String
@@ -1520,6 +1677,7 @@ pub xui_rs::settings::RouteTestResult::group_tags: alloc::vec::Vec<alloc::string
 pub xui_rs::settings::RouteTestResult::matched: bool
 pub xui_rs::settings::RouteTestResult::outbound_tag: alloc::string::String
 pub struct xui_rs::settings::SecuritySettings
+pub xui_rs::settings::SecuritySettings::ip_limit_allowlist: alloc::string::String
 pub xui_rs::settings::SecuritySettings::outbound_down_threshold: u8
 pub xui_rs::settings::SecuritySettings::time_location: alloc::string::String
 pub xui_rs::settings::SecuritySettings::two_factor_enable: bool
@@ -1537,13 +1695,13 @@ pub struct xui_rs::settings::SettingsApi<'client>
 impl<'client> xui_rs::SettingsApi<'client>
 pub async fn xui_rs::SettingsApi<'client>::all(self) -> xui_rs::error::Result<xui_rs::PanelSettingsView>
 pub async fn xui_rs::SettingsApi<'client>::api_tokens(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::ApiTokenMetadata>>
-pub async fn xui_rs::SettingsApi<'client>::create_api_token(self, &str) -> xui_rs::error::Result<xui_rs::CreatedApiToken>
+pub async fn xui_rs::SettingsApi<'client>::create_api_token(self, &xui_rs::ApiTokenCreateRequest) -> xui_rs::error::Result<xui_rs::CreatedApiToken>
 pub async fn xui_rs::SettingsApi<'client>::default_xray_config(self) -> xui_rs::error::Result<xui_rs::XrayConfig>
 pub async fn xui_rs::SettingsApi<'client>::defaults(self) -> xui_rs::error::Result<xui_rs::EffectiveDefaults>
-pub async fn xui_rs::SettingsApi<'client>::delete_api_token(self, i64) -> xui_rs::error::Result<()>
+pub async fn xui_rs::SettingsApi<'client>::delete_api_token(self, i64, xui_rs::ApiTokenScope) -> xui_rs::error::Result<()>
 pub async fn xui_rs::SettingsApi<'client>::factory_defaults(self) -> xui_rs::error::Result<xui_rs::FactoryDefaults>
 pub async fn xui_rs::SettingsApi<'client>::restart_panel(self) -> xui_rs::error::Result<()>
-pub async fn xui_rs::SettingsApi<'client>::set_api_token_enabled(self, i64, bool) -> xui_rs::error::Result<()>
+pub async fn xui_rs::SettingsApi<'client>::set_api_token_enabled(self, i64, xui_rs::ApiTokenScope, bool) -> xui_rs::error::Result<()>
 pub async fn xui_rs::SettingsApi<'client>::test_smtp(self) -> xui_rs::error::Result<xui_rs::SmtpTestResult>
 pub async fn xui_rs::SettingsApi<'client>::test_telegram(self) -> xui_rs::error::Result<()>
 pub async fn xui_rs::SettingsApi<'client>::update(self, &xui_rs::PanelSettingsUpdate) -> xui_rs::error::Result<()>
@@ -1593,6 +1751,7 @@ pub xui_rs::settings::SubscriptionSettings::sub_json_auto_detect: bool
 pub xui_rs::settings::SubscriptionSettings::sub_json_enable: bool
 pub xui_rs::settings::SubscriptionSettings::sub_json_final_mask: alloc::string::String
 pub xui_rs::settings::SubscriptionSettings::sub_json_mux: alloc::string::String
+pub xui_rs::settings::SubscriptionSettings::sub_json_observatory: alloc::string::String
 pub xui_rs::settings::SubscriptionSettings::sub_json_path: alloc::string::String
 pub xui_rs::settings::SubscriptionSettings::sub_json_rules: alloc::string::String
 pub xui_rs::settings::SubscriptionSettings::sub_json_uri: alloc::string::String
@@ -1661,6 +1820,7 @@ impl core::fmt::Debug for xui_rs::WebSettings
 pub fn xui_rs::WebSettings::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub struct xui_rs::settings::XraySettingsApi<'client>
 impl<'client> xui_rs::XraySettingsApi<'client>
+pub async fn xui_rs::XraySettingsApi<'client>::add_pia_key(self, &str) -> xui_rs::error::Result<xui_rs::PiaKey>
 pub async fn xui_rs::XraySettingsApi<'client>::balancer_status(self, &[impl core::convert::AsRef<str>]) -> xui_rs::error::Result<alloc::collections::btree::map::BTreeMap<alloc::string::String, xui_rs::BalancerStatus>>
 pub async fn xui_rs::XraySettingsApi<'client>::change_warp_ip(self) -> xui_rs::error::Result<xui_rs::SensitivePayload>
 pub async fn xui_rs::XraySettingsApi<'client>::create_outbound_subscription(self, &xui_rs::OutboundSubscriptionInput) -> xui_rs::error::Result<xui_rs::OutboundSubscription>
@@ -1668,7 +1828,11 @@ pub async fn xui_rs::XraySettingsApi<'client>::default_config(self) -> xui_rs::e
 pub async fn xui_rs::XraySettingsApi<'client>::delete_nord(self) -> xui_rs::error::Result<()>
 pub async fn xui_rs::XraySettingsApi<'client>::delete_outbound_subscription(self, i64) -> xui_rs::error::Result<()>
 pub async fn xui_rs::XraySettingsApi<'client>::delete_outbound_subscription_via_post(self, i64) -> xui_rs::error::Result<()>
+pub async fn xui_rs::XraySettingsApi<'client>::delete_pia(self) -> xui_rs::error::Result<()>
 pub async fn xui_rs::XraySettingsApi<'client>::delete_warp(self) -> xui_rs::error::Result<()>
+pub async fn xui_rs::XraySettingsApi<'client>::geodata_categories(self, &str, &str, u32, u16) -> xui_rs::error::Result<xui_rs::GeoCategoryPage>
+pub async fn xui_rs::XraySettingsApi<'client>::geodata_entries(self, &str, &str, &str, u32, u16) -> xui_rs::error::Result<xui_rs::GeoEntryPage>
+pub async fn xui_rs::XraySettingsApi<'client>::geodata_files(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::GeoFile>>
 pub async fn xui_rs::XraySettingsApi<'client>::move_outbound_subscription(self, i64, xui_rs::MoveDirection) -> xui_rs::error::Result<()>
 pub async fn xui_rs::XraySettingsApi<'client>::nord_countries(self) -> xui_rs::error::Result<xui_rs::SensitivePayload>
 pub async fn xui_rs::XraySettingsApi<'client>::nord_data(self) -> xui_rs::error::Result<xui_rs::SensitivePayload>
@@ -1676,8 +1840,12 @@ pub async fn xui_rs::XraySettingsApi<'client>::nord_servers(self, &str) -> xui_r
 pub async fn xui_rs::XraySettingsApi<'client>::outbound_subscriptions(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::OutboundSubscription>>
 pub async fn xui_rs::XraySettingsApi<'client>::outbounds_traffic(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::OutboundTraffic>>
 pub async fn xui_rs::XraySettingsApi<'client>::parse_outbound_subscription(self, &str, bool, bool) -> xui_rs::error::Result<xui_rs::OutboundDocuments>
+pub async fn xui_rs::XraySettingsApi<'client>::pia_countries(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::PiaCountry>>
+pub async fn xui_rs::XraySettingsApi<'client>::pia_data(self) -> xui_rs::error::Result<xui_rs::PiaAccount>
+pub async fn xui_rs::XraySettingsApi<'client>::pia_servers(self, &str) -> xui_rs::error::Result<xui_rs::PiaServers>
 pub async fn xui_rs::XraySettingsApi<'client>::refresh_outbound_subscription(self, i64) -> xui_rs::error::Result<xui_rs::OutboundDocuments>
 pub async fn xui_rs::XraySettingsApi<'client>::register_nord(self, &str) -> xui_rs::error::Result<xui_rs::SensitivePayload>
+pub async fn xui_rs::XraySettingsApi<'client>::register_pia(self, &str, &str) -> xui_rs::error::Result<xui_rs::PiaAccount>
 pub async fn xui_rs::XraySettingsApi<'client>::register_warp(self, &xui_rs::WarpRegistration) -> xui_rs::error::Result<xui_rs::SensitivePayload>
 pub async fn xui_rs::XraySettingsApi<'client>::reset_outbound_traffic(self, &str) -> xui_rs::error::Result<()>
 pub async fn xui_rs::XraySettingsApi<'client>::set_balancer_override(self, &str, &str) -> xui_rs::error::Result<()>
@@ -1690,6 +1858,7 @@ pub async fn xui_rs::XraySettingsApi<'client>::test_outbounds(self, &[serde_json
 pub async fn xui_rs::XraySettingsApi<'client>::test_route(self, &xui_rs::RouteTestRequest) -> xui_rs::error::Result<xui_rs::RouteTestResult>
 pub async fn xui_rs::XraySettingsApi<'client>::update(self, &xui_rs::XrayConfig, &str) -> xui_rs::error::Result<()>
 pub async fn xui_rs::XraySettingsApi<'client>::update_outbound_subscription(self, i64, &xui_rs::OutboundSubscriptionInput) -> xui_rs::error::Result<()>
+pub async fn xui_rs::XraySettingsApi<'client>::validate_geodata_tokens(self, bool, &[impl core::convert::AsRef<str>]) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::GeodataTokenIssue>>
 pub async fn xui_rs::XraySettingsApi<'client>::warp_config(self) -> xui_rs::error::Result<xui_rs::SensitivePayload>
 pub async fn xui_rs::XraySettingsApi<'client>::warp_data(self) -> xui_rs::error::Result<xui_rs::SensitivePayload>
 pub async fn xui_rs::XraySettingsApi<'client>::xray_result(self) -> xui_rs::error::Result<alloc::string::String>
@@ -1717,6 +1886,7 @@ pub async fn xui_rs::SubscriptionClient::clash_metadata(&self, &str) -> xui_rs::
 pub fn xui_rs::SubscriptionClient::from_settings(&xui_rs::SubscriptionSettings) -> xui_rs::error::Result<Self>
 pub async fn xui_rs::SubscriptionClient::html(&self, &str) -> xui_rs::error::Result<xui_rs::SubscriptionResponse<xui_rs::SubscriptionDocument>>
 pub async fn xui_rs::SubscriptionClient::info(&self, &str) -> xui_rs::error::Result<xui_rs::SubscriptionInfo>
+pub async fn xui_rs::SubscriptionClient::info_with_metadata(&self, &str) -> xui_rs::error::Result<xui_rs::SubscriptionResponse<xui_rs::SubscriptionInfo>>
 pub async fn xui_rs::SubscriptionClient::json(&self, &str) -> xui_rs::error::Result<xui_rs::SubscriptionResponse<xui_rs::SubscriptionJson>>
 pub async fn xui_rs::SubscriptionClient::json_metadata(&self, &str) -> xui_rs::error::Result<xui_rs::SubscriptionMetadata>
 pub fn xui_rs::SubscriptionClient::new(impl core::convert::AsRef<str>) -> xui_rs::error::Result<Self>
@@ -1731,7 +1901,9 @@ pub fn xui_rs::SubscriptionClientBuilder::build(self) -> xui_rs::error::Result<x
 pub fn xui_rs::SubscriptionClientBuilder::clash_path(self, impl core::convert::Into<alloc::string::String>) -> Self
 pub const fn xui_rs::SubscriptionClientBuilder::connect_timeout(self, core::time::Duration) -> Self
 pub const fn xui_rs::SubscriptionClientBuilder::danger_accept_invalid_certs(self, bool) -> Self
+pub fn xui_rs::SubscriptionClientBuilder::device(self, xui_rs::SubscriptionDevice) -> Self
 pub fn xui_rs::SubscriptionClientBuilder::json_path(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn xui_rs::SubscriptionClientBuilder::no_device(self) -> Self
 pub fn xui_rs::SubscriptionClientBuilder::no_proxy(self) -> Self
 pub fn xui_rs::SubscriptionClientBuilder::proxy(self, xui_rs::proxy::ProxyConfig) -> Self
 pub fn xui_rs::SubscriptionClientBuilder::proxy_url(self, impl core::convert::AsRef<str>) -> xui_rs::error::Result<Self>
@@ -1740,6 +1912,16 @@ pub const fn xui_rs::SubscriptionClientBuilder::response_body_limit(self, usize)
 pub const fn xui_rs::SubscriptionClientBuilder::timeout(self, core::time::Duration) -> Self
 impl core::fmt::Debug for xui_rs::SubscriptionClientBuilder
 pub fn xui_rs::SubscriptionClientBuilder::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct xui_rs::subscription::SubscriptionDevice
+pub xui_rs::subscription::SubscriptionDevice::device_model: alloc::string::String
+pub xui_rs::subscription::SubscriptionDevice::device_os: alloc::string::String
+pub xui_rs::subscription::SubscriptionDevice::os_version: alloc::string::String
+pub xui_rs::subscription::SubscriptionDevice::user_agent: alloc::string::String
+impl xui_rs::SubscriptionDevice
+pub fn xui_rs::SubscriptionDevice::hwid(&self) -> &str
+pub fn xui_rs::SubscriptionDevice::new(impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::fmt::Debug for xui_rs::SubscriptionDevice
+pub fn xui_rs::SubscriptionDevice::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub struct xui_rs::subscription::SubscriptionDocument(_)
 impl xui_rs::SubscriptionDocument
 pub fn xui_rs::SubscriptionDocument::as_str(&self) -> &str
@@ -1783,6 +1965,10 @@ pub xui_rs::subscription::SubscriptionMetadata::announcement: core::option::Opti
 pub xui_rs::subscription::SubscriptionMetadata::content_disposition: core::option::Option<alloc::string::String>
 pub xui_rs::subscription::SubscriptionMetadata::content_type: core::option::Option<alloc::string::String>
 pub xui_rs::subscription::SubscriptionMetadata::hide_settings: bool
+pub xui_rs::subscription::SubscriptionMetadata::hwid_active: bool
+pub xui_rs::subscription::SubscriptionMetadata::hwid_limit_reached: bool
+pub xui_rs::subscription::SubscriptionMetadata::hwid_max_devices_reached: bool
+pub xui_rs::subscription::SubscriptionMetadata::hwid_not_supported: bool
 pub xui_rs::subscription::SubscriptionMetadata::profile_title: core::option::Option<alloc::string::String>
 pub xui_rs::subscription::SubscriptionMetadata::routing_enabled: bool
 pub xui_rs::subscription::SubscriptionMetadata::support_url: core::option::Option<alloc::string::String>
@@ -1802,6 +1988,41 @@ pub xui_rs::subscription::SubscriptionTraffic::expire: i64
 pub xui_rs::subscription::SubscriptionTraffic::total: i64
 pub xui_rs::subscription::SubscriptionTraffic::upload: i64
 pub const xui_rs::subscription::DEFAULT_SUBSCRIPTION_RESPONSE_BODY_LIMIT: usize
+pub mod xui_rs::subscription_balancers
+#[non_exhaustive] pub enum xui_rs::subscription_balancers::SubscriptionBalancerStrategy
+pub xui_rs::subscription_balancers::SubscriptionBalancerStrategy::LeastLoad
+pub xui_rs::subscription_balancers::SubscriptionBalancerStrategy::LeastPing
+pub xui_rs::subscription_balancers::SubscriptionBalancerStrategy::Random
+pub xui_rs::subscription_balancers::SubscriptionBalancerStrategy::RoundRobin
+pub xui_rs::subscription_balancers::SubscriptionBalancerStrategy::Unknown
+pub struct xui_rs::subscription_balancers::SubscriptionBalancer
+pub xui_rs::subscription_balancers::SubscriptionBalancer::created_at: i64
+pub xui_rs::subscription_balancers::SubscriptionBalancer::enabled: bool
+pub xui_rs::subscription_balancers::SubscriptionBalancer::id: i64
+pub xui_rs::subscription_balancers::SubscriptionBalancer::inbound_ids: alloc::vec::Vec<i64>
+pub xui_rs::subscription_balancers::SubscriptionBalancer::remark: alloc::string::String
+pub xui_rs::subscription_balancers::SubscriptionBalancer::sort_order: i32
+pub xui_rs::subscription_balancers::SubscriptionBalancer::strategy: xui_rs::SubscriptionBalancerStrategy
+pub xui_rs::subscription_balancers::SubscriptionBalancer::updated_at: i64
+pub struct xui_rs::subscription_balancers::SubscriptionBalancerInput
+pub xui_rs::subscription_balancers::SubscriptionBalancerInput::enabled: core::option::Option<bool>
+pub xui_rs::subscription_balancers::SubscriptionBalancerInput::inbound_ids: alloc::vec::Vec<i64>
+pub xui_rs::subscription_balancers::SubscriptionBalancerInput::remark: alloc::string::String
+pub xui_rs::subscription_balancers::SubscriptionBalancerInput::sort_order: i32
+pub xui_rs::subscription_balancers::SubscriptionBalancerInput::strategy: xui_rs::SubscriptionBalancerStrategy
+impl xui_rs::SubscriptionBalancerInput
+pub fn xui_rs::SubscriptionBalancerInput::new(impl core::convert::Into<alloc::string::String>, alloc::vec::Vec<i64>) -> Self
+pub struct xui_rs::subscription_balancers::SubscriptionBalancersApi<'client>
+impl<'client> xui_rs::SubscriptionBalancersApi<'client>
+pub async fn xui_rs::SubscriptionBalancersApi<'client>::create(self, &xui_rs::SubscriptionBalancerInput) -> xui_rs::error::Result<xui_rs::SubscriptionBalancer>
+pub async fn xui_rs::SubscriptionBalancersApi<'client>::delete(self, i64) -> xui_rs::error::Result<()>
+pub async fn xui_rs::SubscriptionBalancersApi<'client>::delete_via_post(self, i64) -> xui_rs::error::Result<()>
+pub async fn xui_rs::SubscriptionBalancersApi<'client>::list(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::SubscriptionBalancer>>
+pub async fn xui_rs::SubscriptionBalancersApi<'client>::update(self, i64, &xui_rs::SubscriptionBalancerInput) -> xui_rs::error::Result<xui_rs::SubscriptionBalancer>
+#[non_exhaustive] pub enum xui_rs::ApiTokenScope
+pub xui_rs::ApiTokenScope::Admin
+pub xui_rs::ApiTokenScope::Monitor
+pub xui_rs::ApiTokenScope::NodeSync
 #[non_exhaustive] pub enum xui_rs::AuthenticationKind
 pub xui_rs::AuthenticationKind::BearerToken
 pub xui_rs::AuthenticationKind::Session
@@ -1959,6 +2180,7 @@ pub fn xui_rs::HostSecurity::serialize<S>(&self, S) -> core::result::Result<<S a
 impl<'de> serde_core::de::Deserialize<'de> for xui_rs::HostSecurity
 pub fn xui_rs::HostSecurity::deserialize<D>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
 #[non_exhaustive] pub enum xui_rs::InboundProtocol
+pub xui_rs::InboundProtocol::Amneziawg
 pub xui_rs::InboundProtocol::Http
 pub xui_rs::InboundProtocol::Hysteria
 pub xui_rs::InboundProtocol::Mixed
@@ -2134,6 +2356,12 @@ pub xui_rs::ShareAddressStrategy::Node
 #[non_exhaustive] pub enum xui_rs::SortOrder
 pub xui_rs::SortOrder::Ascending
 pub xui_rs::SortOrder::Descending
+#[non_exhaustive] pub enum xui_rs::SubscriptionBalancerStrategy
+pub xui_rs::SubscriptionBalancerStrategy::LeastLoad
+pub xui_rs::SubscriptionBalancerStrategy::LeastPing
+pub xui_rs::SubscriptionBalancerStrategy::Random
+pub xui_rs::SubscriptionBalancerStrategy::RoundRobin
+pub xui_rs::SubscriptionBalancerStrategy::Unknown
 #[non_exhaustive] pub enum xui_rs::SubscriptionDecodeError
 pub xui_rs::SubscriptionDecodeError::Base64(base64::decode::DecodeError)
 pub xui_rs::SubscriptionDecodeError::Utf8(alloc::string::FromUtf8Error)
@@ -2192,11 +2420,75 @@ pub xui_rs::XrayMetric::PauseNs
 pub xui_rs::XrayMetric::Sys
 pub struct xui_rs::AffectedCount
 pub xui_rs::AffectedCount::affected: u64
+pub struct xui_rs::AmneziaWgLogs
+pub xui_rs::AmneziaWgLogs::events: alloc::vec::Vec<alloc::string::String>
+pub xui_rs::AmneziaWgLogs::peers: alloc::vec::Vec<xui_rs::AmneziaWgPeerActivity>
+pub xui_rs::AmneziaWgLogs::running: bool
+pub struct xui_rs::AmneziaWgPeerActivity
+pub xui_rs::AmneziaWgPeerActivity::allowed_ips: alloc::string::String
+pub xui_rs::AmneziaWgPeerActivity::down: i64
+pub xui_rs::AmneziaWgPeerActivity::email: alloc::string::String
+pub xui_rs::AmneziaWgPeerActivity::endpoint: alloc::string::String
+pub xui_rs::AmneziaWgPeerActivity::handshake: i64
+pub xui_rs::AmneziaWgPeerActivity::inbound_id: i64
+pub xui_rs::AmneziaWgPeerActivity::interface_name: alloc::string::String
+pub xui_rs::AmneziaWgPeerActivity::online: bool
+pub xui_rs::AmneziaWgPeerActivity::tag: alloc::string::String
+pub xui_rs::AmneziaWgPeerActivity::up: i64
+pub struct xui_rs::AmneziaWgServerSettings
+pub xui_rs::AmneziaWgServerSettings::content_padding_addition: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::disable_cookies: bool
+pub xui_rs::AmneziaWgServerSettings::external_interface: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::h1: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::h2: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::h3: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::h4: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::header_protection_key: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::i1: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::i2: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::i3: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::i4: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::i5: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::ipv6_enabled: bool
+pub xui_rs::AmneziaWgServerSettings::ipv6_external_interface: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::ipv6_subnet: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::jc: i32
+pub xui_rs::AmneziaWgServerSettings::jmax: i32
+pub xui_rs::AmneziaWgServerSettings::jmin: i32
+pub xui_rs::AmneziaWgServerSettings::keepalive_timeout: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::max_handshake_attempts: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::mtu: i32
+pub xui_rs::AmneziaWgServerSettings::primary_dns: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::private_key: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::public_key: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::random_trailers: bool
+pub xui_rs::AmneziaWgServerSettings::reject_after_time: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::rekey_after_time: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::rekey_timeout: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::route_through_xray: bool
+pub xui_rs::AmneziaWgServerSettings::s1: i32
+pub xui_rs::AmneziaWgServerSettings::s2: i32
+pub xui_rs::AmneziaWgServerSettings::s3: i32
+pub xui_rs::AmneziaWgServerSettings::s4: i32
+pub xui_rs::AmneziaWgServerSettings::secondary_dns: alloc::string::String
+pub xui_rs::AmneziaWgServerSettings::subnet_cidr: u8
+pub xui_rs::AmneziaWgServerSettings::subnet_ip: alloc::string::String
+pub struct xui_rs::AmneziaWgStatus
+pub xui_rs::AmneziaWgStatus::configured: bool
+pub xui_rs::AmneziaWgStatus::running: bool
+pub struct xui_rs::ApiTokenCreateRequest
+pub xui_rs::ApiTokenCreateRequest::expires_at: i64
+pub xui_rs::ApiTokenCreateRequest::name: alloc::string::String
+pub xui_rs::ApiTokenCreateRequest::scope: xui_rs::ApiTokenScope
+impl xui_rs::ApiTokenCreateRequest
+pub fn xui_rs::ApiTokenCreateRequest::new(impl core::convert::Into<alloc::string::String>) -> Self
 pub struct xui_rs::ApiTokenMetadata
 pub xui_rs::ApiTokenMetadata::created_at: i64
 pub xui_rs::ApiTokenMetadata::enabled: bool
+pub xui_rs::ApiTokenMetadata::expires_at: i64
 pub xui_rs::ApiTokenMetadata::id: i64
 pub xui_rs::ApiTokenMetadata::name: alloc::string::String
+pub xui_rs::ApiTokenMetadata::scope: xui_rs::ApiTokenScope
 pub struct xui_rs::AppStats
 pub xui_rs::AppStats::mem: u64
 pub xui_rs::AppStats::threads: u32
@@ -2263,6 +2555,7 @@ pub const fn xui_rs::client::Client::panel(&self) -> xui_rs::PanelApi<'_>
 pub fn xui_rs::client::Client::response_body_limit(&self) -> usize
 pub const fn xui_rs::client::Client::server(&self) -> xui_rs::ServerApi<'_>
 pub const fn xui_rs::client::Client::settings(&self) -> xui_rs::SettingsApi<'_>
+pub const fn xui_rs::client::Client::subscription_balancers(&self) -> xui_rs::SubscriptionBalancersApi<'_>
 pub const fn xui_rs::client::Client::xray_settings(&self) -> xui_rs::XraySettingsApi<'_>
 impl core::fmt::Debug for xui_rs::client::Client
 pub fn xui_rs::client::Client::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -2284,6 +2577,7 @@ pub fn xui_rs::client::ClientBuilder::fmt(&self, &mut core::fmt::Formatter<'_>) 
 pub struct xui_rs::ClientConfig
 pub xui_rs::ClientConfig::ad_tag: alloc::string::String
 pub xui_rs::ClientConfig::allowed_ips: alloc::vec::Vec<alloc::string::String>
+pub xui_rs::ClientConfig::allowed_ips_by_inbound: std::collections::hash::map::HashMap<i64, alloc::vec::Vec<alloc::string::String>>
 pub xui_rs::ClientConfig::auth: alloc::string::String
 pub xui_rs::ClientConfig::comment: alloc::string::String
 pub xui_rs::ClientConfig::created_at: i64
@@ -2291,8 +2585,10 @@ pub xui_rs::ClientConfig::email: alloc::string::String
 pub xui_rs::ClientConfig::enable: bool
 pub xui_rs::ClientConfig::expiry_time: i64
 pub xui_rs::ClientConfig::flow: alloc::string::String
+pub xui_rs::ClientConfig::forwarded_ports: alloc::string::String
 pub xui_rs::ClientConfig::group: alloc::string::String
 pub xui_rs::ClientConfig::keep_alive: i32
+pub xui_rs::ClientConfig::limit_hwid: i32
 pub xui_rs::ClientConfig::limit_ip: i32
 pub xui_rs::ClientConfig::password: alloc::string::String
 pub xui_rs::ClientConfig::pre_shared_key: alloc::string::String
@@ -2300,12 +2596,16 @@ pub xui_rs::ClientConfig::private_key: alloc::string::String
 pub xui_rs::ClientConfig::protocol_id: alloc::string::String
 pub xui_rs::ClientConfig::public_key: alloc::string::String
 pub xui_rs::ClientConfig::reset: i32
+pub xui_rs::ClientConfig::reset_day: i32
+pub xui_rs::ClientConfig::reset_max: i32
 pub xui_rs::ClientConfig::reverse: core::option::Option<xui_rs::ClientReverse>
 pub xui_rs::ClientConfig::secret: alloc::string::String
 pub xui_rs::ClientConfig::security: alloc::string::String
 pub xui_rs::ClientConfig::sub_id: alloc::string::String
 pub xui_rs::ClientConfig::tg_id: i64
 pub xui_rs::ClientConfig::total_gb: i64
+pub xui_rs::ClientConfig::traffic_reset: core::option::Option<xui_rs::inbounds::TrafficReset>
+pub xui_rs::ClientConfig::traffic_reset_day: i32
 pub xui_rs::ClientConfig::updated_at: i64
 impl xui_rs::ClientConfig
 pub fn xui_rs::ClientConfig::new(impl core::convert::Into<alloc::string::String>) -> Self
@@ -2324,6 +2624,7 @@ pub struct xui_rs::ClientDetails
 pub xui_rs::ClientDetails::client: xui_rs::ClientRecord
 pub xui_rs::ClientDetails::external_links: alloc::vec::Vec<xui_rs::ClientExternalLink>
 pub xui_rs::ClientDetails::inbound_ids: alloc::vec::Vec<i64>
+pub xui_rs::ClientDetails::tunnel_allowed_ips: std::collections::hash::map::HashMap<i64, alloc::vec::Vec<alloc::string::String>>
 pub xui_rs::ClientDetails::used_traffic: i64
 pub struct xui_rs::ClientExternalLink
 pub xui_rs::ClientExternalLink::client_id: i64
@@ -2341,6 +2642,14 @@ pub xui_rs::ClientExternalLinkInput::remark: alloc::string::String
 pub xui_rs::ClientExternalLinkInput::value: alloc::string::String
 impl core::fmt::Debug for xui_rs::ClientExternalLinkInput
 pub fn xui_rs::ClientExternalLinkInput::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct xui_rs::ClientHwidDevice
+pub xui_rs::ClientHwidDevice::device_model: alloc::string::String
+pub xui_rs::ClientHwidDevice::device_os: alloc::string::String
+pub xui_rs::ClientHwidDevice::first_seen: i64
+pub xui_rs::ClientHwidDevice::id: i64
+pub xui_rs::ClientHwidDevice::last_seen: i64
+pub xui_rs::ClientHwidDevice::os_version: alloc::string::String
+pub xui_rs::ClientHwidDevice::user_agent: alloc::string::String
 pub struct xui_rs::ClientIpEntry
 pub xui_rs::ClientIpEntry::ip: alloc::string::String
 pub xui_rs::ClientIpEntry::timestamp: i64
@@ -2394,21 +2703,27 @@ pub xui_rs::ClientRecord::email: alloc::string::String
 pub xui_rs::ClientRecord::enable: bool
 pub xui_rs::ClientRecord::expiry_time: i64
 pub xui_rs::ClientRecord::flow: alloc::string::String
+pub xui_rs::ClientRecord::forwarded_ports: alloc::string::String
 pub xui_rs::ClientRecord::group: alloc::string::String
 pub xui_rs::ClientRecord::id: i64
 pub xui_rs::ClientRecord::keep_alive: i32
+pub xui_rs::ClientRecord::limit_hwid: i32
 pub xui_rs::ClientRecord::limit_ip: i32
 pub xui_rs::ClientRecord::password: alloc::string::String
 pub xui_rs::ClientRecord::pre_shared_key: alloc::string::String
 pub xui_rs::ClientRecord::private_key: alloc::string::String
 pub xui_rs::ClientRecord::public_key: alloc::string::String
 pub xui_rs::ClientRecord::reset: i32
+pub xui_rs::ClientRecord::reset_day: i32
+pub xui_rs::ClientRecord::reset_max: i32
 pub xui_rs::ClientRecord::reverse: core::option::Option<xui_rs::ClientReverse>
 pub xui_rs::ClientRecord::secret: alloc::string::String
 pub xui_rs::ClientRecord::security: alloc::string::String
 pub xui_rs::ClientRecord::sub_id: alloc::string::String
 pub xui_rs::ClientRecord::tg_id: i64
 pub xui_rs::ClientRecord::total_gb: i64
+pub xui_rs::ClientRecord::traffic_reset: alloc::string::String
+pub xui_rs::ClientRecord::traffic_reset_day: i32
 pub xui_rs::ClientRecord::updated_at: i64
 pub xui_rs::ClientRecord::uuid: alloc::string::String
 impl xui_rs::ClientRecord
@@ -2458,7 +2773,11 @@ pub xui_rs::ClientTraffic::expiry_time: i64
 pub xui_rs::ClientTraffic::id: i64
 pub xui_rs::ClientTraffic::inbound_id: i64
 pub xui_rs::ClientTraffic::last_online: i64
+pub xui_rs::ClientTraffic::last_sub_fetch: i64
 pub xui_rs::ClientTraffic::reset: i32
+pub xui_rs::ClientTraffic::reset_count: i32
+pub xui_rs::ClientTraffic::reset_day: i32
+pub xui_rs::ClientTraffic::reset_max: i32
 pub xui_rs::ClientTraffic::sub_id: alloc::string::String
 pub xui_rs::ClientTraffic::total: i64
 pub xui_rs::ClientTraffic::up: i64
@@ -2486,6 +2805,7 @@ pub async fn xui_rs::ClientsApi<'client>::bulk_detach(self, &[impl core::convert
 pub async fn xui_rs::ClientsApi<'client>::bulk_disable(self, &[impl core::convert::AsRef<str>]) -> xui_rs::error::Result<xui_rs::BulkSetEnabledResult>
 pub async fn xui_rs::ClientsApi<'client>::bulk_enable(self, &[impl core::convert::AsRef<str>]) -> xui_rs::error::Result<xui_rs::BulkSetEnabledResult>
 pub async fn xui_rs::ClientsApi<'client>::bulk_reset_traffic(self, &[impl core::convert::AsRef<str>]) -> xui_rs::error::Result<xui_rs::AffectedCount>
+pub async fn xui_rs::ClientsApi<'client>::clear_hwid_devices(self, &str) -> xui_rs::error::Result<()>
 pub async fn xui_rs::ClientsApi<'client>::clear_ips(self, &str) -> xui_rs::error::Result<()>
 pub async fn xui_rs::ClientsApi<'client>::client_ips_by_guid(self) -> xui_rs::error::Result<xui_rs::ClientIpsByGuid>
 pub async fn xui_rs::ClientsApi<'client>::create(self, &xui_rs::ClientCreateRequest) -> xui_rs::error::Result<xui_rs::ClientMutationStatus>
@@ -2493,6 +2813,7 @@ pub async fn xui_rs::ClientsApi<'client>::create_group(self, &str) -> xui_rs::er
 pub async fn xui_rs::ClientsApi<'client>::delete(self, &str, bool) -> xui_rs::error::Result<()>
 pub async fn xui_rs::ClientsApi<'client>::delete_depleted(self) -> xui_rs::error::Result<xui_rs::DeletedCount>
 pub async fn xui_rs::ClientsApi<'client>::delete_group(self, &str) -> xui_rs::error::Result<xui_rs::AffectedCount>
+pub async fn xui_rs::ClientsApi<'client>::delete_hwid_device(self, &str, i64) -> xui_rs::error::Result<()>
 pub async fn xui_rs::ClientsApi<'client>::delete_orphans(self) -> xui_rs::error::Result<xui_rs::DeletedCount>
 pub async fn xui_rs::ClientsApi<'client>::detach(self, &str, &[i64]) -> xui_rs::error::Result<xui_rs::ClientMutationStatus>
 pub async fn xui_rs::ClientsApi<'client>::export(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::ClientCreateRequest>>
@@ -2500,6 +2821,7 @@ pub async fn xui_rs::ClientsApi<'client>::get(self, &str) -> xui_rs::error::Resu
 pub async fn xui_rs::ClientsApi<'client>::get_by_telegram_id(self, i64) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::ClientDetails>>
 pub async fn xui_rs::ClientsApi<'client>::group_emails(self, &str) -> xui_rs::error::Result<alloc::vec::Vec<alloc::string::String>>
 pub async fn xui_rs::ClientsApi<'client>::groups(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::GroupSummary>>
+pub async fn xui_rs::ClientsApi<'client>::hwid_devices(self, &str) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::ClientHwidDevice>>
 pub async fn xui_rs::ClientsApi<'client>::import(self, &[xui_rs::ClientCreateRequest]) -> xui_rs::error::Result<xui_rs::BulkCreateResult>
 pub async fn xui_rs::ClientsApi<'client>::ips(self, &str) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::ClientIpInfo>>
 pub async fn xui_rs::ClientsApi<'client>::last_online(self) -> xui_rs::error::Result<xui_rs::LastOnlineByEmail>
@@ -2522,8 +2844,10 @@ pub async fn xui_rs::ClientsApi<'client>::update_traffic(self, &str, i64, i64) -
 pub struct xui_rs::CreatedApiToken
 pub xui_rs::CreatedApiToken::created_at: i64
 pub xui_rs::CreatedApiToken::enabled: bool
+pub xui_rs::CreatedApiToken::expires_at: i64
 pub xui_rs::CreatedApiToken::id: i64
 pub xui_rs::CreatedApiToken::name: alloc::string::String
+pub xui_rs::CreatedApiToken::scope: xui_rs::ApiTokenScope
 pub xui_rs::CreatedApiToken::token: alloc::string::String
 impl core::fmt::Debug for xui_rs::CreatedApiToken
 pub fn xui_rs::CreatedApiToken::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -2610,6 +2934,31 @@ pub xui_rs::FallbackInput::xver: i32
 pub struct xui_rs::FallbackParent
 pub xui_rs::FallbackParent::master_id: i64
 pub xui_rs::FallbackParent::path: alloc::string::String
+pub struct xui_rs::GeoCategory
+pub xui_rs::GeoCategory::attributes: alloc::vec::Vec<alloc::string::String>
+pub xui_rs::GeoCategory::code: alloc::string::String
+pub xui_rs::GeoCategory::entries: i32
+pub struct xui_rs::GeoCategoryPage
+pub xui_rs::GeoCategoryPage::items: alloc::vec::Vec<xui_rs::GeoCategory>
+pub xui_rs::GeoCategoryPage::total: i32
+pub struct xui_rs::GeoEntry
+pub xui_rs::GeoEntry::kind: alloc::string::String
+pub xui_rs::GeoEntry::value: alloc::string::String
+pub struct xui_rs::GeoEntryPage
+pub xui_rs::GeoEntryPage::items: alloc::vec::Vec<xui_rs::GeoEntry>
+pub xui_rs::GeoEntryPage::total: i32
+pub struct xui_rs::GeoFile
+pub xui_rs::GeoFile::categories: i32
+pub xui_rs::GeoFile::error: alloc::string::String
+pub xui_rs::GeoFile::kind: alloc::string::String
+pub xui_rs::GeoFile::modified_at: i64
+pub xui_rs::GeoFile::name: alloc::string::String
+pub xui_rs::GeoFile::size: i64
+pub struct xui_rs::GeodataTokenIssue
+pub xui_rs::GeodataTokenIssue::code: alloc::string::String
+pub xui_rs::GeodataTokenIssue::file: alloc::string::String
+pub xui_rs::GeodataTokenIssue::reason: alloc::string::String
+pub xui_rs::GeodataTokenIssue::token: alloc::string::String
 pub struct xui_rs::GroupName
 pub xui_rs::GroupName::name: alloc::string::String
 pub struct xui_rs::GroupSummary
@@ -2701,6 +3050,7 @@ impl core::fmt::Debug for xui_rs::inbounds::Inbound
 pub fn xui_rs::inbounds::Inbound::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub struct xui_rs::InboundConfig
 pub xui_rs::InboundConfig::client_stats: alloc::vec::Vec<xui_rs::inbounds::ClientTraffic>
+pub xui_rs::InboundConfig::disable_flow: bool
 pub xui_rs::InboundConfig::down: i64
 pub xui_rs::InboundConfig::enable: bool
 pub xui_rs::InboundConfig::expiry_time: i64
@@ -2736,6 +3086,7 @@ pub xui_rs::InboundFallback::path: alloc::string::String
 pub xui_rs::InboundFallback::sort_order: i32
 pub xui_rs::InboundFallback::xver: i32
 pub struct xui_rs::InboundOption
+pub xui_rs::InboundOption::awg_server: core::option::Option<xui_rs::inbounds::AmneziaWgServerSettings>
 pub xui_rs::InboundOption::enable: bool
 pub xui_rs::InboundOption::id: i64
 pub xui_rs::InboundOption::listen: alloc::string::String
@@ -2777,6 +3128,7 @@ pub async fn xui_rs::inbounds::InboundsApi<'client>::reset_all_traffic(self) -> 
 pub async fn xui_rs::inbounds::InboundsApi<'client>::reset_traffic(self, i64) -> xui_rs::error::Result<()>
 pub async fn xui_rs::inbounds::InboundsApi<'client>::set_enabled(self, i64, bool) -> xui_rs::error::Result<()>
 pub async fn xui_rs::inbounds::InboundsApi<'client>::set_fallbacks(self, i64, &[xui_rs::inbounds::FallbackInput]) -> xui_rs::error::Result<()>
+pub async fn xui_rs::inbounds::InboundsApi<'client>::set_subscription_sort_index(self, i64, i32) -> xui_rs::error::Result<()>
 pub async fn xui_rs::inbounds::InboundsApi<'client>::update(self, i64, &xui_rs::inbounds::InboundConfig) -> xui_rs::error::Result<xui_rs::inbounds::Inbound>
 pub struct xui_rs::Invalidation
 pub xui_rs::Invalidation::target: xui_rs::EventMessageType
@@ -2950,6 +3302,7 @@ pub async fn xui_rs::NodesApi<'client>::history(self, i64, xui_rs::NodeMetric, x
 pub async fn xui_rs::NodesApi<'client>::list(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::NodeView>>
 pub async fn xui_rs::NodesApi<'client>::mtls_ca(self) -> xui_rs::error::Result<xui_rs::NodeMtlsCa>
 pub async fn xui_rs::NodesApi<'client>::probe(self, i64) -> xui_rs::error::Result<xui_rs::NodeProbeResult>
+pub async fn xui_rs::NodesApi<'client>::reload_mtls_client(self) -> xui_rs::error::Result<()>
 pub async fn xui_rs::NodesApi<'client>::remote_inbounds(self, &xui_rs::NodeRequest) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::RemoteInboundOption>>
 pub async fn xui_rs::NodesApi<'client>::set_enabled(self, i64, bool) -> xui_rs::error::Result<()>
 pub async fn xui_rs::NodesApi<'client>::set_mtls_trust_ca(self, &str) -> xui_rs::error::Result<()>
@@ -3079,6 +3432,31 @@ pub xui_rs::PanelUpdateStatus::exit_code: i32
 pub xui_rs::PanelUpdateStatus::finished_at: i64
 pub xui_rs::PanelUpdateStatus::run_id: alloc::string::String
 pub xui_rs::PanelUpdateStatus::state: xui_rs::PanelUpdateState
+pub struct xui_rs::PiaAccount
+pub xui_rs::PiaAccount::account_hint: alloc::string::String
+pub xui_rs::PiaAccount::username: alloc::string::String
+pub struct xui_rs::PiaCountry
+pub xui_rs::PiaCountry::code: alloc::string::String
+pub struct xui_rs::PiaKey
+pub xui_rs::PiaKey::address: alloc::string::String
+pub xui_rs::PiaKey::endpoint: alloc::string::String
+pub xui_rs::PiaKey::hostname: alloc::string::String
+pub xui_rs::PiaKey::public_key: alloc::string::String
+pub xui_rs::PiaKey::secret_key: alloc::string::String
+pub xui_rs::PiaKey::tag: alloc::string::String
+impl core::fmt::Debug for xui_rs::PiaKey
+pub fn xui_rs::PiaKey::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct xui_rs::PiaRegion
+pub xui_rs::PiaRegion::id: alloc::string::String
+pub xui_rs::PiaRegion::name: alloc::string::String
+pub struct xui_rs::PiaServer
+pub xui_rs::PiaServer::hostname: alloc::string::String
+pub xui_rs::PiaServer::ip: alloc::string::String
+pub xui_rs::PiaServer::region_id: alloc::string::String
+pub xui_rs::PiaServer::region_name: alloc::string::String
+pub struct xui_rs::PiaServers
+pub xui_rs::PiaServers::regions: alloc::vec::Vec<xui_rs::PiaRegion>
+pub xui_rs::PiaServers::servers: alloc::vec::Vec<xui_rs::PiaServer>
 pub struct xui_rs::ProxyConfig
 impl xui_rs::proxy::ProxyConfig
 pub const fn xui_rs::proxy::ProxyConfig::has_basic_auth(&self) -> bool
@@ -3145,6 +3523,7 @@ pub xui_rs::RouteTestResult::group_tags: alloc::vec::Vec<alloc::string::String>
 pub xui_rs::RouteTestResult::matched: bool
 pub xui_rs::RouteTestResult::outbound_tag: alloc::string::String
 pub struct xui_rs::SecuritySettings
+pub xui_rs::SecuritySettings::ip_limit_allowlist: alloc::string::String
 pub xui_rs::SecuritySettings::outbound_down_threshold: u8
 pub xui_rs::SecuritySettings::time_location: alloc::string::String
 pub xui_rs::SecuritySettings::two_factor_enable: bool
@@ -3160,6 +3539,7 @@ impl core::fmt::Debug for xui_rs::SensitivePayload
 pub fn xui_rs::SensitivePayload::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub struct xui_rs::ServerApi<'client>
 impl<'client> xui_rs::ServerApi<'client>
+pub async fn xui_rs::ServerApi<'client>::amneziawg_logs(self, u32, &str) -> xui_rs::error::Result<xui_rs::AmneziaWgLogs>
 pub async fn xui_rs::ServerApi<'client>::certificate_content_hashes(self, &str) -> xui_rs::error::Result<alloc::vec::Vec<alloc::string::String>>
 pub async fn xui_rs::ServerApi<'client>::certificate_file_hashes(self, &str) -> xui_rs::error::Result<alloc::vec::Vec<alloc::string::String>>
 pub async fn xui_rs::ServerApi<'client>::client_ips(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::ClientIpRecord>>
@@ -3201,6 +3581,7 @@ pub async fn xui_rs::ServerApi<'client>::xray_observatory(self) -> xui_rs::error
 pub async fn xui_rs::ServerApi<'client>::xray_observatory_history(self, &str, xui_rs::HistoryBucket) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::MetricPoint>>
 pub async fn xui_rs::ServerApi<'client>::xray_versions(self) -> xui_rs::error::Result<alloc::vec::Vec<alloc::string::String>>
 pub struct xui_rs::ServerStatus
+pub xui_rs::ServerStatus::amneziawg: xui_rs::AmneziaWgStatus
 pub xui_rs::ServerStatus::app_stats: xui_rs::AppStats
 pub xui_rs::ServerStatus::cpu: f64
 pub xui_rs::ServerStatus::cpu_cores: i32
@@ -3225,13 +3606,13 @@ pub struct xui_rs::SettingsApi<'client>
 impl<'client> xui_rs::SettingsApi<'client>
 pub async fn xui_rs::SettingsApi<'client>::all(self) -> xui_rs::error::Result<xui_rs::PanelSettingsView>
 pub async fn xui_rs::SettingsApi<'client>::api_tokens(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::ApiTokenMetadata>>
-pub async fn xui_rs::SettingsApi<'client>::create_api_token(self, &str) -> xui_rs::error::Result<xui_rs::CreatedApiToken>
+pub async fn xui_rs::SettingsApi<'client>::create_api_token(self, &xui_rs::ApiTokenCreateRequest) -> xui_rs::error::Result<xui_rs::CreatedApiToken>
 pub async fn xui_rs::SettingsApi<'client>::default_xray_config(self) -> xui_rs::error::Result<xui_rs::XrayConfig>
 pub async fn xui_rs::SettingsApi<'client>::defaults(self) -> xui_rs::error::Result<xui_rs::EffectiveDefaults>
-pub async fn xui_rs::SettingsApi<'client>::delete_api_token(self, i64) -> xui_rs::error::Result<()>
+pub async fn xui_rs::SettingsApi<'client>::delete_api_token(self, i64, xui_rs::ApiTokenScope) -> xui_rs::error::Result<()>
 pub async fn xui_rs::SettingsApi<'client>::factory_defaults(self) -> xui_rs::error::Result<xui_rs::FactoryDefaults>
 pub async fn xui_rs::SettingsApi<'client>::restart_panel(self) -> xui_rs::error::Result<()>
-pub async fn xui_rs::SettingsApi<'client>::set_api_token_enabled(self, i64, bool) -> xui_rs::error::Result<()>
+pub async fn xui_rs::SettingsApi<'client>::set_api_token_enabled(self, i64, xui_rs::ApiTokenScope, bool) -> xui_rs::error::Result<()>
 pub async fn xui_rs::SettingsApi<'client>::test_smtp(self) -> xui_rs::error::Result<xui_rs::SmtpTestResult>
 pub async fn xui_rs::SettingsApi<'client>::test_telegram(self) -> xui_rs::error::Result<()>
 pub async fn xui_rs::SettingsApi<'client>::update(self, &xui_rs::PanelSettingsUpdate) -> xui_rs::error::Result<()>
@@ -3262,6 +3643,30 @@ pub struct xui_rs::SmtpTestResult
 pub xui_rs::SmtpTestResult::message: alloc::string::String
 pub xui_rs::SmtpTestResult::stage: alloc::string::String
 pub xui_rs::SmtpTestResult::success: bool
+pub struct xui_rs::SubscriptionBalancer
+pub xui_rs::SubscriptionBalancer::created_at: i64
+pub xui_rs::SubscriptionBalancer::enabled: bool
+pub xui_rs::SubscriptionBalancer::id: i64
+pub xui_rs::SubscriptionBalancer::inbound_ids: alloc::vec::Vec<i64>
+pub xui_rs::SubscriptionBalancer::remark: alloc::string::String
+pub xui_rs::SubscriptionBalancer::sort_order: i32
+pub xui_rs::SubscriptionBalancer::strategy: xui_rs::SubscriptionBalancerStrategy
+pub xui_rs::SubscriptionBalancer::updated_at: i64
+pub struct xui_rs::SubscriptionBalancerInput
+pub xui_rs::SubscriptionBalancerInput::enabled: core::option::Option<bool>
+pub xui_rs::SubscriptionBalancerInput::inbound_ids: alloc::vec::Vec<i64>
+pub xui_rs::SubscriptionBalancerInput::remark: alloc::string::String
+pub xui_rs::SubscriptionBalancerInput::sort_order: i32
+pub xui_rs::SubscriptionBalancerInput::strategy: xui_rs::SubscriptionBalancerStrategy
+impl xui_rs::SubscriptionBalancerInput
+pub fn xui_rs::SubscriptionBalancerInput::new(impl core::convert::Into<alloc::string::String>, alloc::vec::Vec<i64>) -> Self
+pub struct xui_rs::SubscriptionBalancersApi<'client>
+impl<'client> xui_rs::SubscriptionBalancersApi<'client>
+pub async fn xui_rs::SubscriptionBalancersApi<'client>::create(self, &xui_rs::SubscriptionBalancerInput) -> xui_rs::error::Result<xui_rs::SubscriptionBalancer>
+pub async fn xui_rs::SubscriptionBalancersApi<'client>::delete(self, i64) -> xui_rs::error::Result<()>
+pub async fn xui_rs::SubscriptionBalancersApi<'client>::delete_via_post(self, i64) -> xui_rs::error::Result<()>
+pub async fn xui_rs::SubscriptionBalancersApi<'client>::list(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::SubscriptionBalancer>>
+pub async fn xui_rs::SubscriptionBalancersApi<'client>::update(self, i64, &xui_rs::SubscriptionBalancerInput) -> xui_rs::error::Result<xui_rs::SubscriptionBalancer>
 pub struct xui_rs::SubscriptionClient
 impl xui_rs::SubscriptionClient
 pub fn xui_rs::SubscriptionClient::builder(impl core::convert::AsRef<str>) -> xui_rs::error::Result<xui_rs::SubscriptionClientBuilder>
@@ -3270,6 +3675,7 @@ pub async fn xui_rs::SubscriptionClient::clash_metadata(&self, &str) -> xui_rs::
 pub fn xui_rs::SubscriptionClient::from_settings(&xui_rs::SubscriptionSettings) -> xui_rs::error::Result<Self>
 pub async fn xui_rs::SubscriptionClient::html(&self, &str) -> xui_rs::error::Result<xui_rs::SubscriptionResponse<xui_rs::SubscriptionDocument>>
 pub async fn xui_rs::SubscriptionClient::info(&self, &str) -> xui_rs::error::Result<xui_rs::SubscriptionInfo>
+pub async fn xui_rs::SubscriptionClient::info_with_metadata(&self, &str) -> xui_rs::error::Result<xui_rs::SubscriptionResponse<xui_rs::SubscriptionInfo>>
 pub async fn xui_rs::SubscriptionClient::json(&self, &str) -> xui_rs::error::Result<xui_rs::SubscriptionResponse<xui_rs::SubscriptionJson>>
 pub async fn xui_rs::SubscriptionClient::json_metadata(&self, &str) -> xui_rs::error::Result<xui_rs::SubscriptionMetadata>
 pub fn xui_rs::SubscriptionClient::new(impl core::convert::AsRef<str>) -> xui_rs::error::Result<Self>
@@ -3284,7 +3690,9 @@ pub fn xui_rs::SubscriptionClientBuilder::build(self) -> xui_rs::error::Result<x
 pub fn xui_rs::SubscriptionClientBuilder::clash_path(self, impl core::convert::Into<alloc::string::String>) -> Self
 pub const fn xui_rs::SubscriptionClientBuilder::connect_timeout(self, core::time::Duration) -> Self
 pub const fn xui_rs::SubscriptionClientBuilder::danger_accept_invalid_certs(self, bool) -> Self
+pub fn xui_rs::SubscriptionClientBuilder::device(self, xui_rs::SubscriptionDevice) -> Self
 pub fn xui_rs::SubscriptionClientBuilder::json_path(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn xui_rs::SubscriptionClientBuilder::no_device(self) -> Self
 pub fn xui_rs::SubscriptionClientBuilder::no_proxy(self) -> Self
 pub fn xui_rs::SubscriptionClientBuilder::proxy(self, xui_rs::proxy::ProxyConfig) -> Self
 pub fn xui_rs::SubscriptionClientBuilder::proxy_url(self, impl core::convert::AsRef<str>) -> xui_rs::error::Result<Self>
@@ -3293,6 +3701,16 @@ pub const fn xui_rs::SubscriptionClientBuilder::response_body_limit(self, usize)
 pub const fn xui_rs::SubscriptionClientBuilder::timeout(self, core::time::Duration) -> Self
 impl core::fmt::Debug for xui_rs::SubscriptionClientBuilder
 pub fn xui_rs::SubscriptionClientBuilder::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct xui_rs::SubscriptionDevice
+pub xui_rs::SubscriptionDevice::device_model: alloc::string::String
+pub xui_rs::SubscriptionDevice::device_os: alloc::string::String
+pub xui_rs::SubscriptionDevice::os_version: alloc::string::String
+pub xui_rs::SubscriptionDevice::user_agent: alloc::string::String
+impl xui_rs::SubscriptionDevice
+pub fn xui_rs::SubscriptionDevice::hwid(&self) -> &str
+pub fn xui_rs::SubscriptionDevice::new(impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::fmt::Debug for xui_rs::SubscriptionDevice
+pub fn xui_rs::SubscriptionDevice::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub struct xui_rs::SubscriptionDocument(_)
 impl xui_rs::SubscriptionDocument
 pub fn xui_rs::SubscriptionDocument::as_str(&self) -> &str
@@ -3336,6 +3754,10 @@ pub xui_rs::SubscriptionMetadata::announcement: core::option::Option<alloc::stri
 pub xui_rs::SubscriptionMetadata::content_disposition: core::option::Option<alloc::string::String>
 pub xui_rs::SubscriptionMetadata::content_type: core::option::Option<alloc::string::String>
 pub xui_rs::SubscriptionMetadata::hide_settings: bool
+pub xui_rs::SubscriptionMetadata::hwid_active: bool
+pub xui_rs::SubscriptionMetadata::hwid_limit_reached: bool
+pub xui_rs::SubscriptionMetadata::hwid_max_devices_reached: bool
+pub xui_rs::SubscriptionMetadata::hwid_not_supported: bool
 pub xui_rs::SubscriptionMetadata::profile_title: core::option::Option<alloc::string::String>
 pub xui_rs::SubscriptionMetadata::routing_enabled: bool
 pub xui_rs::SubscriptionMetadata::support_url: core::option::Option<alloc::string::String>
@@ -3374,6 +3796,7 @@ pub xui_rs::SubscriptionSettings::sub_json_auto_detect: bool
 pub xui_rs::SubscriptionSettings::sub_json_enable: bool
 pub xui_rs::SubscriptionSettings::sub_json_final_mask: alloc::string::String
 pub xui_rs::SubscriptionSettings::sub_json_mux: alloc::string::String
+pub xui_rs::SubscriptionSettings::sub_json_observatory: alloc::string::String
 pub xui_rs::SubscriptionSettings::sub_json_path: alloc::string::String
 pub xui_rs::SubscriptionSettings::sub_json_rules: alloc::string::String
 pub xui_rs::SubscriptionSettings::sub_json_uri: alloc::string::String
@@ -3531,6 +3954,7 @@ pub xui_rs::XrayObservatoryEntry::tag: alloc::string::String
 pub xui_rs::XrayObservatoryEntry::updated_at: i64
 pub struct xui_rs::XraySettingsApi<'client>
 impl<'client> xui_rs::XraySettingsApi<'client>
+pub async fn xui_rs::XraySettingsApi<'client>::add_pia_key(self, &str) -> xui_rs::error::Result<xui_rs::PiaKey>
 pub async fn xui_rs::XraySettingsApi<'client>::balancer_status(self, &[impl core::convert::AsRef<str>]) -> xui_rs::error::Result<alloc::collections::btree::map::BTreeMap<alloc::string::String, xui_rs::BalancerStatus>>
 pub async fn xui_rs::XraySettingsApi<'client>::change_warp_ip(self) -> xui_rs::error::Result<xui_rs::SensitivePayload>
 pub async fn xui_rs::XraySettingsApi<'client>::create_outbound_subscription(self, &xui_rs::OutboundSubscriptionInput) -> xui_rs::error::Result<xui_rs::OutboundSubscription>
@@ -3538,7 +3962,11 @@ pub async fn xui_rs::XraySettingsApi<'client>::default_config(self) -> xui_rs::e
 pub async fn xui_rs::XraySettingsApi<'client>::delete_nord(self) -> xui_rs::error::Result<()>
 pub async fn xui_rs::XraySettingsApi<'client>::delete_outbound_subscription(self, i64) -> xui_rs::error::Result<()>
 pub async fn xui_rs::XraySettingsApi<'client>::delete_outbound_subscription_via_post(self, i64) -> xui_rs::error::Result<()>
+pub async fn xui_rs::XraySettingsApi<'client>::delete_pia(self) -> xui_rs::error::Result<()>
 pub async fn xui_rs::XraySettingsApi<'client>::delete_warp(self) -> xui_rs::error::Result<()>
+pub async fn xui_rs::XraySettingsApi<'client>::geodata_categories(self, &str, &str, u32, u16) -> xui_rs::error::Result<xui_rs::GeoCategoryPage>
+pub async fn xui_rs::XraySettingsApi<'client>::geodata_entries(self, &str, &str, &str, u32, u16) -> xui_rs::error::Result<xui_rs::GeoEntryPage>
+pub async fn xui_rs::XraySettingsApi<'client>::geodata_files(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::GeoFile>>
 pub async fn xui_rs::XraySettingsApi<'client>::move_outbound_subscription(self, i64, xui_rs::MoveDirection) -> xui_rs::error::Result<()>
 pub async fn xui_rs::XraySettingsApi<'client>::nord_countries(self) -> xui_rs::error::Result<xui_rs::SensitivePayload>
 pub async fn xui_rs::XraySettingsApi<'client>::nord_data(self) -> xui_rs::error::Result<xui_rs::SensitivePayload>
@@ -3546,8 +3974,12 @@ pub async fn xui_rs::XraySettingsApi<'client>::nord_servers(self, &str) -> xui_r
 pub async fn xui_rs::XraySettingsApi<'client>::outbound_subscriptions(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::OutboundSubscription>>
 pub async fn xui_rs::XraySettingsApi<'client>::outbounds_traffic(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::OutboundTraffic>>
 pub async fn xui_rs::XraySettingsApi<'client>::parse_outbound_subscription(self, &str, bool, bool) -> xui_rs::error::Result<xui_rs::OutboundDocuments>
+pub async fn xui_rs::XraySettingsApi<'client>::pia_countries(self) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::PiaCountry>>
+pub async fn xui_rs::XraySettingsApi<'client>::pia_data(self) -> xui_rs::error::Result<xui_rs::PiaAccount>
+pub async fn xui_rs::XraySettingsApi<'client>::pia_servers(self, &str) -> xui_rs::error::Result<xui_rs::PiaServers>
 pub async fn xui_rs::XraySettingsApi<'client>::refresh_outbound_subscription(self, i64) -> xui_rs::error::Result<xui_rs::OutboundDocuments>
 pub async fn xui_rs::XraySettingsApi<'client>::register_nord(self, &str) -> xui_rs::error::Result<xui_rs::SensitivePayload>
+pub async fn xui_rs::XraySettingsApi<'client>::register_pia(self, &str, &str) -> xui_rs::error::Result<xui_rs::PiaAccount>
 pub async fn xui_rs::XraySettingsApi<'client>::register_warp(self, &xui_rs::WarpRegistration) -> xui_rs::error::Result<xui_rs::SensitivePayload>
 pub async fn xui_rs::XraySettingsApi<'client>::reset_outbound_traffic(self, &str) -> xui_rs::error::Result<()>
 pub async fn xui_rs::XraySettingsApi<'client>::set_balancer_override(self, &str, &str) -> xui_rs::error::Result<()>
@@ -3560,6 +3992,7 @@ pub async fn xui_rs::XraySettingsApi<'client>::test_outbounds(self, &[serde_json
 pub async fn xui_rs::XraySettingsApi<'client>::test_route(self, &xui_rs::RouteTestRequest) -> xui_rs::error::Result<xui_rs::RouteTestResult>
 pub async fn xui_rs::XraySettingsApi<'client>::update(self, &xui_rs::XrayConfig, &str) -> xui_rs::error::Result<()>
 pub async fn xui_rs::XraySettingsApi<'client>::update_outbound_subscription(self, i64, &xui_rs::OutboundSubscriptionInput) -> xui_rs::error::Result<()>
+pub async fn xui_rs::XraySettingsApi<'client>::validate_geodata_tokens(self, bool, &[impl core::convert::AsRef<str>]) -> xui_rs::error::Result<alloc::vec::Vec<xui_rs::GeodataTokenIssue>>
 pub async fn xui_rs::XraySettingsApi<'client>::warp_config(self) -> xui_rs::error::Result<xui_rs::SensitivePayload>
 pub async fn xui_rs::XraySettingsApi<'client>::warp_data(self) -> xui_rs::error::Result<xui_rs::SensitivePayload>
 pub async fn xui_rs::XraySettingsApi<'client>::xray_result(self) -> xui_rs::error::Result<alloc::string::String>

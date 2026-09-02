@@ -228,7 +228,7 @@ pub enum Error {
         source: serde_json::Error,
     },
 
-    /// The panel sent a data-frame format not used by the v3.6.0 protocol.
+    /// The panel sent a data-frame format not used by the v3.7.0 protocol.
     #[error("unexpected WebSocket {kind} frame from {url}")]
     UnexpectedWebSocketFrame {
         /// WebSocket endpoint.

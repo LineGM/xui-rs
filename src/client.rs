@@ -361,6 +361,11 @@ impl Client {
         crate::EventsApi::new(self)
     }
 
+    /// Accesses JSON-subscription balancer management operations.
+    pub const fn subscription_balancers(&self) -> crate::SubscriptionBalancersApi<'_> {
+        crate::SubscriptionBalancersApi::new(self)
+    }
+
     pub(crate) fn endpoint(&self, path: &str) -> Result<Url> {
         self.inner
             .base_url

@@ -10,7 +10,7 @@
     { "method": "get", "path": "/panel/api/server/xrayObservatoryHistory/{tag}/{bucket}" },
     { "method": "get", "path": "/panel/api/server/getXrayVersion" },
     { "method": "get", "path": "/panel/api/server/getPanelUpdateInfo" },
-    { "method": "get", "path": "/panel/api/server/getUpdateStatus", "openapi": false },
+    { "method": "get", "path": "/panel/api/server/getUpdateStatus" },
     { "method": "get", "path": "/panel/api/server/getConfigJson" },
     { "method": "get", "path": "/panel/api/server/getDb" },
     { "method": "get", "path": "/panel/api/server/getMigration" },
@@ -32,12 +32,13 @@
     { "method": "post", "path": "/panel/api/server/updateGeofile/{fileName}" },
     { "method": "post", "path": "/panel/api/server/logs/{count}" },
     { "method": "post", "path": "/panel/api/server/xraylogs/{count}" },
+    { "method": "post", "path": "/panel/api/server/amneziawglogs/{count}" },
     { "method": "post", "path": "/panel/api/server/importDB" },
     { "method": "post", "path": "/panel/api/server/getNewEchCert" },
     { "method": "post", "path": "/panel/api/server/getCertHash" },
     { "method": "post", "path": "/panel/api/server/getRemoteCertHash" },
-    { "method": "post", "path": "/panel/api/server/scanRealityTarget", "openapi": false },
-    { "method": "post", "path": "/panel/api/server/scanRealityTargets", "openapi": false },
+    { "method": "post", "path": "/panel/api/server/scanRealityTarget" },
+    { "method": "post", "path": "/panel/api/server/scanRealityTargets" },
     { "method": "post", "path": "/panel/api/server/clientIps" }
   ]
 }

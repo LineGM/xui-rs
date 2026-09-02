@@ -7,6 +7,6 @@ pub use client::{
     DEFAULT_SUBSCRIPTION_RESPONSE_BODY_LIMIT, SubscriptionClient, SubscriptionClientBuilder,
 };
 pub use models::{
-    SubscriptionDecodeError, SubscriptionDocument, SubscriptionInfo, SubscriptionJson,
-    SubscriptionMetadata, SubscriptionResponse, SubscriptionTraffic,
+    SubscriptionDecodeError, SubscriptionDevice, SubscriptionDocument, SubscriptionInfo,
+    SubscriptionJson, SubscriptionMetadata, SubscriptionResponse, SubscriptionTraffic,
 };

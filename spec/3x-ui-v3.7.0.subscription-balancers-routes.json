@@ -1,0 +1,10 @@
+{
+  "source": "internal/web/controller/sub_balancer.go:initRouter",
+  "routes": [
+    { "method": "get", "path": "/panel/api/sub-balancers" },
+    { "method": "post", "path": "/panel/api/sub-balancers" },
+    { "method": "post", "path": "/panel/api/sub-balancers/{id}" },
+    { "method": "delete", "path": "/panel/api/sub-balancers/{id}" },
+    { "method": "post", "path": "/panel/api/sub-balancers/{id}/del" }
+  ]
+}

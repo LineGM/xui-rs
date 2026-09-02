@@ -57,12 +57,18 @@ pub struct ClientConfig {
         deserialize_with = "deserialize_null_default"
     )]
     pub allowed_ips: Vec<String>,
+    /// Per-inbound `WireGuard`/`AmneziaWG` allowed-network overrides.
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub allowed_ips_by_inbound: HashMap<i64, Vec<String>>,
     /// `WireGuard` pre-shared key.
     #[serde(skip_serializing_if = "String::is_empty")]
     pub pre_shared_key: String,
     /// `WireGuard` keepalive interval.
     #[serde(skip_serializing_if = "is_zero_i32")]
     pub keep_alive: i32,
+    /// `AmneziaWG` per-client port-forwarding specification.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub forwarded_ports: String,
     /// `MTProto` client secret.
     #[serde(skip_serializing_if = "String::is_empty")]
     pub secret: String,
@@ -73,6 +79,8 @@ pub struct ClientConfig {
     pub email: String,
     /// Maximum concurrent source IP count.
     pub limit_ip: i32,
+    /// Maximum registered subscription devices; zero disables HWID limiting.
+    pub limit_hwid: i32,
     /// Traffic quota in bytes, despite the historical `totalGB` wire name.
     #[serde(rename = "totalGB")]
     pub total_gb: i64,
@@ -91,6 +99,16 @@ pub struct ClientConfig {
     pub comment: String,
     /// Automatic reset period encoded by 3x-ui.
     pub reset: i32,
+    /// Calendar renewal day; zero keeps interval-based renewal.
+    pub reset_day: i32,
+    /// Maximum automatic renewals; zero is unlimited.
+    pub reset_max: i32,
+    /// Independent per-client traffic reset cycle.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub traffic_reset: Option<crate::TrafficReset>,
+    /// Day of month used by the per-client monthly reset cycle.
+    #[serde(skip_serializing_if = "is_zero_i32")]
+    pub traffic_reset_day: i32,
     /// Creation timestamp in milliseconds used by import/export.
     #[serde(rename = "created_at", skip_serializing_if = "is_zero_i64")]
     pub created_at: i64,
@@ -124,12 +142,15 @@ impl fmt::Debug for ClientConfig {
             .field("private_key", &"[REDACTED]")
             .field("public_key", &"[REDACTED]")
             .field("allowed_ips", &self.allowed_ips)
+            .field("allowed_ips_by_inbound", &self.allowed_ips_by_inbound)
             .field("pre_shared_key", &"[REDACTED]")
             .field("keep_alive", &self.keep_alive)
+            .field("forwarded_ports", &self.forwarded_ports)
             .field("secret", &"[REDACTED]")
             .field("ad_tag", &"[REDACTED]")
             .field("email", &self.email)
             .field("limit_ip", &self.limit_ip)
+            .field("limit_hwid", &self.limit_hwid)
             .field("total_gb", &self.total_gb)
             .field("expiry_time", &self.expiry_time)
             .field("enable", &self.enable)
@@ -138,6 +159,10 @@ impl fmt::Debug for ClientConfig {
             .field("group", &self.group)
             .field("comment", &self.comment)
             .field("reset", &self.reset)
+            .field("reset_day", &self.reset_day)
+            .field("reset_max", &self.reset_max)
+            .field("traffic_reset", &self.traffic_reset)
+            .field("traffic_reset_day", &self.traffic_reset_day)
             .field("created_at", &self.created_at)
             .field("updated_at", &self.updated_at)
             .finish()
@@ -164,7 +189,7 @@ pub struct ClientRecord {
     pub flow: String,
     /// Protocol security method.
     pub security: String,
-    /// VLESS reverse-proxy settings, serialized as a nested object by v3.6.0.
+    /// VLESS reverse-proxy settings, serialized as a nested object by v3.7.0.
     pub reverse: Option<ClientReverse>,
     /// `WireGuard` private key.
     pub private_key: String,
@@ -177,12 +202,16 @@ pub struct ClientRecord {
     pub pre_shared_key: String,
     /// `WireGuard` keepalive interval.
     pub keep_alive: i32,
+    /// `AmneziaWG` per-client port-forwarding specification.
+    pub forwarded_ports: String,
     /// `MTProto` client secret.
     pub secret: String,
     /// `MTProto` advertisement tag.
     pub ad_tag: String,
     /// Maximum concurrent source IP count.
     pub limit_ip: i32,
+    /// Maximum registered subscription devices.
+    pub limit_hwid: i32,
     /// Traffic quota in bytes.
     #[serde(rename = "totalGB")]
     pub total_gb: i64,
@@ -198,6 +227,14 @@ pub struct ClientRecord {
     pub comment: String,
     /// Automatic reset period encoded by 3x-ui.
     pub reset: i32,
+    /// Calendar renewal day; zero keeps interval-based renewal.
+    pub reset_day: i32,
+    /// Maximum automatic renewals; zero is unlimited.
+    pub reset_max: i32,
+    /// Independent per-client traffic reset cycle.
+    pub traffic_reset: String,
+    /// Day of month for the per-client monthly reset cycle.
+    pub traffic_reset_day: i32,
     /// Creation timestamp in milliseconds.
     pub created_at: i64,
     /// Last update timestamp in milliseconds.
@@ -223,12 +260,15 @@ impl ClientRecord {
                 .filter(|value| !value.is_empty())
                 .map(ToOwned::to_owned)
                 .collect(),
+            allowed_ips_by_inbound: HashMap::new(),
             pre_shared_key: self.pre_shared_key.clone(),
             keep_alive: self.keep_alive,
+            forwarded_ports: self.forwarded_ports.clone(),
             secret: self.secret.clone(),
             ad_tag: self.ad_tag.clone(),
             email: self.email.clone(),
             limit_ip: self.limit_ip,
+            limit_hwid: self.limit_hwid,
             total_gb: self.total_gb,
             expiry_time: self.expiry_time,
             enable: self.enable,
@@ -237,6 +277,17 @@ impl ClientRecord {
             group: self.group.clone(),
             comment: self.comment.clone(),
             reset: self.reset,
+            reset_day: self.reset_day,
+            reset_max: self.reset_max,
+            traffic_reset: match self.traffic_reset.as_str() {
+                "hourly" => Some(crate::TrafficReset::Hourly),
+                "daily" => Some(crate::TrafficReset::Daily),
+                "weekly" => Some(crate::TrafficReset::Weekly),
+                "monthly" => Some(crate::TrafficReset::Monthly),
+                "never" => Some(crate::TrafficReset::Never),
+                _ => None,
+            },
+            traffic_reset_day: self.traffic_reset_day,
             created_at: self.created_at,
             updated_at: self.updated_at,
         }
@@ -261,9 +312,11 @@ impl fmt::Debug for ClientRecord {
             .field("allowed_ips", &self.allowed_ips)
             .field("pre_shared_key", &"[REDACTED]")
             .field("keep_alive", &self.keep_alive)
+            .field("forwarded_ports", &self.forwarded_ports)
             .field("secret", &"[REDACTED]")
             .field("ad_tag", &"[REDACTED]")
             .field("limit_ip", &self.limit_ip)
+            .field("limit_hwid", &self.limit_hwid)
             .field("total_gb", &self.total_gb)
             .field("expiry_time", &self.expiry_time)
             .field("enable", &self.enable)
@@ -271,6 +324,10 @@ impl fmt::Debug for ClientRecord {
             .field("group", &self.group)
             .field("comment", &self.comment)
             .field("reset", &self.reset)
+            .field("reset_day", &self.reset_day)
+            .field("reset_max", &self.reset_max)
+            .field("traffic_reset", &self.traffic_reset)
+            .field("traffic_reset_day", &self.traffic_reset_day)
             .field("created_at", &self.created_at)
             .field("updated_at", &self.updated_at)
             .finish()
@@ -305,6 +362,30 @@ pub struct ClientDetails {
     pub external_links: Vec<ClientExternalLink>,
     /// Sum of uploaded and downloaded bytes.
     pub used_traffic: i64,
+    /// Effective `WireGuard`/`AmneziaWG` addresses keyed by inbound identifier.
+    #[serde(default, deserialize_with = "deserialize_null_default")]
+    pub tunnel_allowed_ips: HashMap<i64, Vec<String>>,
+}
+
+/// Registered subscription device metadata. Raw HWIDs are never returned.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct ClientHwidDevice {
+    /// Database identifier used to revoke this registration.
+    pub id: i64,
+    /// First successful subscription fetch in Unix milliseconds.
+    pub first_seen: i64,
+    /// Most recent successful subscription fetch in Unix milliseconds.
+    pub last_seen: i64,
+    /// Reported subscription-client user agent.
+    pub user_agent: String,
+    /// Reported operating system.
+    #[serde(rename = "deviceOs")]
+    pub device_os: String,
+    /// Reported operating-system version.
+    pub os_version: String,
+    /// Reported device model.
+    pub device_model: String,
 }
 
 /// Lightweight client row returned by paginated listing.

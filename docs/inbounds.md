@@ -1,22 +1,21 @@
 # Inbound API
 
-`Client::inbounds()` covers every inbound route registered by 3x-ui v3.6.0:
+`Client::inbounds()` covers every inbound route registered by 3x-ui v3.7.0:
 
 | SDK method | Upstream operation |
 |---|---|
 | `list`, `list_slim`, `options`, `all_links`, `get` | Read and share-link views |
 | `create`, `update`, `delete`, `delete_many` | Lifecycle management |
-| `set_enabled` | Lightweight enable switch |
+| `set_enabled`, `set_subscription_sort_index` | Lightweight switches and ordering |
 | `reset_traffic`, `reset_all_traffic` | Traffic reset operations |
 | `delete_all_clients` | Optimized bulk client deletion |
 | `import` | Portable form-based import |
 | `fallbacks`, `set_fallbacks` | Atomic fallback configuration |
 | `push_client_traffic` | Master-panel traffic synchronization |
 
-Upstream OpenAPI documents 16 of these 17 routes. `GET
-/panel/api/inbounds/allLinks` is registered in `inbound.go` but absent from the
-published document. The SDK contract test checks the OpenAPI operations and a
-separate source-derived route snapshot, so neither surface is silently lost.
+Upstream OpenAPI and the tagged router both contain all 18 routes. The SDK
+contract test compares both inventories, so documentation or controller drift
+cannot silently remove a supported operation.
 
 ## Create and update
 
@@ -54,13 +53,17 @@ and response envelopes are strongly typed.
 These fragments can contain client credentials and private keys. Their values,
 along with client UUID and subscription IDs, are redacted from `Debug` output.
 
+`InboundProtocol::Amneziawg` and `AmneziaWgServerSettings` cover the panel's
+v3.7.0 AmneziaWG configuration. `InboundConfig::disable_flow` and
+`InboundOption::awg_server` preserve the other new wire fields.
+
 ## Import and traffic synchronization
 
 `import` sends the form-encoded JSON format required by the panel and preserves
 the supplied `client_stats` rows while the server replaces panel-local IDs.
 This differs from an ordinary create and is why it has a separate SDK method.
 
-`push_client_traffic` accepts only the fields the receiving v3.6.0 service
+`push_client_traffic` accepts only the fields the receiving v3.7.0 service
 actually consumes: master GUID, client email, upload bytes, and download
 bytes. Unknown clients are ignored by the panel and each master's latest
 snapshot replaces its previous values.

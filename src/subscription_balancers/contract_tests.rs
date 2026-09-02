@@ -2,25 +2,38 @@ use std::collections::BTreeSet;
 
 use serde_json::Value;
 
-const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
-    ("get", "/panel/api/openapi.json", None),
+const SDK_ROUTES: &[(&str, &str, &str)] = &[
+    (
+        "get",
+        "/panel/api/sub-balancers",
+        "get_panel_api_sub_balancers",
+    ),
     (
         "post",
-        "/panel/api/backuptotgbot",
-        Some("post_panel_api_backuptotgbot"),
+        "/panel/api/sub-balancers",
+        "post_panel_api_sub_balancers",
     ),
-    ("get", "/{subPath}{subid}", Some("get_subPath_subid")),
-    ("head", "/{subPath}{subid}", None),
-    ("get", "/{jsonPath}{subid}", Some("get_jsonPath_subid")),
-    ("head", "/{jsonPath}{subid}", None),
-    ("get", "/{clashPath}{subid}", Some("get_clashPath_subid")),
-    ("head", "/{clashPath}{subid}", None),
+    (
+        "post",
+        "/panel/api/sub-balancers/{id}",
+        "post_panel_api_sub_balancers_id",
+    ),
+    (
+        "delete",
+        "/panel/api/sub-balancers/{id}",
+        "delete_panel_api_sub_balancers_id",
+    ),
+    (
+        "post",
+        "/panel/api/sub-balancers/{id}/del",
+        "post_panel_api_sub_balancers_id_del",
+    ),
 ];
 
 #[test]
-fn sdk_covers_every_remaining_openapi_and_source_http_route() {
+fn sdk_covers_every_openapi_and_source_route() {
     let openapi: Value =
-        serde_json::from_str(include_str!("../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
     let documented = openapi["paths"]
         .as_object()
         .unwrap()
@@ -31,9 +44,7 @@ fn sdk_covers_every_remaining_openapi_and_source_http_route() {
                     .iter()
                     .filter(|(_, operation)| {
                         operation["tags"].as_array().is_some_and(|tags| {
-                            tags.iter().any(|tag| {
-                                matches!(tag.as_str(), Some("Backup" | "Subscription Server"))
-                            })
+                            tags.iter().any(|tag| tag == "Subscription Balancers")
                         })
                     })
                     .map(move |(method, operation)| {
@@ -46,20 +57,13 @@ fn sdk_covers_every_remaining_openapi_and_source_http_route() {
             })
         })
         .collect::<BTreeSet<_>>();
-    let implemented_openapi = SDK_ROUTES
-        .iter()
-        .filter_map(|(method, path, operation)| {
-            operation.map(|operation| (*method, *path, operation))
-        })
-        .collect::<BTreeSet<_>>();
-    assert_eq!(documented.len(), 4);
-    assert_eq!(documented, implemented_openapi);
+    assert_eq!(documented, SDK_ROUTES.iter().copied().collect());
 
-    let snapshot: Value = serde_json::from_str(include_str!(
-        "../spec/3x-ui-v3.7.0.remaining-http-routes.json"
+    let source: Value = serde_json::from_str(include_str!(
+        "../../spec/3x-ui-v3.7.0.subscription-balancers-routes.json"
     ))
     .unwrap();
-    let source = snapshot["routes"]
+    let source = source["routes"]
         .as_array()
         .unwrap()
         .iter()
@@ -74,6 +78,5 @@ fn sdk_covers_every_remaining_openapi_and_source_http_route() {
         .iter()
         .map(|(method, path, _)| (*method, *path))
         .collect::<BTreeSet<_>>();
-    assert_eq!(source.len(), 8);
     assert_eq!(source, implemented);
 }

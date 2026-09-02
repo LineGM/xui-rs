@@ -223,6 +223,18 @@ impl<'client> NodesApi<'client> {
             .await
     }
 
+    /// Validates the stored master mTLS credential and drops cached pools.
+    ///
+    /// Subsequent node requests rebuild their transport with the rotated
+    /// client certificate.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the stored credential is invalid or reload fails.
+    pub async fn reload_mtls_client(self) -> Result<()> {
+        self.post_empty::<()>("mtls/reloadClient", None).await
+    }
+
     async fn get_object<T>(self, suffix: &str) -> Result<T>
     where
         T: DeserializeOwned,

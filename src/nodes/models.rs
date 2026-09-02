@@ -200,7 +200,7 @@ impl_string_enum!(RemoteInboundProtocol {
 /// One browser-safe view of a direct or transitive node.
 ///
 /// The upstream `OpenAPI` schema is stale and includes `apiToken`; the tagged
-/// v3.6.0 controller deliberately returns only `hasApiToken`.
+/// v3.7.0 controller deliberately returns only `hasApiToken`.
 #[derive(Clone, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct NodeView {

@@ -82,7 +82,7 @@ async fn mount_endpoint(server: &MockServer, method: Method, path: &str, object:
 
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
-async fn every_v360_client_and_group_route_is_wired() {
+async fn every_v370_client_and_group_route_is_wired() {
     let server = MockServer::start().await;
     let page = json!({
         "items": [],
@@ -227,6 +227,21 @@ async fn every_v360_client_and_group_route_is_wired() {
         (Method::POST, "/panel/api/clients/clearIps/alice", None),
         (
             Method::POST,
+            "/panel/api/clients/hwids/alice",
+            Some(json!([{
+                "id": 9,
+                "firstSeen": 100,
+                "lastSeen": 200,
+                "userAgent": "Hiddify/2",
+                "deviceOs": "Android",
+                "osVersion": "15",
+                "deviceModel": "Pixel"
+            }])),
+        ),
+        (Method::DELETE, "/panel/api/clients/hwids/alice", None),
+        (Method::DELETE, "/panel/api/clients/hwids/alice/9", None),
+        (
+            Method::POST,
             "/panel/api/clients/onlines",
             Some(json!(["alice"])),
         ),
@@ -301,7 +316,7 @@ async fn every_v360_client_and_group_route_is_wired() {
             Some(json!({"affected": 1})),
         ),
     ];
-    assert_eq!(routes.len(), 43);
+    assert_eq!(routes.len(), 46);
     for (method, path, object) in routes {
         mount_endpoint(&server, method, path, object).await;
     }
@@ -484,6 +499,16 @@ async fn every_v360_client_and_group_route_is_wired() {
         .unwrap();
     assert_eq!(client.clients().ips("alice").await.unwrap()[0].node, "edge");
     client.clients().clear_ips("alice").await.unwrap();
+    assert_eq!(
+        client.clients().hwid_devices("alice").await.unwrap()[0].device_os,
+        "Android"
+    );
+    client.clients().clear_hwid_devices("alice").await.unwrap();
+    client
+        .clients()
+        .delete_hwid_device("alice", 9)
+        .await
+        .unwrap();
     assert_eq!(client.clients().onlines().await.unwrap(), emails);
     assert_eq!(
         client.clients().onlines_by_guid().await.unwrap()["panel-guid"],

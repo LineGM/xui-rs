@@ -1,7 +1,7 @@
 # Authentication design
 
 xui-rs supports the two authentication mechanisms implemented by 3x-ui
-v3.6.0. They deliberately have different lifecycles.
+v3.7.0. They deliberately have different lifecycles.
 
 ## API tokens
 
@@ -41,7 +41,7 @@ including domain/path/secure/expiry rules. See [the event-stream guide](events.m
 
 ## Upstream references
 
-This design is based on the v3.6.0 implementations in:
+This design is based on the v3.7.0 implementations in:
 
 - `internal/web/controller/index.go`
 - `internal/web/controller/api.go`

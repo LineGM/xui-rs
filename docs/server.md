@@ -1,8 +1,7 @@
 # Server and Xray API
 
-`Client::server()` covers all 38 routes registered by the 3x-ui v3.6.0 server
-controller. Upstream OpenAPI documents 35. The source-only routes are
-`getUpdateStatus`, `scanRealityTarget`, and `scanRealityTargets`.
+`Client::server()` covers all 39 routes registered and documented by the 3x-ui
+v3.7.0 server controller.
 
 | Area | SDK methods |
 |---|---|
@@ -10,7 +9,7 @@ controller. Upstream OpenAPI documents 35. The source-only routes are
 | Xray metrics | `xray_metrics_state`, `xray_metrics_history`, observatory methods |
 | Xray lifecycle | `xray_versions`, `install_xray`, `stop_xray`, `restart_xray` |
 | Panel updates | `panel_update_info`, `update_panel`, `panel_update_status`, `set_update_channel` |
-| Diagnostics | `panel_logs`, `xray_logs`, `xray_config` |
+| Diagnostics | `panel_logs`, `xray_logs`, `amneziawg_logs`, `xray_config` |
 | Database | `download_database`, `download_migration`, `import_database` |
 | Crypto and REALITY | UUID/key/ECH/hash generators and REALITY scan methods |
 | Cluster utilities | `descendants`, `client_ips`, `merge_client_ips`, web certificate paths |
@@ -20,11 +19,11 @@ controller. Upstream OpenAPI documents 35. The source-only routes are
 `ServerStatus` follows the full Go `service.Status` structure rather than the
 smaller OpenAPI example. It includes capacity and IO counters, current and
 cumulative network traffic, public addresses, panel process statistics, stable
-panel identity, and Xray state.
+panel identity, Xray state, and AmneziaWG service status.
 
 `SystemMetric` exposes all 16 names accepted by the controller's source
 allowlist. `XrayMetric` exposes the five accepted expvar series.
-`HistoryBucket` similarly models the exact v3.6.0 allowlist, preventing an
+`HistoryBucket` similarly models the exact v3.7.0 allowlist, preventing an
 unsupported bucket from reaching the server. Its variants describe the visible
 window (`Minutes2` through `Days7`); the wire value is the per-point bucket size
 in seconds and each response contains at most 60 points.
@@ -41,6 +40,7 @@ returns different real shapes:
 - `panel_logs` returns `Vec<String>`;
 - `xray_logs` returns `Vec<XrayLogEntry>` with parsed addresses, tags, email,
   timestamp, and a typed direct/blocked/proxied event.
+- `amneziawg_logs` returns service status and typed peer activity records.
 
 The assembled Xray configuration is an `XrayConfig` wrapper around
 `serde_json::Value`. Its schema depends on the installed xray-core version and
@@ -73,7 +73,7 @@ and importing a database are never performed implicitly by another SDK call.
 ## Cryptographic material and paths
 
 The source implementation differs from several OpenAPI examples. The SDK uses
-the authoritative v3.6.0 shapes: UUID is `{uuid}`, ML-DSA-65 is `{seed,
+the authoritative v3.7.0 shapes: UUID is `{uuid}`, ML-DSA-65 is `{seed,
 verify}`, and ML-KEM-768 is `{seed, client}`. Generated private keys, seeds,
 ECH server keys, and VLESS encryption strings are redacted from `Debug`.
 

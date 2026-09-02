@@ -26,7 +26,7 @@ async fn mount_envelope(server: &MockServer, method: Method, path: &str, object:
 
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
-async fn every_v360_settings_and_xray_route_is_wired() {
+async fn every_v370_settings_and_xray_route_is_wired() {
     let server = MockServer::start().await;
     let subscription = json!({
         "id": 7, "remark": "remote", "url": "https://secret.example/sub?token=abc",
@@ -70,14 +70,18 @@ async fn every_v360_settings_and_xray_route_is_wired() {
         (
             Method::GET,
             "/panel/api/setting/apiTokens",
-            Some(json!([{"id": 1, "name": "automation", "enabled": true, "createdAt": 100}])),
+            Some(json!([{
+                "id": 1, "name": "automation", "enabled": true, "createdAt": 100,
+                "scope": "admin", "expiresAt": 0
+            }])),
         ),
         (
             Method::POST,
             "/panel/api/setting/apiTokens/create",
-            Some(
-                json!({"id": 2, "name": "new", "token": "plaintext-once", "enabled": true, "createdAt": 101}),
-            ),
+            Some(json!({
+                "id": 2, "name": "new", "token": "plaintext-once", "enabled": true,
+                "createdAt": 101, "scope": "admin", "expiresAt": 0
+            })),
         ),
         (Method::POST, "/panel/api/setting/apiTokens/delete/2", None),
         (
@@ -147,6 +151,37 @@ async fn every_v360_settings_and_xray_route_is_wired() {
             Method::POST,
             "/panel/api/xray/routeTest",
             Some(json!({"matched": true, "outboundTag": "proxy", "groupTags": ["balance"]})),
+        ),
+        (
+            Method::GET,
+            "/panel/api/xray/geodata/files",
+            Some(json!([{
+                "name": "geosite.dat", "kind": "site", "size": 1024,
+                "modifiedAt": 1000, "categories": 2
+            }])),
+        ),
+        (
+            Method::GET,
+            "/panel/api/xray/geodata/categories",
+            Some(json!({
+                "items": [{"code": "google", "entries": 2, "attributes": ["ads"]}],
+                "total": 1
+            })),
+        ),
+        (
+            Method::GET,
+            "/panel/api/xray/geodata/entries",
+            Some(json!({
+                "items": [{"kind": "domain", "value": "google.com"}], "total": 1
+            })),
+        ),
+        (
+            Method::POST,
+            "/panel/api/xray/geodata/validate",
+            Some(json!([{
+                "token": "geosite:missing", "reason": "categoryMissing",
+                "file": "geosite.dat", "code": "missing"
+            }])),
         ),
         (
             Method::GET,
@@ -233,6 +268,44 @@ async fn every_v360_settings_and_xray_route_is_wired() {
         )
         .await;
     }
+    for (action, object) in [
+        ("countries", json!([{"code": "NL"}])),
+        (
+            "servers",
+            json!({
+                "regions": [{"id": "nl_amsterdam", "name": "Netherlands"}],
+                "servers": [{
+                    "hostname": "nl-amsterdam.example", "ip": "203.0.113.20",
+                    "regionId": "nl_amsterdam", "regionName": "Netherlands"
+                }]
+            }),
+        ),
+        (
+            "reg",
+            json!({"username": "pia-user", "accountHint": "pi****er"}),
+        ),
+        (
+            "data",
+            json!({"username": "pia-user", "accountHint": "pi****er"}),
+        ),
+        ("del", Value::Null),
+        (
+            "addKey",
+            json!({
+                "tag": "pia-nl-amsterdam", "hostname": "nl-amsterdam.example",
+                "secretKey": "private-secret", "address": "10.0.0.2/32",
+                "publicKey": "server-public", "endpoint": "203.0.113.20:1337"
+            }),
+        ),
+    ] {
+        mount_envelope(
+            &server,
+            Method::POST,
+            &format!("/panel/api/xray/pia/{action}"),
+            Some(object),
+        )
+        .await;
+    }
 
     let client = Client::builder(server.uri())
         .unwrap()
@@ -264,10 +337,19 @@ async fn every_v360_settings_and_xray_route_is_wired() {
     settings.restart_panel().await.unwrap();
     settings.default_xray_config().await.unwrap();
     assert_eq!(settings.api_tokens().await.unwrap()[0].name, "automation");
-    let created = settings.create_api_token("new").await.unwrap();
+    let created = settings
+        .create_api_token(&xui_rs::ApiTokenCreateRequest::new("new"))
+        .await
+        .unwrap();
     assert_eq!(created.token, "plaintext-once");
-    settings.delete_api_token(2).await.unwrap();
-    settings.set_api_token_enabled(1, false).await.unwrap();
+    settings
+        .delete_api_token(2, xui_rs::ApiTokenScope::Admin)
+        .await
+        .unwrap();
+    settings
+        .set_api_token_enabled(1, xui_rs::ApiTokenScope::Admin, false)
+        .await
+        .unwrap();
     let smtp = settings.test_smtp().await.unwrap();
     assert!(!smtp.success);
     assert_eq!(smtp.stage, "auth");
@@ -303,6 +385,12 @@ async fn every_v360_settings_and_xray_route_is_wired() {
     xray.set_nord_key("nord-key").await.unwrap();
     xray.nord_data().await.unwrap();
     xray.delete_nord().await.unwrap();
+    xray.pia_countries().await.unwrap();
+    xray.pia_servers("NL").await.unwrap();
+    xray.register_pia("pia-user", "pia-secret").await.unwrap();
+    xray.pia_data().await.unwrap();
+    xray.delete_pia().await.unwrap();
+    xray.add_pia_key("nl-amsterdam.example").await.unwrap();
     xray.reset_outbound_traffic("proxy").await.unwrap();
     let outbound = json!({"tag": "proxy", "protocol": "freedom"});
     xray.test_outbound(&outbound, None, OutboundTestMode::Http)
@@ -329,6 +417,30 @@ async fn every_v360_settings_and_xray_route_is_wired() {
         .await
         .unwrap();
     assert_eq!(route.outbound_tag, "proxy");
+    assert_eq!(xray.geodata_files().await.unwrap()[0].kind, "site");
+    assert_eq!(
+        xray.geodata_categories("geosite.dat", "goo", 0, 100)
+            .await
+            .unwrap()
+            .items[0]
+            .code,
+        "google"
+    );
+    assert_eq!(
+        xray.geodata_entries("geosite.dat", "google", "", 0, 100)
+            .await
+            .unwrap()
+            .items[0]
+            .value,
+        "google.com"
+    );
+    assert_eq!(
+        xray.validate_geodata_tokens(false, &["geosite:missing"])
+            .await
+            .unwrap()[0]
+            .reason,
+        "categoryMissing"
+    );
     assert_eq!(xray.outbound_subscriptions().await.unwrap()[0].id, 7);
     let input = OutboundSubscriptionInput::new("https://secret.example/sub?token=abc");
     xray.create_outbound_subscription(&input).await.unwrap();
@@ -354,6 +466,38 @@ async fn every_v360_settings_and_xray_route_is_wired() {
             .len(),
         1
     );
+
+    let requests = server.received_requests().await.unwrap();
+    let create_token = requests
+        .iter()
+        .find(|request| request.url.path() == "/panel/api/setting/apiTokens/create")
+        .unwrap();
+    let create_form = url::form_urlencoded::parse(&create_token.body)
+        .into_owned()
+        .collect::<std::collections::BTreeMap<_, _>>();
+    assert_eq!(create_form["name"], "new");
+    assert_eq!(create_form["scope"], "admin");
+    assert_eq!(create_form["expiresAt"], "0");
+
+    for (path, expected) in [
+        (
+            "/panel/api/setting/apiTokens/delete/2",
+            json!({"expectedScope": "admin"}),
+        ),
+        (
+            "/panel/api/setting/apiTokens/setEnabled/1",
+            json!({"enabled": false, "expectedScope": "admin"}),
+        ),
+    ] {
+        let request = requests
+            .iter()
+            .find(|request| request.url.path() == path)
+            .unwrap();
+        assert_eq!(
+            serde_json::from_slice::<Value>(&request.body).unwrap(),
+            expected
+        );
+    }
 }
 
 #[test]
@@ -417,7 +561,7 @@ fn exact_acronym_wire_names_and_sensitive_wrappers_are_safe() {
 
 #[test]
 #[allow(clippy::too_many_lines)]
-fn panel_settings_cover_every_v360_all_setting_field() {
+fn panel_settings_cover_every_v370_all_setting_field() {
     let actual = serde_json::to_value(PanelSettings::default()).unwrap();
     let actual = actual
         .as_object()
@@ -430,6 +574,7 @@ fn panel_settings_cover_every_v360_all_setting_field() {
         "expireDiff",
         "externalTrafficInformEnable",
         "externalTrafficInformURI",
+        "ipLimitAllowlist",
         "ldapAutoCreate",
         "ldapAutoDelete",
         "ldapBaseDN",
@@ -490,6 +635,7 @@ fn panel_settings_cover_every_v360_all_setting_field() {
         "subJsonEnable",
         "subJsonFinalMask",
         "subJsonMux",
+        "subJsonObservatory",
         "subJsonPath",
         "subJsonRules",
         "subJsonURI",
@@ -532,7 +678,7 @@ fn panel_settings_cover_every_v360_all_setting_field() {
     ]
     .into_iter()
     .collect::<BTreeSet<_>>();
-    assert_eq!(actual.len(), 103);
+    assert_eq!(actual.len(), 105);
     assert_eq!(actual, expected);
 }
 

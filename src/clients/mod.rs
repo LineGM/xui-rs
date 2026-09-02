@@ -11,8 +11,9 @@ pub use models::{
     ActiveInboundsByGuid, AffectedCount, BulkAdjustRequest, BulkAdjustResult, BulkAttachResult,
     BulkClientIssue, BulkCreateResult, BulkDeleteResult, BulkDetachResult, BulkFlowAdjustment,
     BulkSetEnabledResult, ClientConfig, ClientCreateRequest, ClientDetails, ClientExternalLink,
-    ClientExternalLinkInput, ClientExternalLinkKind, ClientIpEntry, ClientIpInfo, ClientIpsByGuid,
-    ClientMutationStatus, ClientPage, ClientPageRequest, ClientRecord, ClientReverse, ClientSlim,
-    ClientSort, ClientStatusFilter, ClientSummary, ClientWithAttachments, ClientsByGuid,
-    DeletedCount, GroupName, GroupSummary, LastOnlineByEmail, SortOrder,
+    ClientExternalLinkInput, ClientExternalLinkKind, ClientHwidDevice, ClientIpEntry, ClientIpInfo,
+    ClientIpsByGuid, ClientMutationStatus, ClientPage, ClientPageRequest, ClientRecord,
+    ClientReverse, ClientSlim, ClientSort, ClientStatusFilter, ClientSummary,
+    ClientWithAttachments, ClientsByGuid, DeletedCount, GroupName, GroupSummary, LastOnlineByEmail,
+    SortOrder,
 };

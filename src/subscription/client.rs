@@ -5,8 +5,8 @@ use serde_json::Value;
 use url::Url;
 
 use super::{
-    SubscriptionDocument, SubscriptionInfo, SubscriptionJson, SubscriptionMetadata,
-    SubscriptionResponse,
+    SubscriptionDevice, SubscriptionDocument, SubscriptionInfo, SubscriptionJson,
+    SubscriptionMetadata, SubscriptionResponse,
 };
 use crate::{
     Error, ProxyConfig, Result, SubscriptionSettings,
@@ -32,6 +32,7 @@ pub struct SubscriptionClientBuilder {
     accept_invalid_certs: bool,
     proxy: Option<ProxyConfig>,
     response_body_limit: usize,
+    device: Option<SubscriptionDevice>,
 }
 
 impl SubscriptionClientBuilder {
@@ -46,6 +47,7 @@ impl SubscriptionClientBuilder {
             accept_invalid_certs: false,
             proxy: None,
             response_body_limit: DEFAULT_SUBSCRIPTION_RESPONSE_BODY_LIMIT,
+            device: None,
         })
     }
 
@@ -120,6 +122,18 @@ impl SubscriptionClientBuilder {
         self
     }
 
+    /// Sends subscription-device headers used by 3x-ui's optional HWID gate.
+    pub fn device(mut self, device: SubscriptionDevice) -> Self {
+        self.device = Some(device);
+        self
+    }
+
+    /// Removes previously configured subscription-device metadata.
+    pub fn no_device(mut self) -> Self {
+        self.device = None;
+        self
+    }
+
     /// Builds the standalone client.
     ///
     /// # Errors
@@ -140,6 +154,7 @@ impl SubscriptionClientBuilder {
                 accept_invalid_certs: self.accept_invalid_certs,
                 proxy: self.proxy.as_ref(),
                 response_body_limit: self.response_body_limit,
+                device: self.device.as_ref(),
             },
         )
     }
@@ -158,6 +173,7 @@ impl std::fmt::Debug for SubscriptionClientBuilder {
             .field("accept_invalid_certs", &self.accept_invalid_certs)
             .field("proxy", &self.proxy.as_ref().map(ProxyConfig::scheme))
             .field("response_body_limit", &self.response_body_limit)
+            .field("device", &self.device)
             .finish()
     }
 }
@@ -230,11 +246,46 @@ impl SubscriptionClient {
         clash_prefix: Url,
         transport: SubscriptionTransportConfig<'_>,
     ) -> Result<Self> {
+        let mut default_headers = header::HeaderMap::new();
+        let user_agent = if let Some(device) = transport.device {
+            if device.hwid().len() < 6 {
+                return Err(Error::Configuration(
+                    "subscription device HWID must contain at least 6 bytes".to_owned(),
+                ));
+            }
+            insert_device_header(&mut default_headers, "x-hwid", device.hwid(), "HWID")?;
+            insert_device_header(
+                &mut default_headers,
+                "x-device-os",
+                &device.device_os,
+                "device OS",
+            )?;
+            insert_device_header(
+                &mut default_headers,
+                "x-ver-os",
+                &device.os_version,
+                "OS version",
+            )?;
+            insert_device_header(
+                &mut default_headers,
+                "x-device-model",
+                &device.device_model,
+                "device model",
+            )?;
+            if device.user_agent.is_empty() {
+                DEFAULT_USER_AGENT
+            } else {
+                device.user_agent.as_str()
+            }
+        } else {
+            DEFAULT_USER_AGENT
+        };
         let mut http_builder = reqwest::Client::builder()
             .no_proxy()
+            .default_headers(default_headers)
             .timeout(transport.timeout)
             .connect_timeout(transport.connect_timeout)
-            .user_agent(DEFAULT_USER_AGENT)
+            .user_agent(user_agent)
             .danger_accept_invalid_certs(transport.accept_invalid_certs);
         if let Some(proxy) = transport.proxy {
             http_builder = http_builder.proxy(proxy.reqwest_proxy()?);
@@ -298,7 +349,21 @@ impl SubscriptionClient {
     /// Returns an error for transport, unsuccessful HTTP status, or invalid
     /// JSON.
     pub async fn info(&self, subscription_id: &str) -> Result<SubscriptionInfo> {
-        let (_, bytes, method, redacted_url) = self
+        Ok(self.info_with_metadata(subscription_id).await?.content)
+    }
+
+    /// Fetches the typed information view together with common and HWID headers.
+    ///
+    /// Prefer this method when device-limit state is relevant to the caller.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for transport, unsuccessful HTTP status, or invalid JSON.
+    pub async fn info_with_metadata(
+        &self,
+        subscription_id: &str,
+    ) -> Result<SubscriptionResponse<SubscriptionInfo>> {
+        let (headers, bytes, method, redacted_url) = self
             .send(
                 Method::GET,
                 Format::Raw,
@@ -307,10 +372,14 @@ impl SubscriptionClient {
                 "application/json",
             )
             .await?;
-        serde_json::from_slice(&bytes).map_err(|source| Error::Decode {
+        let content = serde_json::from_slice(&bytes).map_err(|source| Error::Decode {
             method,
             url: Box::new(redacted_url),
             source,
+        })?;
+        Ok(SubscriptionResponse {
+            content,
+            metadata: SubscriptionMetadata::from_headers(&headers),
         })
     }
 
@@ -479,6 +548,7 @@ struct SubscriptionTransportConfig<'proxy> {
     accept_invalid_certs: bool,
     proxy: Option<&'proxy ProxyConfig>,
     response_body_limit: usize,
+    device: Option<&'proxy SubscriptionDevice>,
 }
 
 impl Default for SubscriptionTransportConfig<'_> {
@@ -489,8 +559,24 @@ impl Default for SubscriptionTransportConfig<'_> {
             accept_invalid_certs: false,
             proxy: None,
             response_body_limit: DEFAULT_SUBSCRIPTION_RESPONSE_BODY_LIMIT,
+            device: None,
         }
     }
+}
+
+fn insert_device_header(
+    headers: &mut header::HeaderMap,
+    name: &'static str,
+    value: &str,
+    label: &str,
+) -> Result<()> {
+    if value.is_empty() {
+        return Ok(());
+    }
+    let value = header::HeaderValue::from_str(value)
+        .map_err(|error| Error::Configuration(format!("invalid {label} header: {error}")))?;
+    headers.insert(header::HeaderName::from_static(name), value);
+    Ok(())
 }
 
 impl std::fmt::Debug for SubscriptionClient {

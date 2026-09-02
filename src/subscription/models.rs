@@ -6,6 +6,49 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 
+/// Device identity sent to subscription endpoints when HWID limiting is enabled.
+#[derive(Clone, Default, Eq, PartialEq)]
+pub struct SubscriptionDevice {
+    hwid: String,
+    /// Subscription application's user agent.
+    pub user_agent: String,
+    /// Operating-system name sent as `X-Device-OS`.
+    pub device_os: String,
+    /// Operating-system version sent as `X-Ver-OS`.
+    pub os_version: String,
+    /// Device model sent as `X-Device-Model`.
+    pub device_model: String,
+}
+
+impl SubscriptionDevice {
+    /// Creates a device identity. 3x-ui requires an HWID of at least six bytes.
+    pub fn new(hwid: impl Into<String>, user_agent: impl Into<String>) -> Self {
+        Self {
+            hwid: hwid.into(),
+            user_agent: user_agent.into(),
+            ..Self::default()
+        }
+    }
+
+    /// Borrows the raw HWID. Avoid logging or persisting this value unnecessarily.
+    pub fn hwid(&self) -> &str {
+        &self.hwid
+    }
+}
+
+impl fmt::Debug for SubscriptionDevice {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("SubscriptionDevice")
+            .field("hwid", &"[REDACTED]")
+            .field("user_agent", &self.user_agent)
+            .field("device_os", &self.device_os)
+            .field("os_version", &self.os_version)
+            .field("device_model", &self.device_model)
+            .finish()
+    }
+}
+
 /// Failure while decoding an encrypted raw subscription body.
 #[derive(Debug, Error)]
 #[non_exhaustive]
@@ -110,6 +153,7 @@ pub struct SubscriptionTraffic {
 }
 
 /// Common response headers emitted by all three subscription formats.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Default, Eq, PartialEq)]
 pub struct SubscriptionMetadata {
     /// Parsed traffic/expiry header, when present and valid.
@@ -130,6 +174,14 @@ pub struct SubscriptionMetadata {
     pub content_type: Option<String>,
     /// Download/profile filename header.
     pub content_disposition: Option<String>,
+    /// Whether HWID enforcement is enabled for this subscription.
+    pub hwid_active: bool,
+    /// Whether the client omitted or sent an unsupported HWID.
+    pub hwid_not_supported: bool,
+    /// Whether all configured HWID slots are currently occupied.
+    pub hwid_limit_reached: bool,
+    /// Whether this request was rejected because no device slot was available.
+    pub hwid_max_devices_reached: bool,
     profile_web_page_url: Option<String>,
     routing_rules: Option<String>,
 }
@@ -154,6 +206,11 @@ impl SubscriptionMetadata {
                 .get(header::CONTENT_DISPOSITION)
                 .and_then(|value| value.to_str().ok())
                 .map(str::to_owned),
+            hwid_active: header_text(headers, "x-hwid-active") == Some("true"),
+            hwid_not_supported: header_text(headers, "x-hwid-not-supported") == Some("true"),
+            hwid_limit_reached: header_text(headers, "x-hwid-limit") == Some("true"),
+            hwid_max_devices_reached: header_text(headers, "x-hwid-max-devices-reached")
+                == Some("true"),
             profile_web_page_url: header_text(headers, "profile-web-page-url").map(str::to_owned),
             routing_rules: header_text(headers, "routing").map(str::to_owned),
         }
@@ -184,6 +241,10 @@ impl fmt::Debug for SubscriptionMetadata {
             .field("hide_settings", &self.hide_settings)
             .field("content_type", &self.content_type)
             .field("content_disposition", &self.content_disposition)
+            .field("hwid_active", &self.hwid_active)
+            .field("hwid_not_supported", &self.hwid_not_supported)
+            .field("hwid_limit_reached", &self.hwid_limit_reached)
+            .field("hwid_max_devices_reached", &self.hwid_max_devices_reached)
             .field("profile_web_page_url", &"[REDACTED]")
             .field("routing_rules", &"[REDACTED]")
             .finish()

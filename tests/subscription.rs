@@ -4,7 +4,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use reqwest::{Method, StatusCode};
 use serde_json::json;
 use wiremock::{Mock, MockServer, ResponseTemplate, matchers};
-use xui_rs::{Error, SubscriptionClient, SubscriptionSettings};
+use xui_rs::{Error, SubscriptionClient, SubscriptionDevice, SubscriptionSettings};
 
 fn response(body: impl Into<Vec<u8>>, content_type: &str) -> ResponseTemplate {
     ResponseTemplate::new(200)
@@ -22,6 +22,8 @@ fn response(body: impl Into<Vec<u8>>, content_type: &str) -> ResponseTemplate {
         .insert_header("routing-enable", "true")
         .insert_header("routing", "private-routing-rules")
         .insert_header("hide-settings", "1")
+        .insert_header("x-hwid-active", "true")
+        .insert_header("x-hwid-limit", "true")
 }
 
 async fn mount(
@@ -40,7 +42,7 @@ async fn mount(
 
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
-async fn all_six_v360_subscription_routes_are_typed_and_secret_safe() {
+async fn all_six_v370_subscription_routes_are_typed_and_secret_safe() {
     let server = MockServer::start().await;
     let private_link = "vless://private-client-credential@example.com:443\n";
     let encoded = STANDARD.encode(private_link);
@@ -113,7 +115,15 @@ async fn all_six_v360_subscription_routes_are_typed_and_secret_safe() {
     )
     .await;
 
-    let client = SubscriptionClient::new(server.uri()).unwrap();
+    let mut device = SubscriptionDevice::new("device-secret-123", "Hiddify/2.5");
+    device.device_os = "Android".into();
+    device.os_version = "15".into();
+    device.device_model = "Pixel".into();
+    let client = SubscriptionClient::builder(server.uri())
+        .unwrap()
+        .device(device)
+        .build()
+        .unwrap();
     let raw = client.raw("secret/id").await.unwrap();
     let decoded = raw.content.decode_base64().unwrap();
     assert_eq!(decoded.lines().collect::<Vec<_>>(), [private_link.trim()]);
@@ -123,6 +133,8 @@ async fn all_six_v360_subscription_routes_are_typed_and_secret_safe() {
     assert_eq!(raw.metadata.update_interval_minutes, Some(10));
     assert!(raw.metadata.routing_enabled);
     assert!(raw.metadata.hide_settings);
+    assert!(raw.metadata.hwid_active);
+    assert!(raw.metadata.hwid_limit_reached);
     assert_eq!(
         raw.metadata.profile_web_page_url(),
         Some("https://sub.example/sub/secret/id")
@@ -175,7 +187,13 @@ async fn all_six_v360_subscription_routes_are_typed_and_secret_safe() {
     let requests = server.received_requests().await.unwrap();
     assert_eq!(requests.len(), 6);
     assert!(requests.iter().all(|request| {
-        request.headers.get("authorization").is_none() && request.headers.get("cookie").is_none()
+        request.headers.get("authorization").is_none()
+            && request.headers.get("cookie").is_none()
+            && request.headers["x-hwid"] == "device-secret-123"
+            && request.headers["x-device-os"] == "Android"
+            && request.headers["x-ver-os"] == "15"
+            && request.headers["x-device-model"] == "Pixel"
+            && request.headers["user-agent"] == "Hiddify/2.5"
     }));
     assert_eq!(
         requests

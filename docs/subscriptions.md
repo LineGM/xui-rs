@@ -7,7 +7,7 @@ sends panel bearer tokens, cookies, or CSRF headers.
 
 | Route family | SDK methods |
 |---|---|
-| Raw subscription | `raw`, `html`, `info`, `raw_metadata` |
+| Raw subscription | `raw`, `html`, `info`, `info_with_metadata`, `raw_metadata` |
 | Xray JSON | `json`, `json_metadata` |
 | Clash/Mihomo YAML | `clash`, `clash_metadata` |
 
@@ -75,6 +75,18 @@ document. `html` explicitly retrieves that browser information page instead.
 `info` decodes the source's typed `format=info` JSON view. It includes status,
 human-readable and byte traffic totals, expiry, last-online time, represented
 emails, and generated public links.
+
+## HWID device identity
+
+v3.7.0 can limit a subscription to registered devices. Configure
+`SubscriptionDevice` on the builder to send the source-defined `X-HWID`,
+device OS/version/model, and user-agent headers. HWIDs shorter than six bytes
+are rejected before any request is sent. `info_with_metadata` returns the
+typed info document and response metadata together.
+
+`SubscriptionMetadata` exposes whether the device was registered, already
+known, over the limit, or whether device limiting is disabled. Hardware IDs
+are redacted from `Debug` and are never sent to the authenticated panel API.
 
 ## Metadata and secret handling
 

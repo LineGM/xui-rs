@@ -4,7 +4,7 @@
     "internal/sub/controller.go:initRouter"
   ],
   "routes": [
-    { "method": "get", "path": "/panel/api/openapi.json", "openapi": false },
+    { "method": "get", "path": "/panel/api/openapi.json" },
     { "method": "post", "path": "/panel/api/backuptotgbot" },
     { "method": "get", "path": "/{subPath}{subid}" },
     { "method": "head", "path": "/{subPath}{subid}", "openapi": false },

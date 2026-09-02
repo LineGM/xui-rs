@@ -2,7 +2,7 @@
 
 The ordinary test suite is deterministic and uses protocol-level local test
 servers. Before release, the SDK is also exercised against the official 3x-ui
-v3.6.0 container:
+v3.7.0 container:
 
 ```console
 scripts/live-test.sh
@@ -38,13 +38,13 @@ script supplies this only for its disposable panel.
 ## Testing another disposable panel
 
 Read-only and cookie/WebSocket checks can be run directly when the target is
-exactly 3x-ui v3.6.0 and the account does not require 2FA:
+exactly 3x-ui v3.7.0 and the account does not require 2FA:
 
 ```console
 export XUI_LIVE_BASE_URL=https://panel.example.com/secret/
 export XUI_LIVE_USERNAME=integration-user
 export XUI_LIVE_PASSWORD=replace-me
-export XUI_LIVE_EXPECTED_VERSION=3.6.0
+export XUI_LIVE_EXPECTED_VERSION=3.7.0
 cargo test --locked --test live live_cookie_http_and_websocket_smoke \
   -- --ignored --nocapture
 ```

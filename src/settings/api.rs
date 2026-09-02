@@ -8,11 +8,13 @@ use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
 
 use super::models::{
-    ApiTokenMetadata, BalancerStatus, CreatedApiToken, EffectiveDefaults, FactoryDefaults,
+    ApiTokenCreateRequest, ApiTokenMetadata, ApiTokenScope, BalancerStatus, CreatedApiToken,
+    EffectiveDefaults, FactoryDefaults, GeoCategoryPage, GeoEntryPage, GeoFile, GeodataTokenIssue,
     MoveDirection, OutboundDocuments, OutboundSubscription, OutboundSubscriptionInput,
     OutboundTestMode, OutboundTestResult, OutboundTraffic, PanelSettingsUpdate, PanelSettingsView,
-    RouteTestRequest, RouteTestResult, SensitivePayload, SmtpTestResult, UserCredentialsUpdate,
-    WarpRegistration, XraySettingsSnapshot,
+    PiaAccount, PiaCountry, PiaKey, PiaServers, RouteTestRequest, RouteTestResult,
+    SensitivePayload, SmtpTestResult, UserCredentialsUpdate, WarpRegistration,
+    XraySettingsSnapshot,
 };
 use crate::{
     Client, Error, Result, XrayConfig, client::AuthenticationScope, response::ApiResponse,
@@ -44,7 +46,6 @@ impl<'client> SettingsApi<'client> {
 
     /// Returns the source defaults as setting-name/value pairs.
     ///
-    /// This v3.6.0 source route is missing from upstream `OpenAPI`.
     pub async fn factory_defaults(self) -> Result<FactoryDefaults> {
         self.post_object("factoryDefaults", None::<&()>).await
     }
@@ -56,7 +57,6 @@ impl<'client> SettingsApi<'client> {
 
     /// Validates a Go regular expression with the panel runtime.
     ///
-    /// This v3.6.0 source route is missing from upstream `OpenAPI`.
     pub async fn validate_regex(self, regex: &str) -> Result<()> {
         #[derive(Serialize)]
         struct Body<'a> {
@@ -87,30 +87,48 @@ impl<'client> SettingsApi<'client> {
     }
 
     /// Creates an API token and returns its plaintext exactly once.
-    pub async fn create_api_token(self, name: &str) -> Result<CreatedApiToken> {
+    pub async fn create_api_token(
+        self,
+        request: &ApiTokenCreateRequest,
+    ) -> Result<CreatedApiToken> {
+        self.post_form_object("apiTokens/create", request).await
+    }
+
+    /// Permanently deletes an API token after verifying its expected scope.
+    pub async fn delete_api_token(self, id: i64, expected_scope: ApiTokenScope) -> Result<()> {
         #[derive(Serialize)]
-        struct Form<'a> {
-            name: &'a str,
+        #[serde(rename_all = "camelCase")]
+        struct Body<'a> {
+            expected_scope: &'a str,
         }
-        self.post_form_object("apiTokens/create", &Form { name })
-            .await
+        self.post_empty(
+            &format!("apiTokens/delete/{id}"),
+            Some(&Body {
+                expected_scope: expected_scope.as_str(),
+            }),
+        )
+        .await
     }
 
-    /// Permanently deletes an API token.
-    pub async fn delete_api_token(self, id: i64) -> Result<()> {
-        self.post_empty::<()>(&format!("apiTokens/delete/{id}"), None)
-            .await
-    }
-
-    /// Enables or disables an API token.
-    pub async fn set_api_token_enabled(self, id: i64, enabled: bool) -> Result<()> {
+    /// Enables or disables an API token after verifying its expected scope.
+    pub async fn set_api_token_enabled(
+        self,
+        id: i64,
+        expected_scope: ApiTokenScope,
+        enabled: bool,
+    ) -> Result<()> {
         #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
         struct Body {
             enabled: bool,
+            expected_scope: &'static str,
         }
         self.post_empty(
             &format!("apiTokens/setEnabled/{id}"),
-            Some(&Body { enabled }),
+            Some(&Body {
+                enabled,
+                expected_scope: expected_scope.as_str(),
+            }),
         )
         .await
     }
@@ -342,6 +360,153 @@ impl<'client> XraySettingsApi<'client> {
         self.integration_empty("nord", "del", None::<&()>).await
     }
 
+    /// Returns PIA countries from the provider's signed server list.
+    pub async fn pia_countries(self) -> Result<Vec<PiaCountry>> {
+        self.integration("pia", "countries", None::<&()>).await
+    }
+
+    /// Returns PIA `WireGuard` servers for a country code.
+    pub async fn pia_servers(self, country_code: &str) -> Result<PiaServers> {
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Form<'a> {
+            country_code: &'a str,
+        }
+        self.integration("pia", "servers", Some(&Form { country_code }))
+            .await
+    }
+
+    /// Signs in to PIA and stores the resulting account data.
+    pub async fn register_pia(self, username: &str, password: &str) -> Result<PiaAccount> {
+        #[derive(Serialize)]
+        struct Form<'a> {
+            username: &'a str,
+            password: &'a str,
+        }
+        self.integration("pia", "reg", Some(&Form { username, password }))
+            .await
+    }
+
+    /// Returns the stored PIA account hint.
+    pub async fn pia_data(self) -> Result<PiaAccount> {
+        self.integration("pia", "data", None::<&()>).await
+    }
+
+    /// Deletes stored PIA credentials.
+    pub async fn delete_pia(self) -> Result<()> {
+        self.integration_empty("pia", "del", None::<&()>).await
+    }
+
+    /// Registers a PIA `WireGuard` key against the selected server.
+    pub async fn add_pia_key(self, hostname: &str) -> Result<PiaKey> {
+        #[derive(Serialize)]
+        struct Form<'a> {
+            hostname: &'a str,
+        }
+        self.integration("pia", "addKey", Some(&Form { hostname }))
+            .await
+    }
+
+    /// Lists geosite and geoip databases from Xray's active asset directory.
+    pub async fn geodata_files(self) -> Result<Vec<GeoFile>> {
+        self.get_object("geodata/files").await
+    }
+
+    /// Returns one filtered page of categories from a geodata database.
+    pub async fn geodata_categories(
+        self,
+        file: &str,
+        query: &str,
+        offset: u32,
+        limit: u16,
+    ) -> Result<GeoCategoryPage> {
+        #[derive(Serialize)]
+        struct Query<'a> {
+            file: &'a str,
+            q: &'a str,
+            offset: u32,
+            limit: u16,
+        }
+        let path = format!("{XRAY_ROOT}/geodata/categories");
+        let envelope = self
+            .client
+            .execute_query::<GeoCategoryPage, _>(
+                Method::GET,
+                &path,
+                &Query {
+                    file,
+                    q: query,
+                    offset,
+                    limit,
+                },
+                AuthenticationScope::PanelApi,
+            )
+            .await?;
+        required_object(self.client, Method::GET, &path, envelope)
+    }
+
+    /// Returns one filtered page of rules inside a geodata category.
+    pub async fn geodata_entries(
+        self,
+        file: &str,
+        code: &str,
+        query: &str,
+        offset: u32,
+        limit: u16,
+    ) -> Result<GeoEntryPage> {
+        #[derive(Serialize)]
+        struct Query<'a> {
+            file: &'a str,
+            code: &'a str,
+            q: &'a str,
+            offset: u32,
+            limit: u16,
+        }
+        let path = format!("{XRAY_ROOT}/geodata/entries");
+        let envelope = self
+            .client
+            .execute_query::<GeoEntryPage, _>(
+                Method::GET,
+                &path,
+                &Query {
+                    file,
+                    code,
+                    q: query,
+                    offset,
+                    limit,
+                },
+                AuthenticationScope::PanelApi,
+            )
+            .await?;
+        required_object(self.client, Method::GET, &path, envelope)
+    }
+
+    /// Validates up to 500 geosite or geoip routing tokens.
+    pub async fn validate_geodata_tokens(
+        self,
+        ip: bool,
+        tokens: &[impl AsRef<str>],
+    ) -> Result<Vec<GeodataTokenIssue>> {
+        #[derive(Serialize)]
+        struct Form<'a> {
+            kind: &'a str,
+            tokens: String,
+        }
+        let tokens = tokens
+            .iter()
+            .map(AsRef::as_ref)
+            .collect::<Vec<_>>()
+            .join(",");
+        self.post_form_object(
+            "geodata/validate",
+            &Form {
+                kind: if ip { "ip" } else { "site" },
+                tokens,
+            },
+        )
+        .await
+    }
+
     /// Resets traffic counters for one outbound tag.
     pub async fn reset_outbound_traffic(self, tag: &str) -> Result<()> {
         #[derive(Serialize)]
@@ -540,7 +705,24 @@ impl<'client> XraySettingsApi<'client> {
     where
         B: Serialize + ?Sized,
     {
-        let _: SensitivePayload = self.integration(family, action, form).await?;
+        let path = format!("{XRAY_ROOT}/{family}/{}", segment(action));
+        match form {
+            Some(form) => {
+                self.client
+                    .execute_form::<Value, _>(
+                        Method::POST,
+                        &path,
+                        form,
+                        AuthenticationScope::PanelApi,
+                    )
+                    .await?;
+            }
+            None => {
+                self.client
+                    .execute::<Value, ()>(Method::POST, &path, None, AuthenticationScope::PanelApi)
+                    .await?;
+            }
+        }
         Ok(())
     }
 

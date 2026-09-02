@@ -11,7 +11,7 @@ use crate::{
 macro_rules! string_enum {
     ($name:ident { $($wire:literal => $variant:ident),+ $(,)? }) => {
         impl $name {
-            /// Returns the exact v3.6.0 wire value.
+            /// Returns the exact v3.7.0 wire value.
             pub fn as_str(&self) -> &str {
                 match self {
                     $(Self::$variant => $wire,)+
@@ -47,7 +47,7 @@ macro_rules! string_enum {
     };
 }
 
-/// Message names declared by the v3.6.0 WebSocket hub.
+/// Message names declared by the v3.7.0 WebSocket hub.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 pub enum EventMessageType {
@@ -112,7 +112,7 @@ string_enum!(NotificationLevel {
 });
 
 /// One Xray traffic delta. Its capitalized field names are the exact Go wire
-/// representation used by v3.6.0.
+/// representation used by v3.7.0.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default, rename_all = "PascalCase")]
 pub struct TrafficDelta {
@@ -264,7 +264,7 @@ pub struct Invalidation {
     pub target: EventMessageType,
 }
 
-/// Decoded payload of one v3.6.0 real-time message.
+/// Decoded payload of one v3.7.0 real-time message.
 #[derive(Clone, PartialEq)]
 #[non_exhaustive]
 pub enum PanelEventKind {
@@ -284,7 +284,7 @@ pub enum PanelEventKind {
     XrayState(XrayStateChange),
     /// Absolute client/inbound counters.
     ClientStats(ClientStatsUpdate),
-    /// Reserved source-declared clients message. v3.6.0 has no direct
+    /// Reserved source-declared clients message. v3.7.0 has no direct
     /// broadcaster or stable payload schema for this type.
     Clients(Value),
     /// Request to refresh a resource through HTTP.

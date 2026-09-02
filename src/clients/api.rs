@@ -6,9 +6,9 @@ use serde_json::Value;
 use super::models::{
     ActiveInboundsByGuid, AffectedCount, BulkAdjustRequest, BulkAdjustResult, BulkAttachResult,
     BulkCreateResult, BulkDeleteResult, BulkDetachResult, BulkSetEnabledResult, ClientConfig,
-    ClientCreateRequest, ClientDetails, ClientExternalLinkInput, ClientIpInfo, ClientIpsByGuid,
-    ClientMutationStatus, ClientPage, ClientPageRequest, ClientWithAttachments, ClientsByGuid,
-    DeletedCount, GroupName, GroupSummary, LastOnlineByEmail,
+    ClientCreateRequest, ClientDetails, ClientExternalLinkInput, ClientHwidDevice, ClientIpInfo,
+    ClientIpsByGuid, ClientMutationStatus, ClientPage, ClientPageRequest, ClientWithAttachments,
+    ClientsByGuid, DeletedCount, GroupName, GroupSummary, LastOnlineByEmail,
 };
 use crate::{
     Client, ClientTraffic, Error, Result, client::AuthenticationScope, response::ApiResponse,
@@ -67,8 +67,6 @@ impl<'client> ClientsApi<'client> {
 
     /// Fetches all clients associated with a positive Telegram user ID.
     ///
-    /// This source-defined v3.6.0 endpoint is absent from upstream `OpenAPI`.
-    ///
     /// # Errors
     ///
     /// Returns an error when the lookup or response decoding fails.
@@ -103,6 +101,47 @@ impl<'client> ClientsApi<'client> {
     /// Returns an error when link generation or decoding fails.
     pub async fn links(self, email: &str) -> Result<Vec<String>> {
         self.get_object(&format!("links/{}", segment(email))).await
+    }
+
+    /// Lists devices registered against a client's subscription identifier.
+    ///
+    /// 3x-ui stores only a hash of the raw HWID; this response contains
+    /// non-secret metadata and the revocation identifier.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the request or response contract fails.
+    pub async fn hwid_devices(self, email: &str) -> Result<Vec<ClientHwidDevice>> {
+        self.post_object(&format!("hwids/{}", segment(email)), None::<&()>)
+            .await
+    }
+
+    /// Clears every registered HWID device for a client.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the panel cannot clear the registrations.
+    pub async fn clear_hwid_devices(self, email: &str) -> Result<()> {
+        let suffix = format!("hwids/{}", segment(email));
+        let path = format!("{ROOT}/{suffix}");
+        self.client
+            .execute::<Value, ()>(Method::DELETE, &path, None, AuthenticationScope::PanelApi)
+            .await?;
+        Ok(())
+    }
+
+    /// Revokes one registered HWID device by its database identifier.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the device does not exist or cannot be revoked.
+    pub async fn delete_hwid_device(self, email: &str, id: i64) -> Result<()> {
+        let suffix = format!("hwids/{}/{}", segment(email), id);
+        let path = format!("{ROOT}/{suffix}");
+        self.client
+            .execute::<Value, ()>(Method::DELETE, &path, None, AuthenticationScope::PanelApi)
+            .await?;
+        Ok(())
     }
 
     /// Creates and attaches a client.
@@ -603,8 +642,6 @@ impl<'client> ClientsApi<'client> {
 
     /// Resets a group's traffic baseline without resetting client counters.
     ///
-    /// This source-defined v3.6.0 endpoint is absent from upstream `OpenAPI`.
-    ///
     /// # Errors
     ///
     /// Returns an error when reset or decoding fails.
@@ -843,7 +880,7 @@ mod tests {
     }
 
     #[test]
-    fn page_request_uses_actual_v360_query_vocabulary() {
+    fn page_request_uses_actual_v370_query_vocabulary() {
         let request = ClientPageRequest {
             statuses: vec![ClientStatusFilter::Online, ClientStatusFilter::Expiring],
             protocols: vec![InboundProtocol::Vless],

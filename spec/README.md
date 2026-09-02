@@ -3,24 +3,22 @@
 This directory pins the contract used to build and test `xui-rs`.
 
 - Upstream: `MHSanaei/3x-ui`
-- Release: `v3.6.0`
-- Commit: `c377dca27c23549cdf84e0ffd2d287a16bee577c`
-- OpenAPI source: `web/html/xui/openapi.json`
-- OpenAPI SHA-256: `1dd51816003c3ea28efda48bcdab1f3b117aa9fb74461981195263d75bb8a519`
-- OpenAPI operations: 160
-- Official container runtime OpenAPI operations: 170
+- Release: `v3.7.0`
+- Commit: `f727d04f6522bb94a8fb52e8352fdcafb51c11e1`
+- OpenAPI source: `docs/public/openapi.json`
+- OpenAPI SHA-256: `a8c92b434efc1f0c5e68de0a719150bd2056be6b45e784c2ccbad4fdd581cd50`
+- OpenAPI operations: 186
+- Official container runtime OpenAPI operations: 186
 
-`3x-ui-v3.6.0.openapi.json` is an unmodified copy from that release. The
+`3x-ui-v3.7.0.openapi.json` is an unmodified copy from that release. The
 smaller per-domain route snapshots record endpoints found in the Go routers but
-absent from OpenAPI as well. Contract tests compare both sources with the SDK
-route inventory, because the published v3.6.0 document is useful but not
-complete.
+alongside the OpenAPI contract. Contract tests compare both sources with the
+SDK route inventory so controller drift cannot hide behind stale generated
+documentation.
 
-The official v3.6.0 container's runtime document augments the 160 static
-operations with exactly the ten source-only panel routes recorded by the route
-snapshots. Its four Hosts templates also rename `{id}` to `{groupId}` without
-changing the matched URL. The live test compares normalized method/path sets
-against that union, so runtime drift is detected without treating placeholder
+The official v3.7.0 container's runtime document matches the 186 static
+operations. The live test compares normalized method/path sets against the
+vendored document, so runtime drift is detected without treating placeholder
 names as different routes.
 
 The OpenAPI document is vendored verbatim. Per-domain `*-routes.json` files are
@@ -29,13 +27,13 @@ contract tests detect drift against both sources. When updating 3x-ui, replace
 the OpenAPI file from one exact tag, regenerate the route snapshots, update this
 provenance block, and adjust the typed modules in the same commit.
 
-`3x-ui-v3.6.0.remaining-http-routes.json` records the two panel-wide routes and
-the six routes on the separate subscription server. The runtime OpenAPI route
-and all three subscription `HEAD` handlers exist in the tagged routers but not
-in the published document. The OpenAPI count above also excludes four
-documentation-only WebSocket message pseudo-operations.
+`3x-ui-v3.7.0.remaining-http-routes.json` records the two panel-wide routes and
+the six routes on the separate subscription server. All three subscription
+`HEAD` handlers exist in the tagged routers but not in the published document.
+The OpenAPI operation count includes four documentation-only WebSocket message
+pseudo-operations.
 
-`3x-ui-v3.6.0.websocket-contract.json` records the authenticated `/ws` route,
+`3x-ui-v3.7.0.websocket-contract.json` records the authenticated `/ws` route,
 actual `{type,payload,time}` envelope, limits, and all ten message constants
 from the tagged hub and broadcaster call sites. The published OpenAPI includes
 only four pseudo-message entries, calls one `xrayState` instead of the actual

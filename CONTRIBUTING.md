@@ -25,7 +25,7 @@ Thanks for helping build a reliable Rust SDK for 3x-ui.
    endpoint behavior still requires focused success and failure assertions;
    aggregate coverage is a regression floor, not a substitute for contracts.
 
-5. Check the proposed 1.0 public contract when changing any public item:
+5. Check the stable 1.x public contract when changing any public item:
 
    ```console
    cargo +1.98.0 install cargo-public-api --version 0.52.0 --locked
@@ -48,7 +48,7 @@ Thanks for helping build a reliable Rust SDK for 3x-ui.
 
 ## API implementation rules
 
-- Treat the pinned 3x-ui OpenAPI document and v3.6.0 source as the contract.
+- Treat the pinned 3x-ui OpenAPI document and v3.7.0 source as the contract.
 - Use explicit domain re-exports; a glob can accidentally make a helper part of
   the permanent public API.
 - Mark enums that may gain variants `#[non_exhaustive]`, and prefer generic

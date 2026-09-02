@@ -1,6 +1,6 @@
 # Remote nodes
 
-`Client::nodes()` covers all 15 routes registered by the 3x-ui v3.6.0
+`Client::nodes()` covers all 16 routes registered by the 3x-ui v3.7.0
 `NodeController`: registration, connectivity tests, remote inbound discovery,
 health/history, panel updates, certificate pinning, and node mTLS.
 
@@ -10,7 +10,7 @@ health/history, panel updates, certificate pinning, and node mTLS.
 | Lifecycle | `create`, `update`, `delete`, `set_enabled` |
 | Connectivity | `test_connection`, `certificate_fingerprint`, `remote_inbounds`, `probe` |
 | Operations | `update_panels`, `history` |
-| mTLS | `mtls_ca`, `set_mtls_trust_ca` |
+| mTLS | `mtls_ca`, `set_mtls_trust_ca`, `reload_mtls_client` |
 
 ## Safe read and write contracts
 
@@ -121,6 +121,9 @@ remote.nodes().set_mtls_trust_ca(&ca.ca_cert).await?;
 
 Sending an empty CA disables trust for incoming node client certificates after
 restart.
+
+`reload_mtls_client()` reloads the local node client certificate without a
+panel restart after the certificate material has changed.
 
 API tokens, remote secret base paths, and internal egress tags are redacted
 from `Debug`; explicit fields/accessors and serialization remain available for

@@ -7,7 +7,7 @@
     { "method": "get", "path": "/panel/api/clients/list" },
     { "method": "get", "path": "/panel/api/clients/list/paged" },
     { "method": "get", "path": "/panel/api/clients/get/{email}" },
-    { "method": "get", "path": "/panel/api/clients/get/tgId/{tgId}", "openapi": false },
+    { "method": "get", "path": "/panel/api/clients/get/tgId/{tgId}" },
     { "method": "get", "path": "/panel/api/clients/traffic/{email}" },
     { "method": "get", "path": "/panel/api/clients/subLinks/{subId}" },
     { "method": "get", "path": "/panel/api/clients/links/{email}" },
@@ -34,6 +34,9 @@
     { "method": "post", "path": "/panel/api/clients/updateTraffic/{email}" },
     { "method": "post", "path": "/panel/api/clients/ips/{email}" },
     { "method": "post", "path": "/panel/api/clients/clearIps/{email}" },
+    { "method": "post", "path": "/panel/api/clients/hwids/{email}" },
+    { "method": "delete", "path": "/panel/api/clients/hwids/{email}" },
+    { "method": "delete", "path": "/panel/api/clients/hwids/{email}/{id}" },
     { "method": "post", "path": "/panel/api/clients/onlines" },
     { "method": "post", "path": "/panel/api/clients/onlinesByGuid" },
     { "method": "post", "path": "/panel/api/clients/clientIpsByGuid" },
@@ -44,7 +47,7 @@
     { "method": "post", "path": "/panel/api/clients/groups/create" },
     { "method": "post", "path": "/panel/api/clients/groups/rename" },
     { "method": "post", "path": "/panel/api/clients/groups/delete" },
-    { "method": "post", "path": "/panel/api/clients/groups/resetTraffic", "openapi": false },
+    { "method": "post", "path": "/panel/api/clients/groups/resetTraffic" },
     { "method": "post", "path": "/panel/api/clients/groups/bulkAdd" },
     { "method": "post", "path": "/panel/api/clients/groups/bulkRemove" }
   ]

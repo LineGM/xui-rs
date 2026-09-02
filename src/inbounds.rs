@@ -10,7 +10,7 @@ use crate::{Client, Error, Result, client::AuthenticationScope, response::ApiRes
 
 const ROOT: &str = "panel/api/inbounds";
 
-/// Xray protocols accepted by 3x-ui v3.6.0 inbound endpoints.
+/// Xray protocols accepted by 3x-ui v3.7.0 inbound endpoints.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
@@ -37,6 +37,8 @@ pub enum InboundProtocol {
     Tun,
     /// `MTProto` proxy.
     Mtproto,
+    /// Embedded `AmneziaWG` tunnel.
+    Amneziawg,
 }
 
 impl InboundProtocol {
@@ -54,6 +56,7 @@ impl InboundProtocol {
             Self::Tunnel => "tunnel",
             Self::Tun => "tun",
             Self::Mtproto => "mtproto",
+            Self::Amneziawg => "amneziawg",
         }
     }
 }
@@ -120,6 +123,18 @@ pub struct ClientTraffic {
     pub reset: i32,
     /// Most recent online timestamp in milliseconds.
     pub last_online: i64,
+    /// Most recent subscription fetch timestamp in milliseconds.
+    #[serde(default)]
+    pub last_sub_fetch: i64,
+    /// Calendar renewal day; zero selects interval-based renewal.
+    #[serde(default)]
+    pub reset_day: i32,
+    /// Maximum number of automatic renewals; zero is unlimited.
+    #[serde(default)]
+    pub reset_max: i32,
+    /// Number of automatic renewals already applied.
+    #[serde(default)]
+    pub reset_count: i32,
 }
 
 impl fmt::Debug for ClientTraffic {
@@ -138,6 +153,10 @@ impl fmt::Debug for ClientTraffic {
             .field("total", &self.total)
             .field("reset", &self.reset)
             .field("last_online", &self.last_online)
+            .field("last_sub_fetch", &self.last_sub_fetch)
+            .field("reset_day", &self.reset_day)
+            .field("reset_max", &self.reset_max)
+            .field("reset_count", &self.reset_count)
             .finish()
     }
 }
@@ -163,6 +182,9 @@ pub struct InboundConfig {
     pub sub_sort_index: i32,
     /// Whether the inbound is enabled.
     pub enable: bool,
+    /// Disables client flow values when generating subscription links.
+    #[serde(default)]
+    pub disable_flow: bool,
     /// Expiration timestamp in milliseconds, or zero when unlimited.
     pub expiry_time: i64,
     /// Automatic traffic reset schedule.
@@ -207,6 +229,7 @@ impl InboundConfig {
             remark: String::new(),
             sub_sort_index: 1,
             enable: true,
+            disable_flow: false,
             expiry_time: 0,
             traffic_reset: TrafficReset::Never,
             traffic_reset_day: 1,
@@ -236,6 +259,7 @@ impl fmt::Debug for InboundConfig {
             .field("remark", &self.remark)
             .field("sub_sort_index", &self.sub_sort_index)
             .field("enable", &self.enable)
+            .field("disable_flow", &self.disable_flow)
             .field("expiry_time", &self.expiry_time)
             .field("traffic_reset", &self.traffic_reset)
             .field("traffic_reset_day", &self.traffic_reset_day)
@@ -355,6 +379,90 @@ pub struct InboundOption {
     /// Share-address strategy, when populated by the panel.
     #[serde(default)]
     pub share_addr_strategy: Option<ShareAddressStrategy>,
+    /// Complete `AmneziaWG` server settings, when applicable.
+    #[serde(default)]
+    pub awg_server: Option<AmneziaWgServerSettings>,
+}
+
+/// Server-side settings embedded in an `AmneziaWG` inbound.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct AmneziaWgServerSettings {
+    /// Server tunnel private key.
+    pub private_key: String,
+    /// Server tunnel public key.
+    pub public_key: String,
+    /// IPv4 subnet address.
+    pub subnet_ip: String,
+    /// IPv4 subnet prefix length.
+    pub subnet_cidr: u8,
+    /// Primary DNS server offered to clients.
+    pub primary_dns: String,
+    /// Secondary DNS server offered to clients.
+    pub secondary_dns: String,
+    /// Tunnel MTU.
+    pub mtu: i32,
+    /// Preferred external interface.
+    pub external_interface: String,
+    /// Enables IPv6 tunnel addressing.
+    pub ipv6_enabled: bool,
+    /// IPv6 subnet.
+    pub ipv6_subnet: String,
+    /// Preferred external IPv6 interface.
+    pub ipv6_external_interface: String,
+    /// Legacy routing flag retained by 3x-ui for stored configurations.
+    pub route_through_xray: bool,
+    /// `AmneziaWG` junk packet count.
+    pub jc: i32,
+    /// Minimum junk packet size.
+    pub jmin: i32,
+    /// Maximum junk packet size.
+    pub jmax: i32,
+    /// Obfuscation header value.
+    pub s1: i32,
+    /// Obfuscation header value.
+    pub s2: i32,
+    /// Obfuscation header value.
+    pub s3: i32,
+    /// Obfuscation header value.
+    pub s4: i32,
+    /// Magic header value.
+    pub h1: String,
+    /// Magic header value.
+    pub h2: String,
+    /// Magic header value.
+    pub h3: String,
+    /// Magic header value.
+    pub h4: String,
+    /// Init packet signature value.
+    pub i1: String,
+    /// Response packet signature value.
+    pub i2: String,
+    /// Under-load packet signature value.
+    pub i3: String,
+    /// Transport packet signature value.
+    pub i4: String,
+    /// Additional transport signature value.
+    pub i5: String,
+    /// Rekey interval accepted by `AmneziaWG`.
+    pub rekey_after_time: String,
+    /// Rekey timeout accepted by `AmneziaWG`.
+    pub rekey_timeout: String,
+    /// Reject-after interval accepted by `AmneziaWG`.
+    pub reject_after_time: String,
+    /// Keepalive timeout accepted by `AmneziaWG`.
+    pub keepalive_timeout: String,
+    /// Maximum handshake attempts accepted by `AmneziaWG`.
+    pub max_handshake_attempts: String,
+    /// Enables randomized trailer bytes.
+    pub random_trailers: bool,
+    /// Disables `AmneziaWG` cookies.
+    pub disable_cookies: bool,
+    /// Base64 header-protection key for `AmneziaWG` 3.0.
+    pub header_protection_key: String,
+    /// Padding range for `AmneziaWG` 3.0.
+    pub content_padding_addition: String,
 }
 
 /// A persisted fallback rule attached to a master inbound.
@@ -487,7 +595,7 @@ impl<'client> InboundsApi<'client> {
     /// # Errors
     ///
     /// Returns an error when the request fails or the response violates the
-    /// v3.6.0 contract.
+    /// v3.7.0 contract.
     pub async fn list(self) -> Result<Vec<Inbound>> {
         self.get_object("list").await
     }
@@ -515,9 +623,8 @@ impl<'client> InboundsApi<'client> {
 
     /// Returns every generated inbound share link.
     ///
-    /// This endpoint exists in 3x-ui v3.6.0 source but is missing from its
-    /// published `OpenAPI` document. An empty panel encodes its nil Go slice as
-    /// `obj: null`; the SDK normalizes that response to an empty vector.
+    /// An empty panel encodes its nil Go slice as `obj: null`; the SDK
+    /// normalizes that response to an empty vector.
     ///
     /// # Errors
     ///
@@ -602,6 +709,28 @@ impl<'client> InboundsApi<'client> {
 
         self.post_empty(&format!("setEnable/{id}"), Some(&Body { enable }))
             .await
+    }
+
+    /// Changes only the inbound's one-based subscription ordering index.
+    ///
+    /// This avoids replacing large protocol settings and potentially writing
+    /// a stale client list during a concurrent edit.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the index is invalid or cannot be persisted.
+    pub async fn set_subscription_sort_index(self, id: i64, sub_sort_index: i32) -> Result<()> {
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Body {
+            sub_sort_index: i32,
+        }
+
+        self.post_empty(
+            &format!("{id}/subSortIndex"),
+            Some(&Body { sub_sort_index }),
+        )
+        .await
     }
 
     /// Resets all traffic counters for one inbound.
@@ -766,7 +895,11 @@ mod tests {
             "/panel/api/inbounds/options",
             Some("get_panel_api_inbounds_options"),
         ),
-        ("get", "/panel/api/inbounds/allLinks", None),
+        (
+            "get",
+            "/panel/api/inbounds/allLinks",
+            Some("get_panel_api_inbounds_allLinks"),
+        ),
         (
             "get",
             "/panel/api/inbounds/get/{id}",
@@ -804,6 +937,11 @@ mod tests {
         ),
         (
             "post",
+            "/panel/api/inbounds/{id}/subSortIndex",
+            Some("post_panel_api_inbounds_id_subSortIndex"),
+        ),
+        (
+            "post",
             "/panel/api/inbounds/{id}/resetTraffic",
             Some("post_panel_api_inbounds_id_resetTraffic"),
         ),
@@ -837,7 +975,7 @@ mod tests {
     #[test]
     fn sdk_covers_openapi_and_source_routes() {
         let openapi: Value =
-            serde_json::from_str(include_str!("../spec/3x-ui-v3.6.0.openapi.json")).unwrap();
+            serde_json::from_str(include_str!("../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
         let paths = openapi["paths"].as_object().unwrap();
         let http_methods = [
             "get", "post", "put", "patch", "delete", "head", "options", "trace",
@@ -848,7 +986,7 @@ mod tests {
             .flat_map(serde_json::Map::keys)
             .filter(|method| http_methods.contains(&method.as_str()))
             .count();
-        assert_eq!(operation_count, 160, "vendored OpenAPI changed");
+        assert_eq!(operation_count, 186, "vendored OpenAPI changed");
 
         let documented = paths
             .iter()
@@ -880,7 +1018,7 @@ mod tests {
         assert_eq!(documented, implemented_openapi);
 
         let source: Value =
-            serde_json::from_str(include_str!("../spec/3x-ui-v3.6.0.inbounds-routes.json"))
+            serde_json::from_str(include_str!("../spec/3x-ui-v3.7.0.inbounds-routes.json"))
                 .unwrap();
         let source_routes = source["routes"]
             .as_array()
@@ -921,7 +1059,7 @@ mod tests {
     }
 
     #[test]
-    fn actual_v360_option_extensions_are_typed() {
+    fn actual_v370_option_extensions_are_typed() {
         let option: InboundOption = serde_json::from_value(serde_json::json!({
             "id": 7,
             "remark": "wg",

@@ -13,13 +13,21 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
         "/panel/api/setting/defaultSettings",
         Some("post_panel_api_setting_defaultSettings"),
     ),
-    ("post", "/panel/api/setting/factoryDefaults", None),
+    (
+        "post",
+        "/panel/api/setting/factoryDefaults",
+        Some("post_panel_api_setting_factoryDefaults"),
+    ),
     (
         "post",
         "/panel/api/setting/update",
         Some("post_panel_api_setting_update"),
     ),
-    ("post", "/panel/api/setting/validateRegex", None),
+    (
+        "post",
+        "/panel/api/setting/validateRegex",
+        Some("post_panel_api_setting_validateRegex"),
+    ),
     (
         "post",
         "/panel/api/setting/updateUser",
@@ -90,6 +98,31 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
         "post",
         "/panel/api/xray/nord/{action}",
         Some("post_panel_api_xray_nord_action"),
+    ),
+    (
+        "post",
+        "/panel/api/xray/pia/{action}",
+        Some("post_panel_api_xray_pia_action"),
+    ),
+    (
+        "get",
+        "/panel/api/xray/geodata/files",
+        Some("get_panel_api_xray_geodata_files"),
+    ),
+    (
+        "get",
+        "/panel/api/xray/geodata/categories",
+        Some("get_panel_api_xray_geodata_categories"),
+    ),
+    (
+        "get",
+        "/panel/api/xray/geodata/entries",
+        Some("get_panel_api_xray_geodata_entries"),
+    ),
+    (
+        "post",
+        "/panel/api/xray/geodata/validate",
+        Some("post_panel_api_xray_geodata_validate"),
     ),
     (
         "post",
@@ -171,7 +204,7 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
 #[test]
 fn sdk_covers_openapi_and_source_routes() {
     let openapi: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.6.0.openapi.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
     let documented = openapi["paths"]
         .as_object()
         .unwrap()
@@ -206,11 +239,11 @@ fn sdk_covers_openapi_and_source_routes() {
             operation.map(|operation| (*method, *path, operation))
         })
         .collect::<BTreeSet<_>>();
-    assert_eq!(documented.len(), 33);
+    assert_eq!(documented.len(), 40);
     assert_eq!(documented, implemented_openapi);
 
     let snapshot: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.6.0.settings-routes.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.settings-routes.json")).unwrap();
     let source = snapshot["routes"]
         .as_array()
         .unwrap()
@@ -226,6 +259,6 @@ fn sdk_covers_openapi_and_source_routes() {
         .iter()
         .map(|(method, path, _)| (*method, *path))
         .collect::<BTreeSet<_>>();
-    assert_eq!(source.len(), 35);
+    assert_eq!(source.len(), 40);
     assert_eq!(source, implemented);
 }

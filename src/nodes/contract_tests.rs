@@ -15,6 +15,11 @@ const SDK_ROUTES: &[(&str, &str, &str)] = &[
         "post_panel_api_nodes_mtls_trustCA",
     ),
     (
+        "post",
+        "/panel/api/nodes/mtls/reloadClient",
+        "post_panel_api_nodes_mtls_reloadClient",
+    ),
+    (
         "get",
         "/panel/api/nodes/get/{id}",
         "get_panel_api_nodes_get_id",
@@ -71,7 +76,7 @@ const SDK_ROUTES: &[(&str, &str, &str)] = &[
 #[test]
 fn sdk_covers_every_openapi_and_source_route() {
     let openapi: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.6.0.openapi.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
     let documented = openapi["paths"]
         .as_object()
         .unwrap()
@@ -96,11 +101,11 @@ fn sdk_covers_every_openapi_and_source_route() {
         })
         .collect::<BTreeSet<_>>();
     let implemented_openapi = SDK_ROUTES.iter().copied().collect::<BTreeSet<_>>();
-    assert_eq!(documented.len(), 15);
+    assert_eq!(documented.len(), 16);
     assert_eq!(documented, implemented_openapi);
 
     let snapshot: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.6.0.nodes-routes.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.nodes-routes.json")).unwrap();
     let source = snapshot["routes"]
         .as_array()
         .unwrap()
@@ -116,6 +121,6 @@ fn sdk_covers_every_openapi_and_source_route() {
         .iter()
         .map(|(method, path, _)| (*method, *path))
         .collect::<BTreeSet<_>>();
-    assert_eq!(source.len(), 15);
+    assert_eq!(source.len(), 16);
     assert_eq!(source, implemented);
 }

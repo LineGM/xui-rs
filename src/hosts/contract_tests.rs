@@ -11,7 +11,7 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
     (
         "get",
         "/panel/api/hosts/get/{groupId}",
-        Some("get_panel_api_hosts_get_id"),
+        Some("get_panel_api_hosts_get_groupId"),
     ),
     (
         "get",
@@ -31,24 +31,28 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
     (
         "post",
         "/panel/api/hosts/update/{groupId}",
-        Some("post_panel_api_hosts_update_id"),
+        Some("post_panel_api_hosts_update_groupId"),
     ),
     (
         "post",
         "/panel/api/hosts/del/{groupId}",
-        Some("post_panel_api_hosts_del_id"),
+        Some("post_panel_api_hosts_del_groupId"),
     ),
     (
         "post",
         "/panel/api/hosts/setEnable/{groupId}",
-        Some("post_panel_api_hosts_setEnable_id"),
+        Some("post_panel_api_hosts_setEnable_groupId"),
     ),
     (
         "post",
         "/panel/api/hosts/reorder",
         Some("post_panel_api_hosts_reorder"),
     ),
-    ("post", "/panel/api/hosts/bulk/add", None),
+    (
+        "post",
+        "/panel/api/hosts/bulk/add",
+        Some("post_panel_api_hosts_bulk_add"),
+    ),
     (
         "post",
         "/panel/api/hosts/bulk/setEnable",
@@ -64,7 +68,7 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
 #[test]
 fn sdk_covers_openapi_and_source_routes() {
     let openapi: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.6.0.openapi.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
     let documented = openapi["paths"]
         .as_object()
         .unwrap()
@@ -94,11 +98,11 @@ fn sdk_covers_openapi_and_source_routes() {
             operation.map(|operation| (*method, *path, operation))
         })
         .collect::<BTreeSet<_>>();
-    assert_eq!(documented.len(), 11);
+    assert_eq!(documented.len(), 12);
     assert_eq!(documented, implemented_openapi);
 
     let snapshot: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.6.0.hosts-routes.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.hosts-routes.json")).unwrap();
     let source = snapshot["routes"]
         .as_array()
         .unwrap()

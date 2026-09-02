@@ -73,7 +73,7 @@ async fn empty_all_links_normalizes_the_upstream_null_slice() {
 
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
-async fn every_v360_inbound_route_is_wired() {
+async fn every_v370_inbound_route_is_wired() {
     let server = MockServer::start().await;
     let routes = [
         (
@@ -142,6 +142,7 @@ async fn every_v360_inbound_route_is_wired() {
             Some(inbound_json(7)),
         ),
         (Method::POST, "/panel/api/inbounds/setEnable/7", None),
+        (Method::POST, "/panel/api/inbounds/7/subSortIndex", None),
         (Method::POST, "/panel/api/inbounds/7/resetTraffic", None),
         (
             Method::POST,
@@ -187,6 +188,11 @@ async fn every_v360_inbound_route_is_wired() {
     );
     assert_eq!(client.inbounds().update(7, &config).await.unwrap().id, 7);
     client.inbounds().set_enabled(7, false).await.unwrap();
+    client
+        .inbounds()
+        .set_subscription_sort_index(7, 2)
+        .await
+        .unwrap();
     client.inbounds().reset_traffic(7).await.unwrap();
     assert_eq!(
         client

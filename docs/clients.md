@@ -1,9 +1,7 @@
 # Client API
 
-`Client::clients()` covers all 43 routes registered by the v3.6.0 client and
-group controllers. Upstream OpenAPI documents 41. The additional source routes
-are `GET /panel/api/clients/get/tgId/:tgId` and `POST
-/panel/api/clients/groups/resetTraffic`.
+`Client::clients()` covers all 46 routes registered and documented by the
+v3.7.0 client and group controllers.
 
 | Area | SDK methods |
 |---|---|
@@ -13,7 +11,7 @@ are `GET /panel/api/clients/get/tgId/:tgId` and `POST
 | Links | `links`, `subscription_links`, `set_external_links` |
 | Portability | `export`, `import`, `bulk_create` |
 | Bulk maintenance | `bulk_adjust`, `bulk_enable`, `bulk_disable`, `bulk_delete` |
-| Traffic and IPs | reset/update methods, `ips`, `clear_ips`, GUID maps |
+| Traffic, IPs, and devices | reset/update methods, IP/GUID maps, and HWID list/clear/delete |
 | Groups | list/create/rename/delete/reset and bulk membership methods |
 
 ## Client types and replacement updates
@@ -21,7 +19,9 @@ are `GET /panel/api/clients/get/tgId/:tgId` and `POST
 `ClientConfig` is the writable protocol model. `ClientConfig::new(email)`
 creates an enabled client with unlimited quota and lets the server generate the
 protocol credential appropriate for each target inbound. The writable fields
-cover VMess/VLESS, Trojan, Shadowsocks, Hysteria, WireGuard, and MTProto.
+cover VMess/VLESS, Trojan, Shadowsocks, Hysteria, WireGuard, MTProto,
+per-inbound allowed IPs and forwarded ports, HWID limits, and the expanded
+v3.7.0 traffic-reset policy.
 
 `ClientRecord` is the canonical database-backed response. The different types
 are deliberate: for example, writable WireGuard `allowedIPs` is an array while
@@ -41,7 +41,7 @@ client.clients().update("alice@example.com", &config).await?;
 # }
 ```
 
-`update_on_inbounds` sends the v3.6.0 `inboundIds` query filter when only
+`update_on_inbounds` sends the v3.7.0 `inboundIds` query filter when only
 selected attachments should have their settings JSON rewritten. Canonical
 record fields such as group and enabled state remain global; an empty filter
 has the server's ordinary unfiltered-update meaning.
@@ -70,6 +70,12 @@ Bulk methods return typed counts and per-client skip reports. Attachment
 results normalize Go's possible `null` slices into empty Rust vectors. Group
 traffic reset moves the group's accounting baseline without changing the
 underlying client counters.
+
+## HWID devices
+
+`hwid_devices`, `clear_hwid_devices`, and `delete_hwid_device` expose the
+v3.7.0 device-limit controller. Returned hardware identifiers are redacted
+from `Debug`; the explicit field remains available for administration.
 
 ## Paths and secrets
 

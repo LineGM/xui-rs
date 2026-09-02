@@ -59,7 +59,7 @@ impl<'client> EventsApi<'client> {
     /// Opens one authenticated real-time stream using the client's current
     /// cookie session.
     ///
-    /// 3x-ui v3.6.0 deliberately ignores API bearer tokens on `/ws`. Call
+    /// 3x-ui v3.7.0 deliberately ignores API bearer tokens on `/ws`. Call
     /// [`crate::AuthApi::login`] first; the same standards-compliant cookie jar
     /// is shared by HTTP requests and this handshake.
     ///
@@ -115,7 +115,7 @@ impl EventStream {
     /// # Errors
     ///
     /// Returns an error for transport/protocol failures, binary data frames,
-    /// oversized messages, or JSON that does not match the event's v3.6.0
+    /// oversized messages, or JSON that does not match the event's v3.7.0
     /// payload contract.
     pub async fn next_event(&mut self) -> Result<Option<PanelEvent>> {
         self.next().await.transpose()

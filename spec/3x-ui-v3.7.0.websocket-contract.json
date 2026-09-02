@@ -5,8 +5,13 @@
     "internal/web/service/panel/websocket.go",
     "internal/web/websocket/hub.go",
     "internal/web/websocket/notifier.go",
+    "internal/web/controller/client.go",
+    "internal/web/controller/inbound.go",
+    "internal/web/controller/server.go",
     "internal/web/job/xray_traffic_job.go",
-    "internal/web/job/node_traffic_sync_job.go"
+    "internal/web/job/node_traffic_sync_job.go",
+    "internal/web/job/node_heartbeat_job.go",
+    "internal/web/job/outbound_subscription_job.go"
   ],
   "route": {
     "method": "get",

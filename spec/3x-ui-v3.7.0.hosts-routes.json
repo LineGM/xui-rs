@@ -10,7 +10,7 @@
     { "method": "post", "path": "/panel/api/hosts/del/{groupId}" },
     { "method": "post", "path": "/panel/api/hosts/setEnable/{groupId}" },
     { "method": "post", "path": "/panel/api/hosts/reorder" },
-    { "method": "post", "path": "/panel/api/hosts/bulk/add", "openapi": false },
+    { "method": "post", "path": "/panel/api/hosts/bulk/add" },
     { "method": "post", "path": "/panel/api/hosts/bulk/setEnable" },
     { "method": "post", "path": "/panel/api/hosts/bulk/del" }
   ]

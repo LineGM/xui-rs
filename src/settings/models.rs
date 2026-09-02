@@ -169,6 +169,8 @@ impl fmt::Debug for SmtpSettings {
 pub struct SecuritySettings {
     /// Percentage below which an outbound is treated as down.
     pub outbound_down_threshold: u8,
+    /// Comma-separated addresses or CIDRs exempt from client IP limits.
+    pub ip_limit_allowlist: String,
     /// IANA time-zone name.
     pub time_location: String,
     /// Enables two-factor authentication.
@@ -184,6 +186,7 @@ impl fmt::Debug for SecuritySettings {
         formatter
             .debug_struct("SecuritySettings")
             .field("outbound_down_threshold", &self.outbound_down_threshold)
+            .field("ip_limit_allowlist", &self.ip_limit_allowlist)
             .field("time_location", &self.time_location)
             .field("two_factor_enable", &self.two_factor_enable)
             .field("two_factor_token", &"[REDACTED]")
@@ -274,6 +277,8 @@ pub struct SubscriptionSettings {
     pub sub_json_rules: String,
     /// JSON final-mask template.
     pub sub_json_final_mask: String,
+    /// JSON observatory template merged into generated subscriptions.
+    pub sub_json_observatory: String,
     /// Subscription theme directory.
     pub sub_theme_dir: String,
     /// Hides settings from subscription output.
@@ -565,6 +570,61 @@ pub struct ApiTokenMetadata {
     pub enabled: bool,
     /// Unix creation timestamp in seconds.
     pub created_at: i64,
+    /// Authorization scope enforced by 3x-ui.
+    #[serde(default)]
+    pub scope: ApiTokenScope,
+    /// Expiration timestamp in Unix milliseconds; zero means no expiry.
+    #[serde(default)]
+    pub expires_at: i64,
+}
+
+/// Authorization scope assigned to a 3x-ui API token.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
+pub enum ApiTokenScope {
+    /// Full panel API access.
+    #[default]
+    Admin,
+    /// Read-only monitoring access.
+    Monitor,
+    /// Node synchronization access.
+    NodeSync,
+}
+
+impl ApiTokenScope {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Admin => "admin",
+            Self::Monitor => "monitor",
+            Self::NodeSync => "node-sync",
+        }
+    }
+}
+
+/// Options used when creating an API token.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiTokenCreateRequest {
+    /// User-visible token name.
+    pub name: String,
+    /// Authorization scope.
+    #[serde(default)]
+    pub scope: ApiTokenScope,
+    /// Expiration timestamp in Unix milliseconds; zero means no expiry.
+    #[serde(default)]
+    pub expires_at: i64,
+}
+
+impl ApiTokenCreateRequest {
+    /// Creates a non-expiring administrative token request.
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            scope: ApiTokenScope::Admin,
+            expires_at: 0,
+        }
+    }
 }
 
 /// Newly created API token, whose plaintext value is shown exactly once.
@@ -581,6 +641,10 @@ pub struct CreatedApiToken {
     pub enabled: bool,
     /// Unix creation timestamp in seconds.
     pub created_at: i64,
+    /// Authorization scope enforced by 3x-ui.
+    pub scope: ApiTokenScope,
+    /// Expiration timestamp in Unix milliseconds; zero means no expiry.
+    pub expires_at: i64,
 }
 
 impl fmt::Debug for CreatedApiToken {
@@ -592,6 +656,166 @@ impl fmt::Debug for CreatedApiToken {
             .field("token", &"[REDACTED]")
             .field("enabled", &self.enabled)
             .field("created_at", &self.created_at)
+            .field("scope", &self.scope)
+            .field("expires_at", &self.expires_at)
+            .finish()
+    }
+}
+
+/// One geodata database resolved from Xray's asset directory.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct GeoFile {
+    /// Basename inside the asset directory.
+    pub name: String,
+    /// Detected database kind, normally `site` or `ip`.
+    pub kind: String,
+    /// File size in bytes.
+    pub size: i64,
+    /// Modification timestamp in Unix milliseconds.
+    pub modified_at: i64,
+    /// Number of indexed categories.
+    pub categories: i32,
+    /// Parse error for a file that could not be indexed.
+    pub error: String,
+}
+
+/// One category in a geosite or geoip database.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct GeoCategory {
+    /// Case-insensitive category code.
+    pub code: String,
+    /// Number of contained entries.
+    pub entries: i32,
+    /// Domain attributes present in this category.
+    pub attributes: Vec<String>,
+}
+
+/// Page of geodata categories.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct GeoCategoryPage {
+    /// Selected category rows.
+    pub items: Vec<GeoCategory>,
+    /// Total matching row count before paging.
+    pub total: i32,
+}
+
+/// One rule inside a geodata category.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct GeoEntry {
+    /// Rule kind such as `domain`, `full`, `keyword`, `regexp`, or `cidr`.
+    pub kind: String,
+    /// Domain expression or CIDR value.
+    pub value: String,
+}
+
+/// Page of rules inside a geodata category.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct GeoEntryPage {
+    /// Selected rules.
+    pub items: Vec<GeoEntry>,
+    /// Total matching rule count before paging.
+    pub total: i32,
+}
+
+/// One invalid or non-resolving routing token.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct GeodataTokenIssue {
+    /// Original routing token.
+    pub token: String,
+    /// Stable reason such as `syntax`, `fileMissing`, or `categoryMissing`.
+    pub reason: String,
+    /// Referenced database filename, when parsed.
+    pub file: String,
+    /// Referenced category or missing attribute, when parsed.
+    pub code: String,
+}
+
+/// Country represented in PIA's signed server catalog.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct PiaCountry {
+    /// ISO 3166-1 alpha-2 country code.
+    pub code: String,
+}
+
+/// PIA region metadata.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct PiaRegion {
+    /// Provider region identifier.
+    pub id: String,
+    /// User-visible region name.
+    pub name: String,
+}
+
+/// One PIA `WireGuard` server.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct PiaServer {
+    /// Provider hostname.
+    pub hostname: String,
+    /// Provider IP address.
+    pub ip: String,
+    /// Parent region identifier.
+    pub region_id: String,
+    /// Parent region name.
+    pub region_name: String,
+}
+
+/// PIA regions and `WireGuard` servers for a selected country.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct PiaServers {
+    /// Matching provider regions.
+    pub regions: Vec<PiaRegion>,
+    /// Matching `WireGuard` servers.
+    pub servers: Vec<PiaServer>,
+}
+
+/// Redacted view of the stored PIA account.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct PiaAccount {
+    /// Stored PIA username.
+    pub username: String,
+    /// Masked username suitable for display.
+    pub account_hint: String,
+}
+
+/// `WireGuard` material registered with one PIA server.
+#[derive(Clone, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct PiaKey {
+    /// Stable suggested Xray outbound tag.
+    pub tag: String,
+    /// Provider server hostname.
+    pub hostname: String,
+    /// Generated `WireGuard` private key.
+    pub secret_key: String,
+    /// Assigned peer address.
+    pub address: String,
+    /// Provider `WireGuard` public key.
+    pub public_key: String,
+    /// Provider `WireGuard` endpoint.
+    pub endpoint: String,
+}
+
+impl fmt::Debug for PiaKey {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PiaKey")
+            .field("tag", &self.tag)
+            .field("hostname", &self.hostname)
+            .field("secret_key", &"[REDACTED]")
+            .field("address", &self.address)
+            .field("public_key", &self.public_key)
+            .field("endpoint", &self.endpoint)
             .finish()
     }
 }

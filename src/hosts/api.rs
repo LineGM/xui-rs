@@ -82,10 +82,9 @@ impl<'client> HostsApi<'client> {
         self.post_object("add", group).await
     }
 
-    /// Creates a host group through the source-defined bulk alias.
+    /// Creates a host group through the bulk alias.
     ///
-    /// This v3.6.0 route is absent from upstream `OpenAPI` and has the same
-    /// request and response semantics as [`Self::create`].
+    /// This has the same request and response semantics as [`Self::create`].
     ///
     /// # Errors
     ///

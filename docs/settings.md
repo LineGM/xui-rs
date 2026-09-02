@@ -1,10 +1,10 @@
 # Panel and Xray settings APIs
 
-3x-ui v3.6.0 splits this surface between `SettingController` and
+3x-ui v3.7.0 splits this surface between `SettingController` and
 `XraySettingController`. `Client::settings()` covers the 14 panel-settings,
 credential, notification, and API-token routes. `Client::xray_settings()`
-covers all 21 Xray settings routes. Upstream OpenAPI documents 33 of the 35;
-`factoryDefaults` and `validateRegex` are tracked from the tagged Go source.
+covers all 26 Xray settings and integration routes. All 40 operations are
+documented by the tagged OpenAPI and independently pinned from the Go routers.
 
 ## Full-replacement panel settings
 
@@ -38,9 +38,12 @@ redacted `Debug` implementations.
 ## API tokens and notification tests
 
 `api_tokens()` returns `ApiTokenMetadata`, which cannot contain plaintext
-tokens. `create_api_token()` instead returns `CreatedApiToken`; copy its token
-to secure storage immediately because the panel shows it only once. Its
-`Debug` implementation never prints the token.
+tokens. `create_api_token()` accepts `ApiTokenCreateRequest` with a typed
+admin, monitor, or node-sync scope and optional expiry, then returns
+`CreatedApiToken`; copy its token to secure storage immediately because the
+panel shows it only once. Delete and enable operations require the expected
+scope, matching v3.7.0's confused-deputy protection. `Debug` never prints the
+token.
 
 SMTP testing is an intentional exception to the normal 3x-ui envelope: an
 authentication or connection failure is HTTP 200 with `success: false`,
@@ -60,6 +63,11 @@ installed xray-core rather than only the panel release. Explicit access remains
 available through `XrayConfig::as_value`; `Debug` is redacted. WARP and NordVPN
 actions return `SensitivePayload`, whose raw string and optional parsed JSON are
 available explicitly without appearing in logs.
+
+PIA joins the typed integration surface in v3.7.0: country/region/server
+discovery, registration, persisted account state, deletion, and key creation.
+Private keys and credentials remain redacted. Geodata file, category, entry,
+pagination, and token-validation responses are also fully typed.
 
 ## Tests, routing, and remote outbounds
 

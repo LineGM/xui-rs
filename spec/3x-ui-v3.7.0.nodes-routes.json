@@ -16,5 +16,6 @@
     { "method": "get", "path": "/panel/api/nodes/history/{id}/{metric}/{bucket}" },
     { "method": "post", "path": "/panel/api/nodes/mtls/ca" },
     { "method": "post", "path": "/panel/api/nodes/mtls/trustCA" }
+    ,{ "method": "post", "path": "/panel/api/nodes/mtls/reloadClient" }
   ]
 }

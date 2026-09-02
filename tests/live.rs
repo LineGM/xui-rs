@@ -1,10 +1,11 @@
-//! Opt-in integration tests against a real disposable 3x-ui v3.6.0 panel.
+//! Opt-in integration tests against a real disposable 3x-ui v3.7.0 panel.
 
 use std::{collections::BTreeSet, env, error::Error as StdError, io, time::Duration};
 
 use serde_json::json;
 use xui_rs::{
-    Client, ErrorKind, InboundConfig, InboundProtocol, LoginRequest, OpenApiDocument, ServerStatus,
+    ApiTokenCreateRequest, ApiTokenScope, Client, ErrorKind, InboundConfig, InboundProtocol,
+    LoginRequest, OpenApiDocument, ServerStatus,
 };
 
 type TestResult<T = ()> = Result<T, Box<dyn StdError + Send + Sync>>;
@@ -70,7 +71,7 @@ async fn wait_for_server_status(client: &Client) -> TestResult<ServerStatus> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "requires XUI_LIVE_* credentials for a real 3x-ui v3.6.0 panel"]
+#[ignore = "requires XUI_LIVE_* credentials for a real 3x-ui v3.7.0 panel"]
 async fn live_cookie_http_and_websocket_smoke() -> TestResult {
     let config = LiveConfig::from_env()?;
     let client = config.client()?;
@@ -153,7 +154,7 @@ async fn live_cookie_http_and_websocket_smoke() -> TestResult {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "requires XUI_LIVE_ALLOW_MUTATION=1 and a disposable 3x-ui v3.6.0 panel"]
+#[ignore = "requires XUI_LIVE_ALLOW_MUTATION=1 and a disposable 3x-ui v3.7.0 panel"]
 async fn live_token_and_inbound_round_trip_with_cleanup() -> TestResult {
     require(
         env::var("XUI_LIVE_ALLOW_MUTATION").as_deref() == Ok("1"),
@@ -163,7 +164,10 @@ async fn live_token_and_inbound_round_trip_with_cleanup() -> TestResult {
     let client = config.authenticated_client().await?;
 
     let token_name = format!("xui-rs-live-{}", std::process::id());
-    let created_token = client.settings().create_api_token(&token_name).await?;
+    let created_token = client
+        .settings()
+        .create_api_token(&ApiTokenCreateRequest::new(&token_name))
+        .await?;
     let token_id = created_token.id;
     let mut inbound_id = None;
 
@@ -248,7 +252,7 @@ async fn live_token_and_inbound_round_trip_with_cleanup() -> TestResult {
     };
     let token_cleanup = client
         .settings()
-        .delete_api_token(token_id)
+        .delete_api_token(token_id, ApiTokenScope::Admin)
         .await
         .map_err(Into::into);
 
@@ -256,7 +260,7 @@ async fn live_token_and_inbound_round_trip_with_cleanup() -> TestResult {
 }
 
 fn json_include() -> &'static str {
-    include_str!("../spec/3x-ui-v3.6.0.openapi.json")
+    include_str!("../spec/3x-ui-v3.7.0.openapi.json")
 }
 
 fn live_inbound_config() -> InboundConfig {
@@ -306,12 +310,13 @@ fn http_operations(document: &OpenApiDocument) -> BTreeSet<String> {
 
 fn source_only_panel_operations() -> TestResult<BTreeSet<String>> {
     const ROUTE_SNAPSHOTS: &[&str] = &[
-        include_str!("../spec/3x-ui-v3.6.0.clients-routes.json"),
-        include_str!("../spec/3x-ui-v3.6.0.hosts-routes.json"),
-        include_str!("../spec/3x-ui-v3.6.0.inbounds-routes.json"),
-        include_str!("../spec/3x-ui-v3.6.0.remaining-http-routes.json"),
-        include_str!("../spec/3x-ui-v3.6.0.server-routes.json"),
-        include_str!("../spec/3x-ui-v3.6.0.settings-routes.json"),
+        include_str!("../spec/3x-ui-v3.7.0.clients-routes.json"),
+        include_str!("../spec/3x-ui-v3.7.0.hosts-routes.json"),
+        include_str!("../spec/3x-ui-v3.7.0.inbounds-routes.json"),
+        include_str!("../spec/3x-ui-v3.7.0.remaining-http-routes.json"),
+        include_str!("../spec/3x-ui-v3.7.0.server-routes.json"),
+        include_str!("../spec/3x-ui-v3.7.0.settings-routes.json"),
+        include_str!("../spec/3x-ui-v3.7.0.subscription-balancers-routes.json"),
     ];
     let mut operations = BTreeSet::new();
     for snapshot in ROUTE_SNAPSHOTS {

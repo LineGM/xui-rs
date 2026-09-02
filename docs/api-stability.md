@@ -1,10 +1,10 @@
 # API stability
 
-xui-rs follows Semantic Versioning for its Rust API. The current 0.2 line is
-the final stabilization line for the proposed 1.0 contract; it is intentionally
-not source-compatible with the legacy 0.1 implementation.
+xui-rs follows Semantic Versioning for its Rust API. The 1.0 line is the stable
+contract for 3x-ui v3.7.0 and is intentionally not source-compatible with the
+legacy 0.1 implementation.
 
-## What 1.0 will guarantee
+## What 1.x guarantees
 
 Within the 1.x series, ordinary dependency updates must preserve:
 
@@ -13,7 +13,7 @@ Within the 1.x series, ordinary dependency updates must preserve:
   model fields;
 - documented trait guarantees such as `Send`, `Sync`, `Clone`, and `Copy`;
 - stable `ErrorKind` labels and error-introspection semantics;
-- serde wire names and the v3.6.0 endpoint contract.
+- serde wire names and the v3.7.0 endpoint contract.
 
 Adding a method or a new type is normally compatible. Removing or renaming an
 item, narrowing a generic input, changing a return type, removing a trait
@@ -32,7 +32,7 @@ SemVer contract.
 ## How the contract is enforced
 
 [`api/public-api.txt`](../api/public-api.txt) is generated from rustdoc JSON
-and records the complete proposed 1.0 API, including module paths, root
+and records the complete 1.0 API, including module paths, root
 re-exports, signatures, fields, and explicit trait implementations. The
 snapshot deliberately omits compiler-generated blanket, auto-trait, and
 auto-derived noise.

@@ -10,16 +10,15 @@
 [![crates.io](https://img.shields.io/crates/v/xui-rs.svg)](https://crates.io/crates/xui-rs)
 [![docs.rs](https://docs.rs/xui-rs/badge.svg)](https://docs.rs/xui-rs)
 [![MSRV](https://img.shields.io/badge/MSRV-1.88.0-dea584.svg)](https://www.rust-lang.org)
-[![3x-ui](https://img.shields.io/badge/3x--ui-v3.6.0-0ea5e9.svg)](https://github.com/MHSanaei/3x-ui/releases/tag/v3.6.0)
+[![3x-ui](https://img.shields.io/badge/3x--ui-v3.7.0-0ea5e9.svg)](https://github.com/MHSanaei/3x-ui/releases/tag/v3.7.0)
 [![License](https://img.shields.io/badge/license-Unlicense-blue.svg)](LICENSE)
 
 </div>
 
 > [!IMPORTANT]
-> The `0.2` line is an active ground-up rewrite targeting the complete 3x-ui
-> v3.6.0 API. The full tagged HTTP and WebSocket surface is now implemented;
-> stabilization toward 1.0 is still in progress. Do not expect compatibility
-> with 0.1.
+> The `1.0` line targets the complete 3x-ui v3.7.0 HTTP and WebSocket API. It is
+> a ground-up replacement for the legacy 0.1 client and is not source-compatible
+> with it.
 
 ## Why xui-rs?
 
@@ -74,8 +73,8 @@ See [the authentication design](docs/authentication.md) for the rationale.
 
 ## Inbounds
 
-The complete v3.6.0 inbound surface is available through `Client::inbounds`,
-including the source-only `allLinks` route omitted from upstream OpenAPI.
+The complete 18-route v3.7.0 inbound surface is available through
+`Client::inbounds`, including AmneziaWG settings and subscription sort order.
 
 ```rust,no_run
 use xui_rs::{Client, InboundConfig, InboundProtocol};
@@ -108,9 +107,9 @@ replacement/import semantics, and intentionally open-ended Xray JSON fields.
 
 ## Clients
 
-`Client::clients()` covers all 43 client and group routes registered by v3.6.0,
+`Client::clients()` covers all 46 client and group routes registered by v3.7.0,
 including server-side paging, portable import/export, bulk operations, online
-and IP attribution, and group traffic baselines.
+and IP attribution, HWID device management, and group traffic baselines.
 
 ```rust,no_run
 use xui_rs::{
@@ -143,10 +142,10 @@ keys are redacted from `Debug`. See [the client API guide](docs/clients.md).
 
 ## Server and Xray
 
-`Client::server()` covers all 38 routes registered by the v3.6.0 server
+`Client::server()` covers all 39 routes registered by the v3.7.0 server
 controller: typed host/Xray status and history, observatory data, lifecycle and
 updates, logs, cryptographic helpers, REALITY target scanning, database
-backup/restore, and cluster IP synchronization.
+backup/restore, cluster IP synchronization, and AmneziaWG peer diagnostics.
 
 ```rust,no_run
 use xui_rs::{Client, HistoryBucket, SystemMetric};
@@ -170,11 +169,11 @@ server API guide](docs/server.md).
 
 ## Panel and Xray settings
 
-`Client::settings()` covers all 14 v3.6.0 panel-settings routes, including API
-tokens, notification tests, credential replacement, and the two source-only
-factory-default and regex-validation operations. `Client::xray_settings()`
-covers all 21 Xray settings, WARP/NordVPN, outbound-test, routing-test, and
-remote outbound-subscription routes.
+`Client::settings()` covers all 14 v3.7.0 panel-settings routes, including
+scoped and expiring API tokens, notification tests, and credential replacement.
+`Client::xray_settings()` covers all 26 Xray settings and integration routes,
+including WARP, NordVPN, PIA, geodata inspection, outbound and routing tests,
+and remote outbound subscriptions.
 
 ```rust,no_run
 use xui_rs::{Client, PanelSettingsUpdate};
@@ -197,10 +196,9 @@ plaintext are redacted from `Debug`. See [the settings API guide](docs/settings.
 
 ## Subscription hosts
 
-`Client::hosts()` covers all 12 host-override routes registered by v3.6.0,
-including the source-only bulk-create alias. Logical groups span multiple
-inbounds and addresses, while create/update results expose every physical row
-produced by that Cartesian expansion.
+`Client::hosts()` covers all 12 host-override routes registered by v3.7.0.
+Logical groups span multiple inbounds and addresses, while create/update
+results expose every physical row produced by that Cartesian expansion.
 
 ```rust,no_run
 use xui_rs::{Client, HostGroup, HostSecurity};
@@ -223,9 +221,9 @@ Hosts API guide](docs/hosts.md).
 
 ## Remote nodes
 
-`Client::nodes()` covers all 15 v3.6.0 node routes: registration and lifecycle,
+`Client::nodes()` covers all 16 v3.7.0 node routes: registration and lifecycle,
 saved/unsaved probes, remote inbound discovery, health history, bulk panel
-updates, certificate pinning, and node mTLS.
+updates, certificate pinning, node mTLS, and live mTLS-client reload.
 
 ```rust,no_run
 use xui_rs::{Client, NodeRequest};
@@ -269,7 +267,9 @@ println!("profile: {:?}; traffic: {:?}", metadata.profile_title, metadata.traffi
 # }
 ```
 
-Custom raw/JSON/Clash paths and construction from panel settings are supported.
+Custom raw/JSON/Clash paths, construction from panel settings, and the v3.7.0
+HWID/device headers are supported. Successful responses expose the panel's
+HWID registration, limit, and device-existence metadata.
 Subscription identifiers, documents, generated links, routing rules, and
 represented emails are redacted from `Debug` and request errors. The raw body
 can be decoded through `SubscriptionDocument::decode_base64` when `subEncrypt`
@@ -279,6 +279,26 @@ is enabled.
 the runtime OpenAPI document and explicitly send a fresh database backup to
 configured Telegram administrators. See [the public subscription and
 panel-wide operations guide](docs/subscriptions.md).
+
+## Subscription balancers
+
+`Client::subscription_balancers()` covers the complete v3.7.0 controller for
+JSON-subscription balancers: list, create, replace, and both delete transports.
+Strategies are typed, inbound IDs preserve the upstream repeated-form wire
+contract, and unknown future strategy values fail closed for mutations.
+
+```rust,no_run
+use xui_rs::{Client, SubscriptionBalancerInput, SubscriptionBalancerStrategy};
+
+# async fn example(client: &Client) -> xui_rs::Result<()> {
+let mut input = SubscriptionBalancerInput::new("EU pool", vec![7, 9]);
+input.strategy = SubscriptionBalancerStrategy::LeastPing;
+
+// Creation is explicit and persistent.
+// client.subscription_balancers().create(&input).await?;
+# Ok(())
+# }
+```
 
 ## Outbound proxies
 
@@ -340,7 +360,7 @@ semantics and introspection.
 ## Real-time events
 
 `Client::events()` covers the authenticated `/ws` handshake and all ten
-message names declared by the v3.6.0 source. Status, traffic, inbounds,
+message names declared by the v3.7.0 source. Status, traffic, inbounds,
 outbounds, nodes, notifications, Xray transitions, client counters, reserved
 clients payloads, and invalidations have distinct typed variants.
 
@@ -399,7 +419,7 @@ for idempotency-aware recommendations and WebSocket recovery semantics.
 
 ## API stability
 
-The complete proposed 1.0 Rust surface is recorded in a reproducible rustdoc
+The complete 1.0 Rust surface is recorded in a reproducible rustdoc
 snapshot. Downstream contract tests compile every concise crate-root re-export,
 important trait guarantee, and representative multithreaded-runtime future.
 Extensible enums are non-exhaustive, so matches should retain a wildcard arm.
@@ -412,7 +432,8 @@ guarantees and the boundary between Rust source compatibility and upstream
 
 | xui-rs | 3x-ui | Status |
 |---|---|---|
-| `0.2.x` | `3.6.0` | Complete HTTP and WebSocket API; pre-1.0 stabilization |
+| `1.0.x` | `3.7.0` | Complete tagged HTTP and WebSocket API |
+| `0.2.x` | `3.6.0` | Superseded release-candidate line |
 | `0.1.x` | legacy API | Superseded |
 
 Rust 1.88.0 is the minimum supported compiler. Development and CI use the
@@ -433,7 +454,7 @@ scripts/package-check.sh --allow-dirty
 ```
 
 The opt-in real-panel gate runs the ignored integration target against an
-isolated, digest-pinned 3x-ui v3.6.0 container:
+isolated, digest-pinned 3x-ui v3.7.0 container:
 
 ```console
 scripts/live-test.sh

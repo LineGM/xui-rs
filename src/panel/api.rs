@@ -36,7 +36,7 @@ impl<'client> PanelApi<'client> {
 
     /// Sends a fresh database backup to configured Telegram administrators.
     ///
-    /// The v3.6.0 handler returns an empty HTTP 200 response and does not report
+    /// The v3.7.0 handler returns an empty HTTP 200 response and does not report
     /// per-recipient delivery results.
     ///
     /// # Errors

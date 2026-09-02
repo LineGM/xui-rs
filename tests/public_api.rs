@@ -17,6 +17,7 @@ use xui_rs::{
     server::ServerApi,
     settings::{SettingsApi, XraySettingsApi},
     subscription::SubscriptionMetadata,
+    subscription_balancers::SubscriptionBalancersApi,
 };
 
 macro_rules! assert_root_reexports {
@@ -53,6 +54,7 @@ fn core_and_accessor_types_keep_their_async_trait_contracts() {
     assert_copy::<NodesApi<'static>>();
     assert_copy::<PanelApi<'static>>();
     assert_copy::<EventsApi<'static>>();
+    assert_copy::<SubscriptionBalancersApi<'static>>();
 
     assert_debug::<LoginRequest>();
     assert_debug::<PanelEvent>();
@@ -72,7 +74,7 @@ fn every_concise_root_reexport_names_the_same_domain_type() {
         BulkDetachResult, BulkFlowAdjustment, BulkSetEnabledResult, ClientConfig,
         ClientCreateRequest, ClientDetails, ClientExternalLink, ClientExternalLinkInput,
         ClientExternalLinkKind, ClientIpEntry, ClientIpInfo, ClientIpsByGuid,
-        ClientMutationStatus, ClientPage, ClientPageRequest, ClientRecord, ClientReverse,
+        ClientHwidDevice, ClientMutationStatus, ClientPage, ClientPageRequest, ClientRecord, ClientReverse,
         ClientSlim, ClientSort, ClientStatusFilter, ClientSummary, ClientWithAttachments,
         ClientsByGuid, DeletedCount, GroupName, GroupSummary, LastOnlineByEmail, SortOrder,
     );
@@ -87,7 +89,7 @@ fn every_concise_root_reexport_names_the_same_domain_type() {
         SubscriptionFormat, VlessRoute,
     );
     assert_root_reexports!(inbounds =>
-        BulkDeleteClientsResult, BulkDeleteInboundsResult, ClientTraffic, ClientTrafficUsage,
+        AmneziaWgServerSettings, BulkDeleteClientsResult, BulkDeleteInboundsResult, ClientTraffic, ClientTrafficUsage,
         FallbackInput, FallbackParent, Inbound, InboundConfig, InboundFallback, InboundOption,
         InboundProtocol, ShareAddressStrategy, SkippedClient, SkippedInbound, TrafficPushRequest,
         TrafficReset,
@@ -100,7 +102,7 @@ fn every_concise_root_reexport_names_the_same_domain_type() {
     assert_root_reexports!(panel => OpenApiDocument);
     assert_root_reexports!(proxy => ProxyConfig, ProxyError, ProxyScheme);
     assert_root_reexports!(server =>
-        AppStats, ClientIpObservation, ClientIpRecord, DatabaseFile, DiskIo, EchKeyPair,
+        AmneziaWgLogs, AmneziaWgPeerActivity, AmneziaWgStatus, AppStats, ClientIpObservation, ClientIpRecord, DatabaseFile, DiskIo, EchKeyPair,
         Fail2banStatus, HistoryBucket, LegacyCpuPoint, LogLevel, MetricPoint, Mldsa65KeyPair,
         Mlkem768KeyPair, NetworkIo, NetworkTraffic, NodeSummary, PanelLogRequest,
         PanelUpdateInfo, PanelUpdateRun, PanelUpdateState, PanelUpdateStatus, ProcessState,
@@ -110,18 +112,23 @@ fn every_concise_root_reexport_names_the_same_domain_type() {
         XrayMetricsState, XrayObservatoryEntry, XrayStatus,
     );
     assert_root_reexports!(settings =>
-        ApiTokenMetadata, BalancerStatus, CreatedApiToken, DisplaySettings, EffectiveDefaults,
-        FactoryDefaults, LdapSettings, MoveDirection, OutboundDocuments, OutboundSubscription,
+        ApiTokenCreateRequest, ApiTokenMetadata, ApiTokenScope, BalancerStatus, CreatedApiToken, DisplaySettings, EffectiveDefaults,
+        FactoryDefaults, GeoCategory, GeoCategoryPage, GeoEntry, GeoEntryPage, GeoFile,
+        GeodataTokenIssue, LdapSettings, MoveDirection, OutboundDocuments, OutboundSubscription,
         OutboundSubscriptionInput, OutboundTestMode, OutboundTestResult, OutboundTraffic,
-        PanelSettings, PanelSettingsUpdate, PanelSettingsView, RouteTestRequest, RouteTestResult,
+        PanelSettings, PanelSettingsUpdate, PanelSettingsView, PiaAccount, PiaCountry, PiaKey,
+        PiaRegion, PiaServer, PiaServers, RouteTestRequest, RouteTestResult,
         SecuritySettings, SensitivePayload, SmtpSettings, SmtpTestResult, SubscriptionSettings,
         TelegramSettings, TestEgressResult, TestEndpointResult, UserCredentialsUpdate,
         WarpRegistration, WebSettings, XraySettingsSnapshot,
     );
     assert_root_reexports!(subscription =>
         SubscriptionClient, SubscriptionClientBuilder, SubscriptionDecodeError,
-        SubscriptionDocument, SubscriptionInfo, SubscriptionJson, SubscriptionMetadata,
+        SubscriptionDevice, SubscriptionDocument, SubscriptionInfo, SubscriptionJson, SubscriptionMetadata,
         SubscriptionTraffic,
+    );
+    assert_root_reexports!(subscription_balancers =>
+        SubscriptionBalancer, SubscriptionBalancerInput, SubscriptionBalancerStrategy,
     );
 
     let _: Option<xui_rs::AuthApi<'static>> = None::<xui_rs::auth::AuthApi<'static>>;
@@ -135,6 +142,8 @@ fn every_concise_root_reexport_names_the_same_domain_type() {
     let _: Option<xui_rs::SettingsApi<'static>> = None::<xui_rs::settings::SettingsApi<'static>>;
     let _: Option<xui_rs::XraySettingsApi<'static>> =
         None::<xui_rs::settings::XraySettingsApi<'static>>;
+    let _: Option<xui_rs::SubscriptionBalancersApi<'static>> =
+        None::<xui_rs::subscription_balancers::SubscriptionBalancersApi<'static>>;
     let _: Option<xui_rs::SubscriptionResponse<()>> =
         None::<xui_rs::subscription::SubscriptionResponse<()>>;
     let _: xui_rs::Result<()> = Ok(());
@@ -166,6 +175,7 @@ fn representative_endpoint_futures_remain_send_for_multithreaded_runtimes() {
     assert_send_value(client.nodes().list());
     assert_send_value(client.panel().openapi());
     assert_send_value(client.events().connect());
+    assert_send_value(client.subscription_balancers().list());
 
     let subscriptions = SubscriptionClient::new("https://panel.example.com").unwrap();
     assert_send_value(subscriptions.raw("subscription-id"));
