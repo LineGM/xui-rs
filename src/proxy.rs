@@ -271,3 +271,107 @@ impl ProxyError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn schemes_define_ports_dns_and_display_values() {
+        let cases = [
+            (ProxyScheme::Http, "http", 80, false),
+            (ProxyScheme::Https, "https", 443, false),
+            (ProxyScheme::Socks5, "socks5", 1080, false),
+            (ProxyScheme::Socks5h, "socks5h", 1080, true),
+        ];
+        for (scheme, text, port, remote_dns) in cases {
+            assert_eq!(scheme.as_str(), text);
+            assert_eq!(scheme.to_string(), text);
+            assert_eq!(scheme.default_port(), port);
+            assert_eq!(scheme.resolves_remotely(), remote_dns);
+        }
+    }
+
+    #[test]
+    fn configuration_rejects_ambiguous_or_leaky_urls() {
+        for value in [
+            "relative",
+            "ftp://proxy.example.com",
+            "http://user:password@proxy.example.com",
+            "http://proxy.example.com/path",
+            "http://proxy.example.com?query=yes",
+            "http://proxy.example.com#fragment",
+        ] {
+            assert!(ProxyConfig::new(value).is_err(), "accepted {value}");
+        }
+        assert!(
+            ProxyConfig::new("http://proxy.example.com")
+                .unwrap()
+                .with_basic_auth("", "password")
+                .is_err()
+        );
+        assert!(
+            ProxyConfig::new("http://proxy.example.com")
+                .unwrap()
+                .with_basic_auth("user:name", "password")
+                .is_err()
+        );
+        let oversized = "x".repeat(256);
+        assert!(
+            ProxyConfig::new("socks5://proxy.example.com")
+                .unwrap()
+                .with_basic_auth(&oversized, "password")
+                .is_err()
+        );
+        assert!(
+            ProxyConfig::new("socks5://proxy.example.com")
+                .unwrap()
+                .with_basic_auth("user", oversized)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn conversions_and_credentials_keep_endpoint_secret_free() {
+        let plain: ProxyConfig = "http://proxy.example.com".parse().unwrap();
+        assert_eq!(plain.host(), "proxy.example.com");
+        assert_eq!(plain.port(), 80);
+        assert!(!plain.has_basic_auth());
+        assert!(plain.credentials().is_none());
+        plain.reqwest_proxy().unwrap();
+
+        let authenticated = ProxyConfig::try_from("https://proxy.example.com:8443")
+            .unwrap()
+            .with_basic_auth("service", "proxy-password-secret")
+            .unwrap();
+        assert_eq!(authenticated.port(), 8443);
+        assert_eq!(
+            authenticated.credentials(),
+            Some(("service", "proxy-password-secret"))
+        );
+        authenticated.reqwest_proxy().unwrap();
+        let output = format!("{authenticated:?}");
+        assert!(!output.contains("proxy.example.com"));
+        assert!(!output.contains("proxy-password-secret"));
+        assert!(output.contains("authenticated: true"));
+
+        let owned = String::from("socks5h://proxy.example.com");
+        assert_eq!(
+            ProxyConfig::try_from(owned).unwrap().scheme(),
+            ProxyScheme::Socks5h
+        );
+    }
+
+    #[test]
+    fn proxy_timeout_detection_handles_io_and_socks_errors() {
+        assert!(ProxyError::Io(io::Error::new(io::ErrorKind::TimedOut, "timeout")).is_timeout());
+        assert!(
+            ProxyError::Socks5(Box::new(tokio_socks::Error::Io(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "timeout",
+            ))))
+            .is_timeout()
+        );
+        assert!(!ProxyError::HttpStatus(StatusCode::BAD_GATEWAY).is_timeout());
+    }
+}

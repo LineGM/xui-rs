@@ -965,4 +965,105 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn open_xray_config_has_explicit_secret_accessors() {
+        let value = serde_json::json!({"privateKey": "xray-private-secret"});
+        let config = XrayConfig::from(value.clone());
+        assert_eq!(config.as_value(), &value);
+        assert!(!format!("{config:?}").contains("xray-private-secret"));
+        assert_eq!(config.into_value(), value);
+    }
+
+    #[test]
+    fn xray_metrics_and_log_filters_match_wire_vocabulary() {
+        assert_eq!(
+            [
+                XrayMetric::Alloc,
+                XrayMetric::Sys,
+                XrayMetric::HeapObjects,
+                XrayMetric::NumGc,
+                XrayMetric::PauseNs,
+            ]
+            .map(XrayMetric::as_str),
+            ["xrAlloc", "xrSys", "xrHeapObjects", "xrNumGC", "xrPauseNs"]
+        );
+        assert_eq!(
+            [
+                LogLevel::All,
+                LogLevel::Debug,
+                LogLevel::Info,
+                LogLevel::Warning,
+                LogLevel::Error,
+            ]
+            .map(LogLevel::as_str),
+            ["", "debug", "info", "warning", "error"]
+        );
+
+        for (wire, event) in [
+            (0, XrayLogEvent::Direct),
+            (1, XrayLogEvent::Blocked),
+            (2, XrayLogEvent::Proxied),
+            (99, XrayLogEvent::Unknown),
+        ] {
+            assert_eq!(XrayLogEvent::from(wire), event);
+            let expected = if event == XrayLogEvent::Unknown {
+                -1
+            } else {
+                wire
+            };
+            assert_eq!(i32::from(event), expected);
+            assert_eq!(serde_json::to_value(event).unwrap(), expected);
+            assert_eq!(
+                serde_json::from_value::<XrayLogEvent>(serde_json::json!(wire)).unwrap(),
+                event
+            );
+        }
+    }
+
+    #[test]
+    fn generated_key_material_is_redacted_selectively() {
+        let x25519 = X25519KeyPair {
+            private_key: "x25519-private-secret".into(),
+            public_key: "x25519-public".into(),
+        };
+        let mldsa = Mldsa65KeyPair {
+            seed: "mldsa-seed-secret".into(),
+            verify: "mldsa-verify".into(),
+        };
+        let mlkem = Mlkem768KeyPair {
+            seed: "mlkem-seed-secret".into(),
+            client: "mlkem-client".into(),
+        };
+        let ech = EchKeyPair {
+            ech_server_keys: "ech-private-secret".into(),
+            ech_config_list: "ech-public".into(),
+        };
+        let vless = VlessEncryptionAuth {
+            id: "option-1".into(),
+            label: "recommended".into(),
+            encryption: "vless-encryption-secret".into(),
+            decryption: "vless-decryption-secret".into(),
+        };
+        let cases = [
+            (
+                format!("{x25519:?}"),
+                "x25519-private-secret",
+                "x25519-public",
+            ),
+            (format!("{mldsa:?}"), "mldsa-seed-secret", "mldsa-verify"),
+            (format!("{mlkem:?}"), "mlkem-seed-secret", "mlkem-client"),
+            (format!("{ech:?}"), "ech-private-secret", "ech-public"),
+            (
+                format!("{vless:?}"),
+                "vless-encryption-secret",
+                "recommended",
+            ),
+        ];
+        for (output, secret, visible) in cases {
+            assert!(!output.contains(secret));
+            assert!(output.contains(visible));
+        }
+        assert!(!format!("{vless:?}").contains("vless-decryption-secret"));
+    }
 }

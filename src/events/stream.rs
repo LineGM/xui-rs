@@ -635,3 +635,241 @@ fn origin(url: &Url) -> String {
     value.set_fragment(None);
     value.to_string().trim_end_matches('/').to_owned()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use futures_util::stream::FusedStream;
+    use tokio::io::{DuplexStream, duplex};
+    use tokio_tungstenite::tungstenite::protocol::Role;
+
+    type TestServer = WebSocketStream<DuplexStream>;
+
+    async fn stream_pair() -> (EventStream, TestServer) {
+        let (client_io, server_io) = duplex(64 * 1024);
+        let transport = MaybeTlsStream::Plain(Box::new(client_io) as BoxedIo);
+        let socket = WebSocketStream::from_raw_socket(transport, Role::Client, None).await;
+        let server = WebSocketStream::from_raw_socket(server_io, Role::Server, None).await;
+        let endpoint = Url::parse("ws://panel.example.com/secret/ws").unwrap();
+        let client = Client::new("http://panel.example.com/secret").unwrap();
+        (
+            EventStream {
+                client,
+                endpoint,
+                socket: Some(socket),
+                close: None,
+                terminated: false,
+            },
+            server,
+        )
+    }
+
+    #[tokio::test]
+    async fn stream_skips_control_frames_and_records_peer_close() {
+        let (mut events, mut server) = stream_pair().await;
+        server
+            .send(Message::Ping(vec![1, 2, 3].into()))
+            .await
+            .unwrap();
+        server
+            .send(Message::Text(
+                r#"{"type":"future","payload":{"value":1},"time":7}"#.into(),
+            ))
+            .await
+            .unwrap();
+        let event = events.next_event().await.unwrap().unwrap();
+        assert_eq!(event.timestamp_ms, 7);
+        assert!(matches!(event.kind, crate::PanelEventKind::Unknown { .. }));
+
+        server.send(Message::Close(None)).await.unwrap();
+        assert!(events.next_event().await.unwrap().is_none());
+        assert!(events.is_closed());
+        assert!(events.is_terminated());
+        assert_eq!(
+            events.close_info(),
+            Some(&WebSocketClose {
+                code: 1005,
+                reason: String::new(),
+            })
+        );
+        assert!(events.next_event().await.unwrap().is_none());
+        events.close().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn binary_frames_fail_closed_and_redact_stream_debug() {
+        let (mut events, mut server) = stream_pair().await;
+        let debug = format!("{events:?}");
+        assert!(debug.contains("panel_origin: \"ws://panel.example.com\""));
+        assert!(!debug.contains("/secret/ws"));
+
+        server
+            .send(Message::Binary(vec![1, 2, 3].into()))
+            .await
+            .unwrap();
+        let error = events.next_event().await.unwrap_err();
+        assert!(matches!(
+            error,
+            Error::UnexpectedWebSocketFrame {
+                kind: "binary data",
+                ..
+            }
+        ));
+        assert!(events.is_closed());
+        assert!(events.is_terminated());
+    }
+
+    #[tokio::test]
+    async fn explicit_close_sends_a_normal_redacted_close_frame() {
+        let (mut events, mut server) = stream_pair().await;
+        events.close().await.unwrap();
+
+        assert!(events.is_closed());
+        assert_eq!(
+            events.close_info(),
+            Some(&WebSocketClose {
+                code: 1000,
+                reason: CLIENT_CLOSE_REASON.to_owned(),
+            })
+        );
+        let message = server.next().await.unwrap().unwrap();
+        let Message::Close(Some(frame)) = message else {
+            panic!("expected a close frame, got {message:?}");
+        };
+        assert_eq!(frame.code, CloseCode::Normal);
+        assert_eq!(frame.reason, CLIENT_CLOSE_REASON);
+        events.close().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn peer_close_details_and_abrupt_errors_are_observable() {
+        let (mut events, mut server) = stream_pair().await;
+        server
+            .send(Message::Close(Some(CloseFrame {
+                code: CloseCode::Away,
+                reason: "maintenance".into(),
+            })))
+            .await
+            .unwrap();
+        assert!(events.next_event().await.unwrap().is_none());
+        assert_eq!(
+            events.close_info(),
+            Some(&WebSocketClose {
+                code: 1001,
+                reason: "maintenance".to_owned(),
+            })
+        );
+
+        let (mut events, server) = stream_pair().await;
+        drop(server);
+        let result = events.next_event().await;
+        assert!(result.is_err() || result.unwrap().is_none());
+        assert!(events.is_closed());
+    }
+
+    #[tokio::test]
+    async fn missing_socket_terminates_without_panicking() {
+        let (mut events, _server) = stream_pair().await;
+        events.socket = None;
+        assert!(events.next_event().await.unwrap().is_none());
+        assert!(events.is_closed());
+        assert!(events.is_terminated());
+    }
+
+    async fn parse_connect_response(bytes: &[u8]) -> std::result::Result<(), ProxyError> {
+        let (client, mut server) = duplex(MAX_CONNECT_RESPONSE_SIZE + 1024);
+        let bytes = bytes.to_vec();
+        let writer = tokio::spawn(async move {
+            server.write_all(&bytes).await.unwrap();
+            server.shutdown().await.unwrap();
+        });
+        let mut transport: BoxedIo = Box::new(client);
+        let result = read_connect_response(&mut transport).await;
+        writer.await.unwrap();
+        result
+    }
+
+    #[tokio::test]
+    async fn connect_response_parser_bounds_and_validates_proxy_headers() {
+        parse_connect_response(b"HTTP/1.1 200 Connection established\r\nHeader: value\r\n\r\n")
+            .await
+            .unwrap();
+        assert!(matches!(
+            parse_connect_response(b"HTTP/1.1 407 Proxy Authentication Required\r\n\r\n").await,
+            Err(ProxyError::HttpStatus(
+                StatusCode::PROXY_AUTHENTICATION_REQUIRED
+            ))
+        ));
+        assert!(matches!(
+            parse_connect_response(b"not-http\r\n\r\n").await,
+            Err(ProxyError::InvalidHttpResponse)
+        ));
+        assert!(matches!(
+            parse_connect_response(b"HTTP/1.1 200").await,
+            Err(ProxyError::InvalidHttpResponse)
+        ));
+        let oversized = vec![b'x'; MAX_CONNECT_RESPONSE_SIZE];
+        assert!(matches!(
+            parse_connect_response(&oversized).await,
+            Err(ProxyError::HttpResponseTooLarge { limit }) if limit == MAX_CONNECT_RESPONSE_SIZE
+        ));
+    }
+
+    #[test]
+    fn websocket_url_and_error_helpers_cover_all_address_families() {
+        let domain = Url::parse("wss://panel.example.com/ws").unwrap();
+        let ipv4 = Url::parse("ws://127.0.0.1:8080/ws").unwrap();
+        let ipv6 = Url::parse("ws://[::1]:8080/ws").unwrap();
+        assert_eq!(target_address(&domain).unwrap(), ("panel.example.com", 443));
+        assert_eq!(target_authority(&domain).unwrap(), "panel.example.com:443");
+        assert_eq!(target_authority(&ipv4).unwrap(), "127.0.0.1:8080");
+        assert_eq!(target_authority(&ipv6).unwrap(), "[::1]:8080");
+        assert!(target_address(&Url::parse("custom:/path").unwrap()).is_err());
+        assert!(target_address(&Url::parse("custom://host/path").unwrap()).is_err());
+
+        for (status, expected) in [
+            (StatusCode::UNAUTHORIZED, crate::ErrorKind::Unauthorized),
+            (StatusCode::FORBIDDEN, crate::ErrorKind::Forbidden),
+            (StatusCode::BAD_GATEWAY, crate::ErrorKind::HttpStatus),
+        ] {
+            let response = tokio_tungstenite::tungstenite::http::Response::builder()
+                .status(status)
+                .body(None)
+                .unwrap();
+            let error = handshake_error(
+                domain.clone(),
+                tokio_tungstenite::tungstenite::Error::Http(Box::new(response)),
+            );
+            assert_eq!(error.kind(), expected);
+        }
+        let error = socket_error(
+            domain.clone(),
+            tokio_tungstenite::tungstenite::Error::Io(std::io::Error::other("closed")),
+        );
+        assert_eq!(error.kind(), crate::ErrorKind::WebSocket);
+        assert_eq!(
+            origin(&Url::parse("wss://panel.example.com/secret?x=1#fragment").unwrap()),
+            "wss://panel.example.com"
+        );
+    }
+
+    #[test]
+    fn custom_certificate_verifier_is_explicit_and_rustls_only() {
+        let verifier = NoCertificateVerification;
+        let certificate = CertificateDer::from(vec![1, 2, 3]);
+        let server_name = ServerName::try_from("panel.example.com").unwrap();
+        verifier
+            .verify_server_cert(
+                &certificate,
+                &[],
+                &server_name,
+                &[],
+                UnixTime::since_unix_epoch(std::time::Duration::ZERO),
+            )
+            .unwrap();
+        assert_eq!(verifier.supported_verify_schemes().len(), 13);
+        assert!(matches!(insecure_rustls_connector(), Connector::Rustls(_)));
+        assert!(proxy_tls_config(true).is_ok());
+        assert!(proxy_tls_config(false).is_ok());
+    }
+}

@@ -64,3 +64,30 @@ impl fmt::Debug for OpenApiDocument {
             .finish_non_exhaustive()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn openapi_document_counts_only_http_operations() {
+        let value = json!({
+            "openapi": "3.0.3",
+            "paths": {
+                "/one": {"get": {}, "post": {}, "parameters": []},
+                "/two": {"delete": {}, "websocket": {}}
+            }
+        });
+        let document = OpenApiDocument::from(value.clone());
+        assert_eq!(document.version(), Some("3.0.3"));
+        assert_eq!(document.http_operation_count(), 3);
+        assert!(format!("{document:?}").contains("http_operation_count: 3"));
+        assert_eq!(document.as_value(), &value);
+        assert_eq!(document.into_value(), value);
+
+        let empty = OpenApiDocument::from(json!({}));
+        assert_eq!(empty.version(), None);
+        assert_eq!(empty.http_operation_count(), 0);
+    }
+}

@@ -371,3 +371,61 @@ fn decode_text_header(value: &str) -> Option<String> {
     let bytes = STANDARD.decode(encoded).ok()?;
     String::from_utf8(bytes).ok()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn device_and_documents_expose_secrets_only_explicitly() {
+        let mut device = SubscriptionDevice::new("device-hwid-secret", "test-agent");
+        device.device_os = "linux".into();
+        device.os_version = "rolling".into();
+        device.device_model = "server".into();
+        assert_eq!(device.hwid(), "device-hwid-secret");
+        assert!(!format!("{device:?}").contains("device-hwid-secret"));
+
+        let document = SubscriptionDocument::new(" first\n\n second \n".into());
+        assert_eq!(document.as_str(), " first\n\n second \n");
+        assert_eq!(document.lines().collect::<Vec<_>>(), ["first", "second"]);
+        assert!(!format!("{document:?}").contains("first"));
+        assert_eq!(document.into_string(), " first\n\n second \n");
+
+        let encoded = SubscriptionDocument::new("dmxlc3M6Ly9leGFtcGxl".into());
+        assert_eq!(encoded.decode_base64().unwrap().as_str(), "vless://example");
+        assert!(matches!(
+            SubscriptionDocument::new("%%%".into()).decode_base64(),
+            Err(SubscriptionDecodeError::Base64(_))
+        ));
+        assert!(matches!(
+            SubscriptionDocument::new("/w==".into()).decode_base64(),
+            Err(SubscriptionDecodeError::Utf8(_))
+        ));
+    }
+
+    #[test]
+    fn json_document_accessors_preserve_exact_value() {
+        let value = json!({"outbounds": [{"password": "subscription-secret"}]});
+        let document = SubscriptionJson::new(value.clone());
+        assert_eq!(document.as_value(), &value);
+        assert!(!format!("{document:?}").contains("subscription-secret"));
+        assert_eq!(document.into_value(), value);
+    }
+
+    #[test]
+    fn userinfo_parser_ignores_extensions_but_rejects_malformed_values() {
+        let parsed =
+            parse_subscription_userinfo("upload=1; download=2; total=3; expire=4; future=99")
+                .unwrap();
+        assert_eq!(parsed.upload, 1);
+        assert_eq!(parsed.download, 2);
+        assert_eq!(parsed.total, 3);
+        assert_eq!(parsed.expire, 4);
+        assert!(parse_subscription_userinfo("upload=bad").is_none());
+        assert!(parse_subscription_userinfo("upload=1; malformed").is_none());
+        assert_eq!(decode_text_header("plain"), None);
+        assert_eq!(decode_text_header("base64:%%%"), None);
+        assert_eq!(decode_text_header("base64:/w=="), None);
+    }
+}

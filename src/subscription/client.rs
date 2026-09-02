@@ -693,3 +693,152 @@ fn origin(url: &Url) -> String {
     value.set_path("");
     value.to_string().trim_end_matches('/').to_owned()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn configuration_message(error: Error) -> String {
+        match error {
+            Error::Configuration(message) => message,
+            other => panic!("expected configuration error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn builder_options_are_composable_and_debug_safe() {
+        let proxy = ProxyConfig::new("http://proxy.example:8080").unwrap();
+        let device = SubscriptionDevice::new("device-secret", "test-agent");
+        let builder = SubscriptionClient::builder("https://sub.example/root?ignored=yes#fragment")
+            .unwrap()
+            .raw_path("private/raw")
+            .json_path("private/json")
+            .clash_path("private/clash")
+            .timeout(Duration::from_secs(11))
+            .connect_timeout(Duration::from_secs(3))
+            .danger_accept_invalid_certs(true)
+            .response_body_limit(1234)
+            .proxy(proxy)
+            .no_proxy()
+            .device(device)
+            .no_device();
+
+        assert_eq!(builder.timeout, Duration::from_secs(11));
+        assert_eq!(builder.connect_timeout, Duration::from_secs(3));
+        assert!(builder.accept_invalid_certs);
+        assert_eq!(builder.response_body_limit, 1234);
+        assert!(builder.proxy.is_none());
+        assert!(builder.device.is_none());
+        assert!(builder.base_url.query().is_none());
+        assert!(builder.base_url.fragment().is_none());
+        assert_eq!(builder.base_url.path(), "/root/");
+
+        let debug = format!("{builder:?}");
+        assert!(debug.contains("https://sub.example"));
+        assert!(debug.contains("[REDACTED]"));
+        assert!(!debug.contains("private/raw"));
+
+        let client = builder.build().unwrap();
+        assert_eq!(client.response_body_limit(), 1234);
+        assert!(!format!("{client:?}").contains("private/raw"));
+    }
+
+    #[test]
+    fn proxy_url_and_device_headers_validate_early() {
+        let builder = SubscriptionClient::builder("https://sub.example")
+            .unwrap()
+            .proxy_url("socks5h://proxy.example:1080")
+            .unwrap();
+        assert_eq!(
+            builder.proxy.as_ref().unwrap().scheme(),
+            crate::ProxyScheme::Socks5h
+        );
+        assert!(builder.no_proxy().proxy.is_none());
+
+        let error = SubscriptionClient::builder("https://sub.example")
+            .unwrap()
+            .proxy_url("not a proxy")
+            .unwrap_err();
+        assert!(configuration_message(error).contains("invalid proxy URL"));
+
+        let short = SubscriptionDevice::new("short", "agent");
+        let error = SubscriptionClient::builder("https://sub.example")
+            .unwrap()
+            .device(short)
+            .build()
+            .unwrap_err();
+        assert!(configuration_message(error).contains("at least 6 bytes"));
+
+        let invalid = SubscriptionDevice::new("bad\nsecret", "agent");
+        let error = SubscriptionClient::builder("https://sub.example")
+            .unwrap()
+            .device(invalid)
+            .build()
+            .unwrap_err();
+        assert!(configuration_message(error).contains("invalid HWID header"));
+
+        let empty_optional_headers = SubscriptionDevice::new("device-secret", "");
+        SubscriptionClient::builder("https://sub.example")
+            .unwrap()
+            .device(empty_optional_headers)
+            .build()
+            .unwrap();
+    }
+
+    #[test]
+    fn subscription_urls_reject_ambiguous_or_credentialed_inputs() {
+        for input in [
+            "relative/path",
+            "ftp://sub.example",
+            "https://user:pass@sub.example",
+        ] {
+            assert!(SubscriptionClient::builder(input).is_err(), "{input}");
+        }
+
+        for raw_path in ["", "sub?format=raw", "sub#fragment"] {
+            let error = SubscriptionClient::builder("https://sub.example")
+                .unwrap()
+                .raw_path(raw_path)
+                .build()
+                .unwrap_err();
+            assert!(configuration_message(error).contains("raw subscription path"));
+        }
+
+        for value in [
+            "",
+            "https://sub.example/path?query=yes",
+            "https://sub.example/path#fragment",
+        ] {
+            let error = normalize_prefix_uri(value, "testURI").unwrap_err();
+            assert!(configuration_message(error).contains("testURI"));
+        }
+
+        let normalized = normalize_prefix_uri("https://sub.example/path", "testURI").unwrap();
+        assert_eq!(normalized.as_str(), "https://sub.example/path/");
+        assert_eq!(origin(&normalized), "https://sub.example");
+    }
+
+    #[test]
+    fn settings_require_valid_public_prefixes_and_fallback_paths() {
+        let empty = SubscriptionSettings::default();
+        assert!(SubscriptionClient::from_settings(&empty).is_err());
+
+        let invalid_json_path = SubscriptionSettings {
+            sub_uri: "https://sub.example/raw/".into(),
+            sub_json_path: "json?view=raw".into(),
+            sub_clash_path: "clash".into(),
+            ..SubscriptionSettings::default()
+        };
+        let error = SubscriptionClient::from_settings(&invalid_json_path).unwrap_err();
+        assert!(configuration_message(error).contains("JSON subscription path"));
+
+        let invalid_clash_uri = SubscriptionSettings {
+            sub_uri: "https://sub.example/raw/".into(),
+            sub_json_uri: "https://sub.example/json/".into(),
+            sub_clash_uri: "https://user:pass@sub.example/clash/".into(),
+            ..SubscriptionSettings::default()
+        };
+        let error = SubscriptionClient::from_settings(&invalid_clash_uri).unwrap_err();
+        assert!(configuration_message(error).contains("subClashURI"));
+    }
+}

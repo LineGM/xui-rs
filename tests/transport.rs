@@ -87,6 +87,45 @@ async fn chunked_body_is_bounded_without_content_length() {
 }
 
 #[tokio::test]
+async fn connection_and_stream_failures_keep_safe_transport_context() {
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
+    let unavailable = listener.local_addr().unwrap();
+    drop(listener);
+
+    let panel = Client::new(format!("http://{unavailable}")).unwrap();
+    let panel_error = panel.panel().openapi().await.unwrap_err();
+    assert!(matches!(panel_error, xui_rs::Error::Transport { .. }));
+    assert_eq!(panel_error.method(), Some(&Method::GET));
+    assert_eq!(panel_error.url().unwrap().path(), "/panel/api/openapi.json");
+
+    let subscription = SubscriptionClient::new(format!("http://{unavailable}")).unwrap();
+    let subscription_error = subscription.raw("private-id").await.unwrap_err();
+    assert!(matches!(
+        subscription_error,
+        xui_rs::Error::Transport { .. }
+    ));
+    assert_eq!(subscription_error.url().unwrap().path(), "/sub/[REDACTED]");
+    assert!(!subscription_error.to_string().contains("private-id"));
+
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+        read_request_headers(&mut stream).await;
+        stream
+            .write_all(
+                b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n10\r\nincomplete",
+            )
+            .await
+            .unwrap();
+    });
+    let client = Client::new(format!("http://{address}")).unwrap();
+    let stream_error = client.panel().openapi().await.unwrap_err();
+    assert!(matches!(stream_error, xui_rs::Error::Transport { .. }));
+    server.await.unwrap();
+}
+
+#[tokio::test]
 async fn head_metadata_does_not_treat_resource_length_as_a_received_body() {
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
     let address = listener.local_addr().unwrap();

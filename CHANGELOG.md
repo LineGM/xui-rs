@@ -6,6 +6,13 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Expanded behavioral coverage for wire-compatible models, secret-redacted
+  diagnostics, configuration validation, HTTP failures, proxy handling,
+  subscription decoding, and WebSocket lifecycle edge cases; all-target line
+  coverage now exceeds 97% while the CI regression floor remains 80%.
+
 ## [1.0.1] - 2026-09-02
 
 ### Changed

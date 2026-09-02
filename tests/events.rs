@@ -1,6 +1,9 @@
 #![allow(missing_docs, clippy::result_large_err)]
 
-use std::sync::{Arc, Mutex};
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
@@ -262,6 +265,42 @@ async fn unauthorized_handshake_maps_to_standard_authentication_error() {
         error,
         Error::Unauthorized { method, url }
             if method == reqwest::Method::GET && url.path() == "/secret/ws"
+    ));
+    server.await.unwrap();
+}
+
+#[tokio::test]
+async fn websocket_connect_failures_distinguish_transport_tls_and_timeout() {
+    let unavailable_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let unavailable = unavailable_listener.local_addr().unwrap();
+    drop(unavailable_listener);
+
+    for scheme in ["http", "https"] {
+        let client = Client::new(format!("{scheme}://{unavailable}/secret")).unwrap();
+        let error = client.events().connect().await.unwrap_err();
+        assert!(matches!(error, Error::WebSocket { .. }));
+        assert_eq!(
+            error.url().unwrap().scheme(),
+            if scheme == "http" { "ws" } else { "wss" }
+        );
+    }
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move {
+        let (_stream, _) = listener.accept().await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    });
+    let client = Client::builder(format!("http://{address}/secret"))
+        .unwrap()
+        .connect_timeout(Duration::from_millis(10))
+        .build()
+        .unwrap();
+    let error = client.events().connect().await.unwrap_err();
+    assert!(matches!(
+        error,
+        Error::WebSocketConnectTimeout { timeout, .. }
+            if timeout == Duration::from_millis(10)
     ));
     server.await.unwrap();
 }

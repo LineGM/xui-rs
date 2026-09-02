@@ -436,3 +436,147 @@ where
 {
     Option::<T>::deserialize(deserializer).map(Option::unwrap_or_default)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn extensible_string_enums_round_trip_every_wire_value() {
+        let message_types = [
+            EventMessageType::Status,
+            EventMessageType::Traffic,
+            EventMessageType::Inbounds,
+            EventMessageType::Outbounds,
+            EventMessageType::Nodes,
+            EventMessageType::Notification,
+            EventMessageType::XrayState,
+            EventMessageType::ClientStats,
+            EventMessageType::Clients,
+            EventMessageType::Invalidate,
+            EventMessageType::Other("future_event".into()),
+        ];
+        for value in message_types {
+            let wire = value.as_str().to_owned();
+            assert_eq!(serde_json::to_value(&value).unwrap(), wire);
+            assert_eq!(
+                serde_json::from_value::<EventMessageType>(json!(wire)).unwrap(),
+                value
+            );
+        }
+
+        let levels = [
+            NotificationLevel::Success,
+            NotificationLevel::Info,
+            NotificationLevel::Warning,
+            NotificationLevel::Error,
+            NotificationLevel::Other("critical".into()),
+        ];
+        for value in levels {
+            let wire = value.as_str().to_owned();
+            assert_eq!(serde_json::to_value(&value).unwrap(), wire);
+            assert_eq!(
+                serde_json::from_value::<NotificationLevel>(json!(wire)).unwrap(),
+                value
+            );
+        }
+    }
+
+    #[test]
+    fn event_debug_views_redact_payloads_and_report_shape() {
+        let traffic = TrafficUpdate {
+            traffics: Some(vec![TrafficDelta::default()]),
+            node_traffics: Some(vec![]),
+            online_clients: vec!["private@example.com".into()],
+            ..TrafficUpdate::default()
+        };
+        let stats = ClientStatsUpdate {
+            snapshot: true,
+            inbounds: vec![InboundTrafficSummary::default()],
+            ..ClientStatsUpdate::default()
+        };
+        let notification = PanelNotification {
+            title: "private-title".into(),
+            message: "private-message".into(),
+            level: NotificationLevel::Warning,
+        };
+        let xray_state = XrayStateChange {
+            state: ProcessState::Error,
+            error_msg: "private-xray-error".into(),
+        };
+
+        assert!(!format!("{traffic:?}").contains("private@example.com"));
+        assert!(format!("{stats:?}").contains("snapshot: true"));
+        assert!(!format!("{notification:?}").contains("private-title"));
+        assert!(!format!("{notification:?}").contains("private-message"));
+        assert!(!format!("{xray_state:?}").contains("private-xray-error"));
+    }
+
+    #[test]
+    fn every_event_kind_reports_its_type_without_exposing_payloads() {
+        let values = vec![
+            PanelEventKind::Status(Box::default()),
+            PanelEventKind::Traffic(Box::default()),
+            PanelEventKind::Inbounds(Vec::new()),
+            PanelEventKind::Outbounds(Vec::new()),
+            PanelEventKind::Nodes(Vec::new()),
+            PanelEventKind::Notification(PanelNotification {
+                title: "notification-secret".into(),
+                message: "message-secret".into(),
+                level: NotificationLevel::Info,
+            }),
+            PanelEventKind::XrayState(XrayStateChange {
+                state: ProcessState::Running,
+                error_msg: "state-secret".into(),
+            }),
+            PanelEventKind::ClientStats(ClientStatsUpdate::default()),
+            PanelEventKind::Clients(json!({"password": "clients-secret"})),
+            PanelEventKind::Invalidate(Invalidation {
+                target: EventMessageType::Inbounds,
+            }),
+            PanelEventKind::Unknown {
+                message_type: "future".into(),
+                payload: json!({"password": "future-secret"}),
+            },
+        ];
+        let expected = [
+            EventMessageType::Status,
+            EventMessageType::Traffic,
+            EventMessageType::Inbounds,
+            EventMessageType::Outbounds,
+            EventMessageType::Nodes,
+            EventMessageType::Notification,
+            EventMessageType::XrayState,
+            EventMessageType::ClientStats,
+            EventMessageType::Clients,
+            EventMessageType::Invalidate,
+            EventMessageType::Other("future".into()),
+        ];
+        for (value, expected) in values.into_iter().zip(expected) {
+            assert_eq!(value.message_type(), expected);
+            let output = format!("{value:?}");
+            for secret in [
+                "notification-secret",
+                "message-secret",
+                "state-secret",
+                "clients-secret",
+                "future-secret",
+            ] {
+                assert!(!output.contains(secret));
+            }
+        }
+    }
+
+    #[test]
+    fn malformed_envelope_has_no_claimed_message_type() {
+        let error = PanelEvent::decode("not-json").unwrap_err();
+        assert!(matches!(
+            error,
+            Error::EventDecode {
+                message_type: None,
+                ..
+            }
+        ));
+    }
+}

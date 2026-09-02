@@ -1234,3 +1234,117 @@ impl fmt::Debug for OutboundDocuments {
             .finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn secret_bearing_models_redact_debug_output() {
+        let credentials = UserCredentialsUpdate {
+            old_username: "old-user".into(),
+            old_password: "old-password-secret".into(),
+            new_username: "new-user".into(),
+            new_password: "new-password-secret".into(),
+            two_factor_code: "123456-secret".into(),
+        };
+        let created = CreatedApiToken {
+            id: 7,
+            name: "automation".into(),
+            token: "bearer-token-secret".into(),
+            enabled: true,
+            created_at: 10,
+            scope: ApiTokenScope::Monitor,
+            expires_at: 20,
+        };
+        let pia_key: PiaKey = serde_json::from_value(json!({
+            "tag": "pia-de",
+            "hostname": "de.example.com",
+            "secretKey": "pia-private-secret",
+            "address": "10.0.0.2/32",
+            "publicKey": "public-key",
+            "endpoint": "de.example.com:1337"
+        }))
+        .unwrap();
+        let registration = WarpRegistration {
+            private_key: "warp-private-secret".into(),
+            public_key: "warp-public".into(),
+        };
+        let outbound: OutboundSubscription = serde_json::from_value(json!({
+            "id": 9,
+            "remark": "remote",
+            "url": "https://user:subscription-secret@example.com/sub",
+            "enabled": true,
+            "lastFetchedOutbounds": "outbound-private-secret"
+        }))
+        .unwrap();
+        let input = OutboundSubscriptionInput::new(
+            "https://user:input-subscription-secret@example.com/sub",
+        );
+        let documents: OutboundDocuments =
+            serde_json::from_value(json!([{"password": "document-secret"}])).unwrap();
+        let snapshot = XraySettingsSnapshot {
+            xray_setting: crate::XrayConfig::from(json!({"privateKey": "xray-secret"})),
+            subscription_outbounds: vec![json!({"password": "snapshot-secret"})],
+            ..XraySettingsSnapshot::default()
+        };
+
+        let outputs = [
+            format!("{credentials:?}"),
+            format!("{created:?}"),
+            format!("{pia_key:?}"),
+            format!("{registration:?}"),
+            format!("{outbound:?}"),
+            format!("{input:?}"),
+            format!("{documents:?}"),
+            format!("{snapshot:?}"),
+        ];
+        for (output, secret) in outputs.iter().zip([
+            "old-password-secret",
+            "bearer-token-secret",
+            "pia-private-secret",
+            "warp-private-secret",
+            "subscription-secret",
+            "input-subscription-secret",
+            "document-secret",
+            "snapshot-secret",
+        ]) {
+            assert!(!output.contains(secret));
+            assert!(output.contains("REDACTED"));
+        }
+    }
+
+    #[test]
+    fn helpers_preserve_wire_values_and_owned_payloads() {
+        assert_eq!(ApiTokenScope::Admin.as_str(), "admin");
+        assert_eq!(ApiTokenScope::Monitor.as_str(), "monitor");
+        assert_eq!(ApiTokenScope::NodeSync.as_str(), "node-sync");
+        let request = ApiTokenCreateRequest::new("deploy");
+        assert_eq!(request.name, "deploy");
+        assert_eq!(request.scope, ApiTokenScope::Admin);
+        assert_eq!(request.expires_at, 0);
+
+        let payload: SensitivePayload = serde_json::from_value(json!("{\"ok\":true}")).unwrap();
+        assert_eq!(payload.as_str(), "{\"ok\":true}");
+        assert_eq!(payload.json().unwrap(), json!({"ok": true}));
+        assert!(
+            serde_json::from_value::<SensitivePayload>(json!("not-json"))
+                .unwrap()
+                .json()
+                .is_err()
+        );
+        assert!(!format!("{payload:?}").contains("ok"));
+
+        assert_eq!(OutboundTestMode::Http.as_str(), "");
+        assert_eq!(OutboundTestMode::Tcp.as_str(), "tcp");
+        assert_eq!(OutboundTestMode::Real.as_str(), "real");
+        assert_eq!(MoveDirection::Up.as_str(), "up");
+        assert_eq!(MoveDirection::Down.as_str(), "down");
+
+        let documents: OutboundDocuments =
+            serde_json::from_value(json!([{"tag": "one"}, {"tag": "two"}])).unwrap();
+        assert_eq!(documents.as_slice().len(), 2);
+        assert_eq!(documents.into_inner()[1]["tag"], "two");
+    }
+}

@@ -379,3 +379,236 @@ impl Error {
 
 /// Result type used throughout the SDK.
 pub type Result<T> = std::result::Result<T, Error>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io;
+
+    fn endpoint() -> Url {
+        Url::parse("https://panel.example.com/secret/api").unwrap()
+    }
+
+    #[test]
+    fn every_error_kind_has_a_stable_display_label() {
+        let values = [
+            (ErrorKind::Configuration, "configuration"),
+            (ErrorKind::Unauthorized, "unauthorized"),
+            (ErrorKind::Forbidden, "forbidden"),
+            (ErrorKind::HttpStatus, "http_status"),
+            (ErrorKind::Transport, "transport"),
+            (ErrorKind::ResponseTooLarge, "response_too_large"),
+            (ErrorKind::Encode, "encode"),
+            (ErrorKind::Api, "api"),
+            (ErrorKind::Decode, "decode"),
+            (ErrorKind::Utf8, "utf8"),
+            (
+                ErrorKind::WebSocketConnectTimeout,
+                "websocket_connect_timeout",
+            ),
+            (ErrorKind::WebSocket, "websocket"),
+            (ErrorKind::Proxy, "proxy"),
+            (ErrorKind::EventDecode, "event_decode"),
+            (
+                ErrorKind::UnexpectedWebSocketFrame,
+                "unexpected_websocket_frame",
+            ),
+            (ErrorKind::MissingObject, "missing_object"),
+        ];
+        for (kind, label) in values {
+            assert_eq!(kind.as_str(), label);
+            assert_eq!(kind.to_string(), label);
+        }
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)]
+    async fn variants_expose_consistent_http_and_socket_context() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        drop(listener);
+        let transport_source = reqwest::get(format!("http://{address}")).await.unwrap_err();
+        let json_source = || serde_json::from_str::<serde_json::Value>("{").unwrap_err();
+        let utf8_source = String::from_utf8(vec![0xff]).unwrap_err();
+        let errors = vec![
+            (
+                Error::Configuration("bad configuration".into()),
+                ErrorKind::Configuration,
+                false,
+            ),
+            (
+                Error::Unauthorized {
+                    method: Method::GET,
+                    url: Box::new(endpoint()),
+                },
+                ErrorKind::Unauthorized,
+                true,
+            ),
+            (
+                Error::Forbidden {
+                    method: Method::POST,
+                    url: Box::new(endpoint()),
+                },
+                ErrorKind::Forbidden,
+                true,
+            ),
+            (
+                Error::HttpStatus {
+                    method: Method::PUT,
+                    url: Box::new(endpoint()),
+                    status: StatusCode::BAD_GATEWAY,
+                },
+                ErrorKind::HttpStatus,
+                true,
+            ),
+            (
+                Error::Transport {
+                    method: Method::GET,
+                    url: Box::new(endpoint()),
+                    source: transport_source,
+                },
+                ErrorKind::Transport,
+                true,
+            ),
+            (
+                Error::ResponseTooLarge {
+                    method: Method::GET,
+                    url: Box::new(endpoint()),
+                    limit: 1024,
+                    content_length: None,
+                },
+                ErrorKind::ResponseTooLarge,
+                true,
+            ),
+            (
+                Error::Encode {
+                    operation: "test",
+                    source: json_source(),
+                },
+                ErrorKind::Encode,
+                false,
+            ),
+            (
+                Error::Api {
+                    method: Method::PATCH,
+                    url: Box::new(endpoint()),
+                    message: "rejected".into(),
+                },
+                ErrorKind::Api,
+                true,
+            ),
+            (
+                Error::Decode {
+                    method: Method::GET,
+                    url: Box::new(endpoint()),
+                    source: json_source(),
+                },
+                ErrorKind::Decode,
+                true,
+            ),
+            (
+                Error::Utf8 {
+                    method: Method::GET,
+                    url: Box::new(endpoint()),
+                    source: utf8_source,
+                },
+                ErrorKind::Utf8,
+                true,
+            ),
+            (
+                Error::WebSocketConnectTimeout {
+                    url: Box::new(endpoint()),
+                    timeout: Duration::from_millis(10),
+                },
+                ErrorKind::WebSocketConnectTimeout,
+                true,
+            ),
+            (
+                Error::WebSocket {
+                    url: Box::new(endpoint()),
+                    source: Box::new(tokio_tungstenite::tungstenite::Error::Io(io::Error::new(
+                        io::ErrorKind::TimedOut,
+                        "timed out",
+                    ))),
+                },
+                ErrorKind::WebSocket,
+                true,
+            ),
+            (
+                Error::Proxy {
+                    scheme: ProxyScheme::Http,
+                    url: Box::new(endpoint()),
+                    source: Box::new(ProxyError::Io(io::Error::new(
+                        io::ErrorKind::TimedOut,
+                        "timed out",
+                    ))),
+                },
+                ErrorKind::Proxy,
+                true,
+            ),
+            (
+                Error::EventDecode {
+                    message_type: Some("status".into()),
+                    source: json_source(),
+                },
+                ErrorKind::EventDecode,
+                false,
+            ),
+            (
+                Error::UnexpectedWebSocketFrame {
+                    url: Box::new(endpoint()),
+                    kind: "binary data",
+                },
+                ErrorKind::UnexpectedWebSocketFrame,
+                true,
+            ),
+            (
+                Error::MissingObject {
+                    method: Method::GET,
+                    url: Box::new(endpoint()),
+                },
+                ErrorKind::MissingObject,
+                true,
+            ),
+        ];
+
+        for (error, kind, has_url) in errors {
+            assert_eq!(error.kind(), kind);
+            assert_eq!(error.url().is_some(), has_url);
+            assert!(!error.to_string().is_empty());
+            if error.method().is_some() {
+                assert!(has_url);
+            }
+        }
+    }
+
+    #[test]
+    fn predicates_cover_positive_and_negative_paths() {
+        let forbidden = Error::Forbidden {
+            method: Method::POST,
+            url: Box::new(endpoint()),
+        };
+        assert!(forbidden.is_forbidden());
+        assert_eq!(forbidden.status(), Some(StatusCode::FORBIDDEN));
+
+        let server = Error::HttpStatus {
+            method: Method::GET,
+            url: Box::new(endpoint()),
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+        };
+        assert!(server.is_server_error());
+        assert!(!server.is_rate_limited());
+
+        let plain = Error::Configuration("plain".into());
+        assert_eq!(plain.status(), None);
+        assert_eq!(plain.method(), None);
+        assert_eq!(plain.url(), None);
+        assert!(!plain.is_unauthorized());
+        assert!(!plain.is_forbidden());
+        assert!(!plain.is_response_too_large());
+        assert_eq!(plain.response_body_limit(), None);
+        assert_eq!(plain.advertised_content_length(), None);
+        assert!(!plain.is_server_error());
+        assert!(!plain.is_timeout());
+    }
+}

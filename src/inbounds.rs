@@ -1092,4 +1092,77 @@ mod tests {
         assert_eq!(decoded, config);
         assert!(value["settings"].is_object());
     }
+
+    #[test]
+    fn every_inbound_protocol_has_the_exact_xray_name() {
+        assert_eq!(
+            [
+                InboundProtocol::Vmess,
+                InboundProtocol::Vless,
+                InboundProtocol::Trojan,
+                InboundProtocol::Shadowsocks,
+                InboundProtocol::Wireguard,
+                InboundProtocol::Hysteria,
+                InboundProtocol::Http,
+                InboundProtocol::Mixed,
+                InboundProtocol::Tunnel,
+                InboundProtocol::Tun,
+                InboundProtocol::Mtproto,
+                InboundProtocol::Amneziawg,
+            ]
+            .map(InboundProtocol::as_str),
+            [
+                "vmess",
+                "vless",
+                "trojan",
+                "shadowsocks",
+                "wireguard",
+                "hysteria",
+                "http",
+                "mixed",
+                "tunnel",
+                "tun",
+                "mtproto",
+                "amneziawg",
+            ]
+        );
+    }
+
+    #[test]
+    fn traffic_and_inbound_debug_redact_client_credentials() {
+        let traffic: ClientTraffic = serde_json::from_value(serde_json::json!({
+            "id": 1,
+            "inboundId": 7,
+            "enable": true,
+            "email": "alice",
+            "uuid": "traffic-uuid-secret",
+            "subId": "traffic-sub-secret",
+            "up": 10,
+            "down": 20,
+            "expiryTime": 0,
+            "total": 100,
+            "reset": 0,
+            "lastOnline": 30
+        }))
+        .unwrap();
+        let output = format!("{traffic:?}");
+        assert!(output.contains("alice"));
+        assert!(!output.contains("traffic-uuid-secret"));
+        assert!(!output.contains("traffic-sub-secret"));
+
+        let mut config = InboundConfig::new(InboundProtocol::Vless, 443);
+        config.remark = "production".into();
+        let inbound = Inbound {
+            id: 7,
+            config: config.clone(),
+            origin_node_guid: "node-guid".into(),
+            fallback_parent: Some(FallbackParent {
+                master_id: 3,
+                path: "/fallback".into(),
+            }),
+        };
+        assert_eq!(inbound.to_config(), config);
+        assert!(format!("{inbound:?}").contains("node-guid"));
+        assert_eq!(inbound.into_config(), config);
+    }
 }

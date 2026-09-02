@@ -469,3 +469,126 @@ pub struct HostRow {
     /// Unix update timestamp in milliseconds.
     pub updated_at: i64,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn extensible_host_enums_round_trip_known_and_future_values() {
+        for value in [
+            HostSecurity::Same,
+            HostSecurity::Tls,
+            HostSecurity::None,
+            HostSecurity::Reality,
+            HostSecurity::Other("future-security".into()),
+        ] {
+            let wire = value.as_str().to_owned();
+            assert_eq!(serde_json::to_value(&value).unwrap(), wire);
+            assert_eq!(
+                serde_json::from_value::<HostSecurity>(json!(wire)).unwrap(),
+                value
+            );
+        }
+        assert_eq!(
+            serde_json::from_value::<HostSecurity>(json!("")).unwrap(),
+            HostSecurity::Same
+        );
+
+        for value in [
+            MihomoIpVersion::Inherit,
+            MihomoIpVersion::Dual,
+            MihomoIpVersion::Ipv4,
+            MihomoIpVersion::Ipv6,
+            MihomoIpVersion::Ipv4Prefer,
+            MihomoIpVersion::Ipv6Prefer,
+            MihomoIpVersion::Other("future-ip-mode".into()),
+        ] {
+            let wire = value.as_str().to_owned();
+            assert_eq!(serde_json::to_value(&value).unwrap(), wire);
+            assert_eq!(
+                serde_json::from_value::<MihomoIpVersion>(json!(wire)).unwrap(),
+                value
+            );
+        }
+
+        for value in [
+            SubscriptionFormat::Raw,
+            SubscriptionFormat::Json,
+            SubscriptionFormat::Clash,
+            SubscriptionFormat::Other("future-format".into()),
+        ] {
+            let wire = value.as_str().to_owned();
+            assert_eq!(serde_json::to_value(&value).unwrap(), wire);
+            assert_eq!(
+                serde_json::from_value::<SubscriptionFormat>(json!(wire)).unwrap(),
+                value
+            );
+        }
+    }
+
+    #[test]
+    fn vless_route_accepts_every_upstream_representation() {
+        let configured = VlessRoute::new(8443);
+        assert_eq!(configured.port(), Some(8443));
+        assert_eq!(VlessRoute::from(443).port(), Some(443));
+        assert_eq!(serde_json::to_value(configured).unwrap(), "8443");
+        assert_eq!(serde_json::to_value(VlessRoute::default()).unwrap(), "");
+        assert_eq!(
+            serde_json::from_value::<VlessRoute>(json!(2053))
+                .unwrap()
+                .port(),
+            Some(2053)
+        );
+        assert_eq!(
+            serde_json::from_value::<VlessRoute>(json!("2087"))
+                .unwrap()
+                .port(),
+            Some(2087)
+        );
+        assert_eq!(
+            serde_json::from_value::<VlessRoute>(Value::Null)
+                .unwrap()
+                .port(),
+            None
+        );
+        assert!(serde_json::from_value::<VlessRoute>(json!(-1)).is_err());
+        assert!(serde_json::from_value::<VlessRoute>(json!(70_000)).is_err());
+        assert!(serde_json::from_value::<VlessRoute>(json!("invalid")).is_err());
+    }
+
+    #[test]
+    fn nested_json_override_preserves_data_but_redacts_debug() {
+        let value = json!({"password": "host-json-secret"});
+        let configured = HostJsonOverride::from_value(&value).unwrap();
+        assert!(!configured.is_empty());
+        assert_eq!(configured.value().unwrap(), Some(value));
+        assert!(configured.as_raw().contains("host-json-secret"));
+        assert_eq!(
+            format!("{configured:?}"),
+            "HostJsonOverride(\"[CONFIGURED]\")"
+        );
+
+        let empty = HostJsonOverride::empty();
+        assert!(empty.is_empty());
+        assert_eq!(empty.value().unwrap(), None);
+        assert_eq!(format!("{empty:?}"), "HostJsonOverride(\"[EMPTY]\")");
+        assert_eq!(
+            serde_json::from_value::<HostJsonOverride>(Value::Null).unwrap(),
+            empty
+        );
+        let invalid: HostJsonOverride = serde_json::from_value(json!("not-json")).unwrap();
+        assert!(invalid.value().is_err());
+    }
+
+    #[test]
+    fn host_group_constructor_sets_only_safe_defaults() {
+        let group = HostGroup::new(vec![7, 9], "production");
+        assert_eq!(group.inbound_ids, [7, 9]);
+        assert_eq!(group.options.remark, "production");
+        assert_eq!(group.options.security, HostSecurity::Same);
+        assert!(group.group_id.is_empty());
+        assert!(group.hosts.is_empty());
+    }
+}

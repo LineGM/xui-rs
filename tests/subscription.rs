@@ -291,6 +291,48 @@ async fn subscription_errors_and_client_debug_redact_secret_paths() {
     assert!(client.raw("").await.is_err());
 }
 
+#[tokio::test]
+async fn malformed_subscription_documents_return_typed_redacted_errors() {
+    let server = MockServer::start().await;
+    mount(
+        &server,
+        "GET",
+        "/sub/private%2Finfo",
+        Some(("format", "info")),
+        response("not-json", "application/json"),
+    )
+    .await;
+    mount(
+        &server,
+        "GET",
+        "/json/private%2Fjson",
+        Some(("view", "raw")),
+        response("not-json", "application/json"),
+    )
+    .await;
+    mount(
+        &server,
+        "GET",
+        "/clash/private%2Fclash",
+        Some(("view", "raw")),
+        response([0xff, 0xfe], "application/yaml"),
+    )
+    .await;
+
+    let client = SubscriptionClient::new(server.uri()).unwrap();
+    for error in [
+        client.info("private/info").await.unwrap_err(),
+        client.json("private/json").await.unwrap_err(),
+    ] {
+        assert!(matches!(error, Error::Decode { .. }));
+        assert!(!error.to_string().contains("private"));
+    }
+
+    let error = client.clash("private/clash").await.unwrap_err();
+    assert!(matches!(error, Error::Utf8 { .. }));
+    assert!(!error.to_string().contains("private"));
+}
+
 #[test]
 fn settings_constructor_uses_public_uris_without_debug_leaks() {
     let settings = SubscriptionSettings {

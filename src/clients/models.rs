@@ -1050,4 +1050,118 @@ mod tests {
         assert!(result.errors.is_empty());
         assert!(client.inbound_ids.is_empty());
     }
+
+    #[test]
+    fn record_and_link_debug_views_redact_credentials() {
+        let record = ClientRecord {
+            email: "alice".into(),
+            uuid: "record-uuid-secret".into(),
+            password: "record-password-secret".into(),
+            auth: "record-auth-secret".into(),
+            private_key: "record-private-secret".into(),
+            public_key: "record-public-secret".into(),
+            pre_shared_key: "record-psk-secret".into(),
+            secret: "record-mtproto-secret".into(),
+            ad_tag: "record-ad-secret".into(),
+            sub_id: "record-sub-secret".into(),
+            ..ClientRecord::default()
+        };
+        let record_debug = format!("{record:?}");
+        assert!(record_debug.contains("alice"));
+        for secret in [
+            "record-uuid-secret",
+            "record-password-secret",
+            "record-auth-secret",
+            "record-private-secret",
+            "record-public-secret",
+            "record-psk-secret",
+            "record-mtproto-secret",
+            "record-ad-secret",
+            "record-sub-secret",
+        ] {
+            assert!(!record_debug.contains(secret));
+        }
+
+        let request = ClientCreateRequest::new(ClientConfig::new("bob"), vec![7, 9]);
+        assert!(format!("{request:?}").contains("bob"));
+        let input = ClientExternalLinkInput {
+            kind: ClientExternalLinkKind::Subscription,
+            value: "https://example.com/input-link-secret".into(),
+            remark: "primary".into(),
+        };
+        let link = ClientExternalLink {
+            id: 3,
+            client_id: 4,
+            kind: ClientExternalLinkKind::Link,
+            value: "vless://persisted-link-secret".into(),
+            remark: "backup".into(),
+            sort_index: 2,
+            created_at: 5,
+        };
+        assert!(!format!("{input:?}").contains("input-link-secret"));
+        assert!(!format!("{link:?}").contains("persisted-link-secret"));
+    }
+
+    #[test]
+    fn paging_and_bulk_enums_match_source_vocabulary() {
+        assert_eq!(
+            [
+                ClientStatusFilter::Active,
+                ClientStatusFilter::Deactive,
+                ClientStatusFilter::Depleted,
+                ClientStatusFilter::Expiring,
+                ClientStatusFilter::Online,
+            ]
+            .map(ClientStatusFilter::as_str),
+            ["active", "deactive", "depleted", "expiring", "online"]
+        );
+        assert_eq!(
+            [
+                ClientSort::Enable,
+                ClientSort::Email,
+                ClientSort::InboundCount,
+                ClientSort::Traffic,
+                ClientSort::Remaining,
+                ClientSort::ExpiryTime,
+                ClientSort::CreatedAt,
+                ClientSort::UpdatedAt,
+                ClientSort::LastOnline,
+            ]
+            .map(ClientSort::as_str),
+            [
+                "enable",
+                "email",
+                "inboundIds",
+                "traffic",
+                "remaining",
+                "expiryTime",
+                "createdAt",
+                "updatedAt",
+                "lastOnline",
+            ]
+        );
+        assert_eq!(SortOrder::Ascending.as_str(), "ascend");
+        assert_eq!(SortOrder::Descending.as_str(), "descend");
+        assert_eq!(
+            [
+                BulkFlowAdjustment::Unchanged,
+                BulkFlowAdjustment::Clear,
+                BulkFlowAdjustment::Vision,
+                BulkFlowAdjustment::VisionUdp443,
+            ]
+            .map(BulkFlowAdjustment::as_str),
+            ["", "none", "xtls-rprx-vision", "xtls-rprx-vision-udp443"]
+        );
+    }
+
+    #[test]
+    fn create_request_accepts_legacy_null_inbound_ids() {
+        let request: ClientCreateRequest = serde_json::from_value(serde_json::json!({
+            "client": {"email": "alice"},
+            "inboundIds": null
+        }))
+        .unwrap();
+        assert_eq!(request.client.email, "alice");
+        assert!(request.inbound_ids.is_empty());
+    }
 }

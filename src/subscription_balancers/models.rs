@@ -80,3 +80,36 @@ impl SubscriptionBalancerInput {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn strategies_and_constructor_match_wire_defaults() {
+        assert_eq!(
+            SubscriptionBalancerStrategy::LeastLoad.as_str(),
+            Some("leastLoad")
+        );
+        assert_eq!(
+            SubscriptionBalancerStrategy::LeastPing.as_str(),
+            Some("leastPing")
+        );
+        assert_eq!(
+            SubscriptionBalancerStrategy::Random.as_str(),
+            Some("random")
+        );
+        assert_eq!(
+            SubscriptionBalancerStrategy::RoundRobin.as_str(),
+            Some("roundRobin")
+        );
+        assert_eq!(SubscriptionBalancerStrategy::Unknown.as_str(), None);
+
+        let input = SubscriptionBalancerInput::new("EU pool", vec![7, 9]);
+        assert_eq!(input.remark, "EU pool");
+        assert_eq!(input.strategy, SubscriptionBalancerStrategy::Random);
+        assert_eq!(input.inbound_ids, [7, 9]);
+        assert_eq!(input.sort_order, 1);
+        assert_eq!(input.enabled, Some(true));
+    }
+}
