@@ -28,15 +28,15 @@ route. It copies every writable field from the payload. Fetch the record and
 call `Inbound::to_config()` before changing fields to avoid dropping settings
 or resetting limits:
 
-```rust,no_run
-# use xui_rs::Client;
-# async fn example(client: &Client, id: i64) -> xui_rs::Result<()> {
+```rust
+use xui_rs::Client;
+async fn example(client: &Client, id: i64) -> xui_rs::Result<()> {
 let inbound = client.inbounds().get(id).await?;
 let mut config = inbound.to_config();
 config.enable = false;
 client.inbounds().update(id, &config).await?;
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 For enable switches, prefer `set_enabled`; the dedicated upstream endpoint

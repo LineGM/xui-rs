@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-Security fixes are provided for the latest development release on `main`.
-The legacy 0.1 API is no longer supported.
+Security fixes are provided for the latest `1.x` release and the development
+branch on `main`. Pre-1.0 releases are no longer supported.
 
 ## Reporting a vulnerability
 

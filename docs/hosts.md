@@ -28,9 +28,9 @@ and exposes it as an empty Rust vector.
 
 ## Creating and replacing groups
 
-```rust,no_run
-# use xui_rs::{Client, HostGroup, HostSecurity, VlessRoute};
-# async fn example(client: &Client) -> xui_rs::Result<()> {
+```rust
+use xui_rs::{Client, HostGroup, HostSecurity, VlessRoute};
+async fn example(client: &Client) -> xui_rs::Result<()> {
 let mut group = HostGroup::new(vec![7, 9], "production CDN");
 group.hosts = vec!["cdn.example.com".into(), "[2001:db8::10]:8443".into()];
 group.options.port = 443;
@@ -40,8 +40,8 @@ group.options.vless_route = VlessRoute::new(443);
 
 let rows = client.hosts().create(&group).await?;
 println!("created {} physical rows", rows.len());
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 An empty `group_id` lets 3x-ui generate one. Supplying a non-empty value uses

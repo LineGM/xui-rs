@@ -5,10 +5,10 @@ panel client applies it to ordinary HTTP requests and authenticated WebSocket
 connections, so enabling a proxy cannot accidentally leave the real-time
 stream on a direct route.
 
-```rust,no_run
+```rust
 use xui_rs::{Client, ProxyConfig, SubscriptionClient};
 
-# fn example() -> xui_rs::Result<()> {
+fn example() -> xui_rs::Result<()> {
 let proxy = ProxyConfig::new("socks5h://proxy.example.com:1080")?
     .with_basic_auth("service", "proxy-password")?;
 
@@ -18,9 +18,9 @@ let panel = Client::builder("https://panel.example.com/secret/")?
 let subscriptions = SubscriptionClient::builder("https://sub.example.com:2096")?
     .proxy(proxy)
     .build()?;
-# let _ = (panel, subscriptions);
-# Ok(())
-# }
+let _ = (panel, subscriptions);
+Ok(())
+}
 ```
 
 ## Protocol and DNS behavior
@@ -72,4 +72,3 @@ remain identical between HTTP and WebSocket requests.
 HTTP CONNECT or SOCKS5 negotiation, target TLS, and the WebSocket handshake.
 `danger_accept_invalid_certs(true)` also applies to an HTTPS proxy certificate;
 use it only when both the target and proxy are explicitly trusted.
-

@@ -30,15 +30,15 @@ the record endpoint exposes the database's comma-separated string.
 Update replaces the supplied client fields rather than patching them. Fetch
 the client and convert its record before editing:
 
-```rust,no_run
-# use xui_rs::Client;
-# async fn example(client: &Client) -> xui_rs::Result<()> {
+```rust
+use xui_rs::Client;
+async fn example(client: &Client) -> xui_rs::Result<()> {
 let details = client.clients().get("alice@example.com").await?;
 let mut config = details.client.to_config();
 config.total_gb += 50 * 1024 * 1024 * 1024;
 client.clients().update("alice@example.com", &config).await?;
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 `update_on_inbounds` sends the v3.7.0 `inboundIds` query filter when only

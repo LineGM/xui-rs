@@ -24,9 +24,9 @@ client counts, dirty configuration state, and multi-hop identity.
 the panel defaults for HTTPS, normal certificate verification, `/` base path,
 all-inbound synchronization, and an enabled node.
 
-```rust,no_run
-# use xui_rs::{Client, NodeRequest, NodeTlsVerifyMode};
-# async fn example(client: &Client) -> xui_rs::Result<()> {
+```rust
+use xui_rs::{Client, NodeRequest, NodeTlsVerifyMode};
+async fn example(client: &Client) -> xui_rs::Result<()> {
 let mut request = NodeRequest::new("edge-de", "node.example.com", 2053)
     .with_api_token(std::env::var("NODE_API_TOKEN").unwrap());
 request.remark = "Frankfurt edge".into();
@@ -38,8 +38,8 @@ request.pinned_cert_sha256 = client
 
 let node = client.nodes().create(&request).await?;
 println!("registered node {} as {}", node.name, node.guid);
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 The fingerprint endpoint deliberately makes an unverified bootstrap TLS
@@ -60,15 +60,15 @@ The SDK makes replacement and clearing mutually exclusive. 3x-ui rejects
 clearing credentials on an enabled node unless `NodeTlsVerifyMode::Mtls` is
 active. A token is required when creating every non-mTLS node.
 
-```rust,no_run
-# use xui_rs::Client;
-# async fn example(client: &Client) -> xui_rs::Result<()> {
+```rust
+use xui_rs::Client;
+async fn example(client: &Client) -> xui_rs::Result<()> {
 let node = client.nodes().get(7).await?;
 let mut request = node.to_request();
 request.remark = "renamed edge".into();
 client.nodes().update(node.id, &request).await?;
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 Transitive entries from a chained topology have `transitive == true` and
@@ -109,14 +109,14 @@ its master client certificate. Call `set_mtls_trust_ca()` through a `Client`
 connected to the remote panel, restart that remote panel, then configure the
 managing panel's node with `NodeTlsVerifyMode::Mtls`.
 
-```rust,no_run
-# use xui_rs::Client;
-# async fn example(manager: &Client, remote: &Client) -> xui_rs::Result<()> {
+```rust
+use xui_rs::Client;
+async fn example(manager: &Client, remote: &Client) -> xui_rs::Result<()> {
 let ca = manager.nodes().mtls_ca().await?;
 remote.nodes().set_mtls_trust_ca(&ca.ca_cert).await?;
 // Restart `remote`, then select NodeTlsVerifyMode::Mtls on `manager`.
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 Sending an empty CA disables trust for incoming node client certificates after

@@ -18,15 +18,15 @@ Always fetch `settings().all()` before editing an existing deployment. Starting
 from `PanelSettings::default()` would deliberately send zero/blank values as a
 full replacement and is only suitable when every required value is filled in.
 
-```rust,no_run
-# use xui_rs::{Client, PanelSettingsUpdate};
-# async fn example(client: &Client) -> xui_rs::Result<()> {
+```rust
+use xui_rs::{Client, PanelSettingsUpdate};
+async fn example(client: &Client) -> xui_rs::Result<()> {
 let view = client.settings().all().await?;
 let mut update = PanelSettingsUpdate::new(view.settings);
 update.settings.display.page_size = 100;
 client.settings().update(&update).await?;
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 3x-ui redacts stored Telegram, SMTP, LDAP, and 2FA secrets on reads. A blank

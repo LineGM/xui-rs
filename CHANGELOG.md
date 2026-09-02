@@ -6,11 +6,22 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-02
+
+### Changed
+
+- Refreshed the README and maintenance documentation after the first stable
+  release.
+- Replaced rustdoc-only hidden-line markers in Markdown examples with clean,
+  readable Rust snippets for GitHub and crates.io.
+- Clarified the supported-version and release procedures without retaining
+  obsolete pre-rewrite compatibility claims.
+
 ## [1.0.0] - 2026-09-02
 
 ### Changed
 
-- Replaced the 0.1 implementation with a new cloneable client foundation.
+- Replaced the original implementation with a new cloneable client foundation.
 - Made API-token authentication the recommended automation path.
 - Reimplemented cookie login around 3x-ui v3.7.0's CSRF lifecycle and a real
   cookie jar; removed credential retention and automatic re-login.

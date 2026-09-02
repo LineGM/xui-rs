@@ -10,7 +10,7 @@ scripts/live-test.sh
 
 The harness pulls the official multi-architecture image by immutable digest,
 verifies the reported panel version, initializes a fresh SQLite database, and
-publishes the panel only on a random `127.0.0.1` port. The container has no
+publishes the panel only on a random loopback port. The container has no
 Linux capabilities, cannot gain privileges, and has CPU, memory, and process
 limits. Fail2ban is disabled because the disposable panel is not exposed to the
 network.

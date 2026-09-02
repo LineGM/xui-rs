@@ -20,28 +20,28 @@ credential-bearing body.
 The defaults are `/sub/`, `/json/`, and `/clash/` below the supplied server
 origin. Deployments with custom paths can configure each prefix explicitly.
 
-```rust,no_run
-# use xui_rs::SubscriptionClient;
+```rust
+use xui_rs::SubscriptionClient;
 let subscriptions = SubscriptionClient::builder("https://sub.example.com:2096")?
     .raw_path("public/raw/")
     .json_path("public/json/")
     .clash_path("public/mihomo/")
     .build()?;
-# Ok::<(), xui_rs::Error>(())
+Ok::<(), xui_rs::Error>(())
 ```
 
 When an authenticated panel client is already available, the public addresses
 can be derived from its settings snapshot:
 
-```rust,no_run
-# use xui_rs::{Client, SubscriptionClient};
-# async fn example(panel: &Client) -> xui_rs::Result<()> {
+```rust
+use xui_rs::{Client, SubscriptionClient};
+async fn example(panel: &Client) -> xui_rs::Result<()> {
 let settings = panel.settings().all().await?;
 let subscriptions = SubscriptionClient::from_settings(&settings.settings.subscription)?;
 let metadata = subscriptions.raw_metadata("secret-subscription-id").await?;
 println!("traffic: {:?}", metadata.traffic);
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 `from_settings` uses the absolute public URIs supplied by 3x-ui and falls back
@@ -55,14 +55,14 @@ option is enabled.
 client-specific format auto-detection. Its body is standard base64 when the
 panel setting `subEncrypt` is enabled:
 
-```rust,no_run
-# use xui_rs::SubscriptionClient;
-# async fn example(subscriptions: &SubscriptionClient) -> xui_rs::Result<()> {
+```rust
+use xui_rs::SubscriptionClient;
+async fn example(subscriptions: &SubscriptionClient) -> xui_rs::Result<()> {
 let response = subscriptions.raw("secret-subscription-id").await?;
 let document = response.content.decode_base64()?;
 println!("{} subscription entries", document.lines().count());
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 Use `decode_base64` only for encrypted raw subscriptions; plaintext documents

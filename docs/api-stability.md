@@ -2,7 +2,7 @@
 
 xui-rs follows Semantic Versioning for its Rust API. The 1.0 line is the stable
 contract for 3x-ui v3.7.0 and is intentionally not source-compatible with the
-legacy 0.1 implementation.
+original implementation.
 
 ## What 1.x guarantees
 

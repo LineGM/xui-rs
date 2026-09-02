@@ -12,9 +12,9 @@ API token by itself cannot authenticate `/ws`.
 
 Call `AuthApi::login` before connecting:
 
-```rust,no_run
-# use xui_rs::{Client, LoginRequest};
-# async fn example() -> xui_rs::Result<()> {
+```rust
+use xui_rs::{Client, LoginRequest};
+async fn example() -> xui_rs::Result<()> {
 let client = Client::new("https://panel.example.com/secret/")?;
 client
     .auth()
@@ -22,9 +22,9 @@ client
     .await?;
 
 let mut events = client.events().connect().await?;
-# events.close().await?;
-# Ok(())
-# }
+events.close().await?;
+Ok(())
+}
 ```
 
 HTTP login and the WebSocket handshake query one shared
@@ -43,9 +43,9 @@ sends only its matching cookie.
 `EventStream` implements `futures_util::Stream<Item = xui_rs::Result<PanelEvent>>`
 and also offers `next_event` when importing `StreamExt` is undesirable:
 
-```rust,no_run
-# use xui_rs::{Client, PanelEventKind};
-# async fn example(client: &Client) -> xui_rs::Result<()> {
+```rust
+use xui_rs::{Client, PanelEventKind};
+async fn example(client: &Client) -> xui_rs::Result<()> {
 let mut events = client.events().connect().await?;
 while let Some(event) = events.next_event().await? {
     match event.kind {
@@ -58,8 +58,8 @@ while let Some(event) = events.next_event().await? {
         _ => {}
     }
 }
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 Every message carries the server-generated Unix timestamp in

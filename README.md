@@ -17,8 +17,8 @@
 
 > [!IMPORTANT]
 > The `1.0` line targets the complete 3x-ui v3.7.0 HTTP and WebSocket API. It is
-> a ground-up replacement for the legacy 0.1 client and is not source-compatible
-> with it.
+> a ground-up replacement for the original `0.0.1` client and is not
+> source-compatible with it.
 
 ## Why xui-rs?
 
@@ -34,36 +34,49 @@
   subscriptions, and WebSocket transports.
 - Strict formatting, linting, documentation, MSRV, and cross-platform CI gates.
 
+## Installation
+
+```console
+cargo add xui-rs@1
+```
+
+xui-rs requires Rust 1.88 or newer. Browse the complete API on
+[docs.rs](https://docs.rs/xui-rs) and runnable programs in
+[`examples/`](examples).
+
 ## Authentication
 
 API tokens are the recommended choice for services, bots, and automation. They
 avoid browser-session state and 3x-ui's CSRF flow.
 
-```rust,no_run
+```rust
 use xui_rs::Client;
 
+fn main() -> Result<(), Box<dyn std::error::Error>> {
 let client = Client::builder("https://panel.example.com/secret/")?
     .bearer_token(std::env::var("XUI_API_TOKEN")?)
     .build()?;
-# Ok::<(), Box<dyn std::error::Error>>(())
+let _ = client;
+Ok(())
+}
 ```
 
 Cookie login remains available for panels where an API token cannot be used.
 The SDK obtains a pre-auth CSRF token, stores only cookie name/value pairs in a
 standards-compliant jar, and reuses the CSRF token for unsafe requests.
 
-```rust,no_run
+```rust
 use xui_rs::{Client, LoginRequest};
 
-# async fn example() -> xui_rs::Result<()> {
+async fn example() -> xui_rs::Result<()> {
 let client = Client::new("https://panel.example.com/secret/")?;
 let login = LoginRequest::new("admin", "password")
     .with_two_factor_code("123456");
 
 client.auth().login(login).await?;
 client.auth().logout().await?;
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 Credentials are never retained for automatic re-login. An expired session is
@@ -76,10 +89,10 @@ See [the authentication design](docs/authentication.md) for the rationale.
 The complete 18-route v3.7.0 inbound surface is available through
 `Client::inbounds`, including AmneziaWG settings and subscription sort order.
 
-```rust,no_run
+```rust
 use xui_rs::{Client, InboundConfig, InboundProtocol};
 
-# async fn example() -> xui_rs::Result<()> {
+async fn example() -> xui_rs::Result<()> {
 let client = Client::builder("https://panel.example.com/secret/")?
     .bearer_token("api-token")
     .build()?;
@@ -98,8 +111,8 @@ let created = client.inbounds().create(&config).await?;
 let mut edited = created.to_config();
 edited.remark = "renamed-vless".into();
 client.inbounds().update(created.id, &edited).await?;
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 See [the inbound API guide](docs/inbounds.md) for the operation inventory,
@@ -111,13 +124,13 @@ replacement/import semantics, and intentionally open-ended Xray JSON fields.
 including server-side paging, portable import/export, bulk operations, online
 and IP attribution, HWID device management, and group traffic baselines.
 
-```rust,no_run
+```rust
 use xui_rs::{
     Client, ClientConfig, ClientCreateRequest, ClientPageRequest,
     ClientStatusFilter,
 };
 
-# async fn example(client: &Client) -> xui_rs::Result<()> {
+async fn example(client: &Client) -> xui_rs::Result<()> {
 let page = client
     .clients()
     .list_paged(&ClientPageRequest {
@@ -132,8 +145,8 @@ let request = ClientCreateRequest::new(config, vec![7, 9]);
 // Uncomment only when creation is intended.
 // client.clients().create(&request).await?;
 println!("{} online clients", page.summary.online_count);
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 Every email, subscription ID, and group name is encoded as one URL path
@@ -147,10 +160,10 @@ controller: typed host/Xray status and history, observatory data, lifecycle and
 updates, logs, cryptographic helpers, REALITY target scanning, database
 backup/restore, cluster IP synchronization, and AmneziaWG peer diagnostics.
 
-```rust,no_run
+```rust
 use xui_rs::{Client, HistoryBucket, SystemMetric};
 
-# async fn example(client: &Client) -> xui_rs::Result<()> {
+async fn example(client: &Client) -> xui_rs::Result<()> {
 let status = client.server().status().await?;
 let cpu = client
     .server()
@@ -158,8 +171,8 @@ let cpu = client
     .await?;
 
 println!("Xray {:?}; {} CPU samples", status.xray.state, cpu.len());
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 Database downloads stay in memory and preserve attachment metadata. Restore,
@@ -175,18 +188,18 @@ scoped and expiring API tokens, notification tests, and credential replacement.
 including WARP, NordVPN, PIA, geodata inspection, outbound and routing tests,
 and remote outbound subscriptions.
 
-```rust,no_run
+```rust
 use xui_rs::{Client, PanelSettingsUpdate};
 
-# async fn example(client: &Client) -> xui_rs::Result<()> {
+async fn example(client: &Client) -> xui_rs::Result<()> {
 let view = client.settings().all().await?;
 let mut update = PanelSettingsUpdate::new(view.settings);
 update.settings.display.page_size = 100;
 
 // This endpoint is a full replacement; update the fetched settings object.
 client.settings().update(&update).await?;
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 The ergonomic grouped settings model flattens to exact upstream wire names.
@@ -200,10 +213,10 @@ plaintext are redacted from `Debug`. See [the settings API guide](docs/settings.
 Logical groups span multiple inbounds and addresses, while create/update
 results expose every physical row produced by that Cartesian expansion.
 
-```rust,no_run
+```rust
 use xui_rs::{Client, HostGroup, HostSecurity};
 
-# async fn example(client: &Client) -> xui_rs::Result<()> {
+async fn example(client: &Client) -> xui_rs::Result<()> {
 let mut group = HostGroup::new(vec![7, 9], "production CDN");
 group.hosts = vec!["cdn.example.com".into()];
 group.options.port = 443;
@@ -211,8 +224,8 @@ group.options.security = HostSecurity::Tls;
 
 // Creation is explicit and persistent.
 // client.hosts().create(&group).await?;
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 Nested mux, sockopt, and final-mask JSON is encoded automatically, path values
@@ -225,10 +238,10 @@ Hosts API guide](docs/hosts.md).
 saved/unsaved probes, remote inbound discovery, health history, bulk panel
 updates, certificate pinning, node mTLS, and live mTLS-client reload.
 
-```rust,no_run
+```rust
 use xui_rs::{Client, NodeRequest};
 
-# async fn example(client: &Client) -> xui_rs::Result<()> {
+async fn example(client: &Client) -> xui_rs::Result<()> {
 let request = NodeRequest::new("edge-de", "node.example.com", 2053)
     .with_api_token(std::env::var("NODE_API_TOKEN").unwrap());
 
@@ -237,8 +250,8 @@ println!("candidate node is {:?}", probe.status);
 
 // Registration is explicit because it persists and starts synchronization.
 // client.nodes().create(&request).await?;
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 Read models never expose write-only node API tokens. Credential retain/replace/
@@ -253,18 +266,18 @@ subscription server: `GET` and `HEAD` for raw, Xray JSON, and Clash/Mihomo
 formats. It intentionally carries no panel authentication because this server
 can run on another origin and port.
 
-```rust,no_run
+```rust
 use xui_rs::SubscriptionClient;
 
-# async fn example() -> xui_rs::Result<()> {
+async fn example() -> xui_rs::Result<()> {
 let subscriptions = SubscriptionClient::new("https://sub.example.com:2096")?;
 let metadata = subscriptions
     .raw_metadata("secret-subscription-id")
     .await?;
 
 println!("profile: {:?}; traffic: {:?}", metadata.profile_title, metadata.traffic);
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 Custom raw/JSON/Clash paths, construction from panel settings, and the v3.7.0
@@ -287,17 +300,17 @@ JSON-subscription balancers: list, create, replace, and both delete transports.
 Strategies are typed, inbound IDs preserve the upstream repeated-form wire
 contract, and unknown future strategy values fail closed for mutations.
 
-```rust,no_run
+```rust
 use xui_rs::{Client, SubscriptionBalancerInput, SubscriptionBalancerStrategy};
 
-# async fn example(client: &Client) -> xui_rs::Result<()> {
+async fn example(client: &Client) -> xui_rs::Result<()> {
 let mut input = SubscriptionBalancerInput::new("EU pool", vec![7, 9]);
 input.strategy = SubscriptionBalancerStrategy::LeastPing;
 
 // Creation is explicit and persistent.
 // client.subscription_balancers().create(&input).await?;
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 ## Outbound proxies
@@ -306,18 +319,18 @@ Panel HTTP, public subscriptions, and WebSocket connections support the same
 typed `ProxyConfig`. HTTP, HTTPS, SOCKS5 with local DNS, and `socks5h` with
 proxy-side DNS are supported, including Basic/username-password authentication.
 
-```rust,no_run
+```rust
 use xui_rs::{Client, ProxyConfig};
 
-# fn example() -> xui_rs::Result<()> {
+fn example() -> xui_rs::Result<()> {
 let proxy = ProxyConfig::new("socks5h://proxy.example.com:1080")?
     .with_basic_auth("service", "proxy-password")?;
 let client = Client::builder("https://panel.example.com/secret/")?
     .proxy(proxy)
     .build()?;
-# let _ = client;
-# Ok(())
-# }
+let _ = client;
+Ok(())
+}
 ```
 
 Proxy credentials are separate from the credential-free URL and redacted from
@@ -334,10 +347,10 @@ encoding or reports an incorrect length. Ordinary panel API and public
 subscription responses default to 64 MiB; explicit database downloads have an
 independent 512 MiB default. All three limits are configurable.
 
-```rust,no_run
+```rust
 use xui_rs::{Client, SubscriptionClient};
 
-# fn example() -> xui_rs::Result<()> {
+fn example() -> xui_rs::Result<()> {
 let panel = Client::builder("https://panel.example.com/secret/")?
     .response_body_limit(16 * 1024 * 1024)
     .download_body_limit(1024 * 1024 * 1024)
@@ -345,9 +358,9 @@ let panel = Client::builder("https://panel.example.com/secret/")?
 let subscriptions = SubscriptionClient::builder("https://panel.example.com")?
     .response_body_limit(32 * 1024 * 1024)
     .build()?;
-# let _ = (panel, subscriptions);
-# Ok(())
-# }
+let _ = (panel, subscriptions);
+Ok(())
+}
 ```
 
 Oversized responses return the typed `ErrorKind::ResponseTooLarge`. Optional
@@ -364,10 +377,10 @@ message names declared by the v3.7.0 source. Status, traffic, inbounds,
 outbounds, nodes, notifications, Xray transitions, client counters, reserved
 clients payloads, and invalidations have distinct typed variants.
 
-```rust,no_run
+```rust
 use xui_rs::{Client, LoginRequest, PanelEventKind};
 
-# async fn example() -> xui_rs::Result<()> {
+async fn example() -> xui_rs::Result<()> {
 let client = Client::new("https://panel.example.com/secret/")?;
 client
     .auth()
@@ -380,8 +393,8 @@ while let Some(event) = events.next_event().await? {
         println!("refresh {} through HTTP", value.target.as_str());
     }
 }
-# Ok(())
-# }
+Ok(())
+}
 ```
 
 The endpoint does not support bearer-token authentication. HTTP and WebSocket
@@ -433,8 +446,6 @@ guarantees and the boundary between Rust source compatibility and upstream
 | xui-rs | 3x-ui | Status |
 |---|---|---|
 | `1.0.x` | `3.7.0` | Complete tagged HTTP and WebSocket API |
-| `0.2.x` | `3.6.0` | Superseded release-candidate line |
-| `0.1.x` | legacy API | Superseded |
 
 Rust 1.88.0 is the minimum supported compiler. Development and CI use the
 pinned Rust 1.98.0 toolchain.
