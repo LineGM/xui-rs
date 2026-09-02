@@ -6,6 +6,8 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-09-02
+
 ### Added
 
 - Expanded behavioral coverage for wire-compatible models, secret-redacted
