@@ -113,7 +113,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install Rust 1.88.0
-        uses: dtolnay/rust-toolchain@2eae45db285e407f22119950686d47e1101e071b # 1.88.0
+        uses: dtolnay/rust-toolchain@f8be11a05b1d4f3fcebe6410cc16743212b999b0 # 1.88.0
       - name: Cache Rust build data
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: Check library on the MSRV
