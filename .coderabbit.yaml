@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  in_progress_fortune: false
+  poem: false
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+    drafts: false
+    ignore_usernames:
+      - "dependabot[bot]"
+
+  tools:
+    clippy:
+      enabled: false
+    actionlint:
+      enabled: false
+
+  path_instructions:
+    - path: "src/**/*.rs"
+      instructions: |
+        Focus on actionable defects and regressions: correctness, public API and
+        SemVer compatibility, async behavior and cancellation safety, concurrency
+        and synchronization, HTTP and WebSocket semantics, Serde request/response
+        contracts, timeout handling, connection and resource cleanup, error
+        propagation, secrets and credentials, malformed or unexpected server
+        responses, and edge cases. Check implementation changes against the 3x-ui
+        API contracts and reference material under api/** and the documented 3x-ui
+        behavior. Treat any introduction or use of unsafe Rust as prohibited.
+
+        Do not comment on formatting, naming, cosmetic style, or lint-only issues
+        unless they cause a concrete correctness, compatibility, performance, or
+        security problem. rustfmt, clippy, cargo test, cargo doc, MSRV checks,
+        cargo-semver-checks, cargo-deny, actionlint, and coverage are enforced by
+        CI; do not duplicate those deterministic checks.
+
+    - path: "tests/**/*.rs"
+      instructions: |
+        Focus on missing regression coverage, error paths, protocol edge cases,
+        async timing and cancellation bugs, race conditions, and flaky-test risks.
+        Do not leave cosmetic, formatting, naming, style, or lint-only comments.
+        Do not duplicate deterministic checks already enforced by CI.
+
+    - path: "api/**"
+      instructions: |
+        Treat these files as API contracts and reference material for reviewing
+        implementation changes. Verify endpoint semantics, request and response
+        types, serialization contracts, and consistency with the documented 3x-ui
+        behavior. Report substantive contract errors or drift, not cosmetic issues.
+
+    - path: "examples/**/*.rs"
+      instructions: |
+        Verify that examples remain compatible with the current public API,
+        demonstrate correct and safe library usage, and do not use deprecated or
+        obsolete APIs. Do not leave cosmetic, formatting, naming, style, or
+        lint-only comments, and do not duplicate deterministic CI checks.
+
+chat:
+  art: false
