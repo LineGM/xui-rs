@@ -1,6 +1,6 @@
 # Inbound API
 
-`Client::inbounds()` covers every inbound route registered by 3x-ui v3.7.0:
+`Client::inbounds()` covers every inbound route registered by 3x-ui v3.8.5:
 
 | SDK method | Upstream operation |
 |---|---|
@@ -54,7 +54,7 @@ These fragments can contain client credentials and private keys. Their values,
 along with client UUID and subscription IDs, are redacted from `Debug` output.
 
 `InboundProtocol::Amneziawg` and `AmneziaWgServerSettings` cover the panel's
-v3.7.0 AmneziaWG configuration. `InboundConfig::disable_flow` and
+v3.8.5 AmneziaWG configuration. `InboundConfig::disable_flow` and
 `InboundOption::awg_server` preserve the other new wire fields.
 
 ## Import and traffic synchronization
@@ -63,7 +63,7 @@ v3.7.0 AmneziaWG configuration. `InboundConfig::disable_flow` and
 the supplied `client_stats` rows while the server replaces panel-local IDs.
 This differs from an ordinary create and is why it has a separate SDK method.
 
-`push_client_traffic` accepts only the fields the receiving v3.7.0 service
+`push_client_traffic` accepts only the fields the receiving v3.8.5 service
 actually consumes: master GUID, client email, upload bytes, and download
 bytes. Unknown clients are ignored by the panel and each master's latest
 snapshot replaces its previous values.

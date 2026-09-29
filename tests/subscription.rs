@@ -42,7 +42,7 @@ async fn mount(
 
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
-async fn all_six_v370_subscription_routes_are_typed_and_secret_safe() {
+async fn all_six_v385_subscription_routes_are_typed_and_secret_safe() {
     let server = MockServer::start().await;
     let private_link = "vless://private-client-credential@example.com:443\n";
     let encoded = STANDARD.encode(private_link);

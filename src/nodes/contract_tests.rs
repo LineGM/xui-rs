@@ -76,7 +76,7 @@ const SDK_ROUTES: &[(&str, &str, &str)] = &[
 #[test]
 fn sdk_covers_every_openapi_and_source_route() {
     let openapi: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.8.5.openapi.json")).unwrap();
     let documented = openapi["paths"]
         .as_object()
         .unwrap()
@@ -105,7 +105,7 @@ fn sdk_covers_every_openapi_and_source_route() {
     assert_eq!(documented, implemented_openapi);
 
     let snapshot: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.nodes-routes.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.8.5.nodes-routes.json")).unwrap();
     let source = snapshot["routes"]
         .as_array()
         .unwrap()

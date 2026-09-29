@@ -10,7 +10,7 @@ use crate::{Client, Error, Result, client::AuthenticationScope, response::ApiRes
 
 const ROOT: &str = "panel/api/inbounds";
 
-/// Xray protocols accepted by 3x-ui v3.7.0 inbound endpoints.
+/// Xray protocols accepted by 3x-ui v3.8.5 inbound endpoints.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
@@ -39,6 +39,8 @@ pub enum InboundProtocol {
     Mtproto,
     /// Embedded `AmneziaWG` tunnel.
     Amneziawg,
+    /// TUIC v5 through the bundled sidecar.
+    Tuic,
 }
 
 impl InboundProtocol {
@@ -57,6 +59,7 @@ impl InboundProtocol {
             Self::Tun => "tun",
             Self::Mtproto => "mtproto",
             Self::Amneziawg => "amneziawg",
+            Self::Tuic => "tuic",
         }
     }
 }
@@ -178,7 +181,7 @@ pub struct InboundConfig {
     pub total: i64,
     /// Human-readable label.
     pub remark: String,
-    /// One-based position in subscription output.
+    /// Position in subscription output; negatives are allowed, and zero normalizes to one.
     pub sub_sort_index: i32,
     /// Whether the inbound is enabled.
     pub enable: bool,
@@ -382,6 +385,15 @@ pub struct InboundOption {
     /// Complete `AmneziaWG` server settings, when applicable.
     #[serde(default)]
     pub awg_server: Option<AmneziaWgServerSettings>,
+    /// Transport network, when supplied by the panel.
+    #[serde(default)]
+    pub network: String,
+    /// Transport security, when supplied by the panel.
+    #[serde(default)]
+    pub security: String,
+    /// Complete TUIC sidecar settings, when applicable.
+    #[serde(default)]
+    pub tuic_server: Option<TuicServerSettings>,
 }
 
 /// Server-side settings embedded in an `AmneziaWG` inbound.
@@ -595,7 +607,7 @@ impl<'client> InboundsApi<'client> {
     /// # Errors
     ///
     /// Returns an error when the request fails or the response violates the
-    /// v3.7.0 contract.
+    /// v3.8.5 contract.
     pub async fn list(self) -> Result<Vec<Inbound>> {
         self.get_object("list").await
     }
@@ -711,7 +723,7 @@ impl<'client> InboundsApi<'client> {
             .await
     }
 
-    /// Changes only the inbound's one-based subscription ordering index.
+    /// Changes only the inbound's nonzero subscription ordering index (negatives allowed).
     ///
     /// This avoids replacing large protocol settings and potentially writing
     /// a stale client list during a concurrent edit.
@@ -873,6 +885,45 @@ impl<'client> InboundsApi<'client> {
     }
 }
 
+/// TUIC v5 server settings, using the sidecar's `snake_case` wire names.
+#[derive(Clone, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct TuicServerSettings {
+    /// Certificate file path.
+    pub certificate: String,
+    /// Private-key file path.
+    pub private_key: String,
+    /// Congestion control algorithm, such as `bbr`.
+    pub congestion_control: String,
+    /// Advertised ALPN protocols.
+    pub alpn: Vec<String>,
+    /// UDP relay mode, such as `native`.
+    pub udp_relay_mode: String,
+    /// Enables zero-RTT handshakes.
+    pub zero_rtt_handshake: bool,
+    /// Sidecar log level.
+    pub log_level: String,
+    /// Maximum idle duration in seconds.
+    pub max_idle_time: i32,
+    /// Authentication timeout in seconds.
+    pub authentication_timeout: i32,
+    /// Maximum relayed UDP packet size in bytes.
+    pub max_udp_relay_packet_size: i32,
+    /// TLS server name.
+    pub sni: String,
+}
+
+impl fmt::Debug for TuicServerSettings {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TuicServerSettings")
+            .field("private_key", &"[REDACTED]")
+            .field("congestion_control", &self.congestion_control)
+            .field("alpn", &self.alpn)
+            .finish_non_exhaustive()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -975,7 +1026,7 @@ mod tests {
     #[test]
     fn sdk_covers_openapi_and_source_routes() {
         let openapi: Value =
-            serde_json::from_str(include_str!("../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
+            serde_json::from_str(include_str!("../spec/3x-ui-v3.8.5.openapi.json")).unwrap();
         let paths = openapi["paths"].as_object().unwrap();
         let http_methods = [
             "get", "post", "put", "patch", "delete", "head", "options", "trace",
@@ -986,7 +1037,7 @@ mod tests {
             .flat_map(serde_json::Map::keys)
             .filter(|method| http_methods.contains(&method.as_str()))
             .count();
-        assert_eq!(operation_count, 186, "vendored OpenAPI changed");
+        assert_eq!(operation_count, 193, "vendored OpenAPI changed");
 
         let documented = paths
             .iter()
@@ -1018,7 +1069,7 @@ mod tests {
         assert_eq!(documented, implemented_openapi);
 
         let source: Value =
-            serde_json::from_str(include_str!("../spec/3x-ui-v3.7.0.inbounds-routes.json"))
+            serde_json::from_str(include_str!("../spec/3x-ui-v3.8.5.inbounds-routes.json"))
                 .unwrap();
         let source_routes = source["routes"]
             .as_array()
@@ -1059,7 +1110,7 @@ mod tests {
     }
 
     #[test]
-    fn actual_v370_option_extensions_are_typed() {
+    fn actual_v385_option_extensions_are_typed() {
         let option: InboundOption = serde_json::from_value(serde_json::json!({
             "id": 7,
             "remark": "wg",
@@ -1109,6 +1160,7 @@ mod tests {
                 InboundProtocol::Tun,
                 InboundProtocol::Mtproto,
                 InboundProtocol::Amneziawg,
+                InboundProtocol::Tuic,
             ]
             .map(InboundProtocol::as_str),
             [
@@ -1124,6 +1176,7 @@ mod tests {
                 "tun",
                 "mtproto",
                 "amneziawg",
+                "tuic",
             ]
         );
     }

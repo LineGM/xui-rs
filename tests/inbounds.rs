@@ -73,7 +73,7 @@ async fn empty_all_links_normalizes_the_upstream_null_slice() {
 
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
-async fn every_v370_inbound_route_is_wired() {
+async fn every_v385_inbound_route_is_wired() {
     let server = MockServer::start().await;
     let routes = [
         (

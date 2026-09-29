@@ -20,7 +20,7 @@ const SDK_MESSAGE_TYPES: &[EventMessageType] = &[
 #[test]
 fn sdk_covers_websocket_route_and_every_source_message_type() {
     let source: Value = serde_json::from_str(include_str!(
-        "../../spec/3x-ui-v3.7.0.websocket-contract.json"
+        "../../spec/3x-ui-v3.8.5.websocket-contract.json"
     ))
     .unwrap();
     assert_eq!(source["route"]["method"], "get");
@@ -47,22 +47,27 @@ fn sdk_covers_websocket_route_and_every_source_message_type() {
     assert_eq!(source_types, sdk_types);
 
     let openapi: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.8.5.openapi.json")).unwrap();
     assert_eq!(openapi["paths"]["/ws"]["get"]["operationId"], "get_ws");
-    let documented_messages = openapi["paths"]
-        .as_object()
-        .unwrap()
-        .values()
-        .filter_map(|path| path.get("ws"))
-        .map(|operation| operation["operationId"].as_str().unwrap())
-        .collect::<BTreeSet<_>>();
-    assert_eq!(
-        documented_messages,
-        BTreeSet::from([
-            "ws_type_invalidate",
-            "ws_type_notification",
-            "ws_type_status",
-            "ws_type_xrayState",
-        ])
+    assert!(
+        openapi["paths"]
+            .as_object()
+            .unwrap()
+            .values()
+            .all(|path| path.get("ws").is_none())
     );
+    let documented_messages = openapi["paths"]["/ws"]["get"]["x-websocket-events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|event| event["type"].as_str().unwrap())
+        .collect::<BTreeSet<_>>();
+    let broadcast_types = source_types
+        .into_iter()
+        .filter(|name| *name != "clients")
+        .collect::<BTreeSet<_>>();
+    assert_eq!(documented_messages, broadcast_types);
+    let envelope = &openapi["components"]["schemas"]["WebSocketEnvelope"]["properties"];
+    assert!(envelope.get("payload").is_some());
+    assert_eq!(envelope["time"]["type"], "integer");
 }

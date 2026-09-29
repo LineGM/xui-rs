@@ -4,7 +4,32 @@ All notable changes to this project will be documented in this file. The
 format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.0.0] - Unreleased
+
+### Changed
+
+- Target the complete tagged 3x-ui v3.8.5 API; replace pinned OpenAPI and route
+  snapshots and advance the disposable live-test image to the exact release digest.
+- Distinguish omitted tunnel keepalive from explicit zero with `Option<i32>`.
+- Add fractional balancer member weights; balancer models now implement
+  `PartialEq` without `Eq`. Extended public struct literals require new fields.
+
+### Added
+
+- TUIC v5, Discord settings/test action, Happ settings/Crypt5 links/response headers,
+  HWID slot status, device fingerprints, and Mihomo/legacy Clash subscription routes.
+- All 147 persisted settings, outbound subscription user agents and preview support,
+  bulk HWID/ad-tag adjustments, and REALITY certificate-chain metadata.
+- A migration guide with the full 199-commit upstream inventory and contribution history.
+- Real-panel tests on every CI push/PR through the shared release/live workflow,
+  retained diagnostics and coverage artifacts, and a 95% line-coverage floor.
+
+### Fixed
+
+- Require rustls 0.23.45 to address RUSTSEC-2026-0285 in the existing dependency tree.
+- Decode REALITY scan field names with the exact upstream capitalization.
+- Normalize nullable inbound links and panel/Xray log collections to empty lists.
+- Preserve and redact newly introduced secrets during settings round trips.
 
 ## [1.0.2] - 2026-09-02
 

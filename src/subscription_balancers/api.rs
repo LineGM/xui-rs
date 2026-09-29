@@ -94,7 +94,19 @@ impl<'client> SubscriptionBalancersApi<'client> {
         let strategy = input.strategy.as_str().ok_or_else(|| {
             Error::Configuration("an unknown subscription-balancer strategy cannot be sent".into())
         })?;
+        if input
+            .member_weights
+            .values()
+            .any(|weight| !weight.is_finite() || *weight <= 0.0)
+        {
+            return Err(Error::Configuration(
+                "balancer weights must be finite and positive".into(),
+            ));
+        }
+        let weights = serde_json::to_string(&input.member_weights)
+            .map_err(|_| Error::Configuration("cannot encode balancer weights".into()))?;
         let mut form = vec![
+            ("memberWeights", weights),
             ("remark", input.remark.clone()),
             ("strategy", strategy.to_owned()),
             ("sortOrder", input.sort_order.to_string()),

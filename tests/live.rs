@@ -1,11 +1,12 @@
-//! Opt-in integration tests against a real disposable 3x-ui v3.7.0 panel.
+//! Opt-in integration tests against a real disposable 3x-ui v3.8.5 panel.
 
 use std::{collections::BTreeSet, env, error::Error as StdError, io, time::Duration};
 
 use serde_json::json;
 use xui_rs::{
     ApiTokenCreateRequest, ApiTokenScope, Client, ErrorKind, InboundConfig, InboundProtocol,
-    LoginRequest, OpenApiDocument, ServerStatus,
+    LoginRequest, OpenApiDocument, ServerStatus, SubscriptionBalancerInput,
+    SubscriptionBalancerStrategy,
 };
 
 type TestResult<T = ()> = Result<T, Box<dyn StdError + Send + Sync>>;
@@ -71,7 +72,7 @@ async fn wait_for_server_status(client: &Client) -> TestResult<ServerStatus> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "requires XUI_LIVE_* credentials for a real 3x-ui v3.7.0 panel"]
+#[ignore = "requires XUI_LIVE_* credentials for a real 3x-ui v3.8.5 panel"]
 async fn live_cookie_http_and_websocket_smoke() -> TestResult {
     let config = LiveConfig::from_env()?;
     let client = config.client()?;
@@ -95,6 +96,11 @@ async fn live_cookie_http_and_websocket_smoke() -> TestResult {
     require(
         settings.settings.web.web_base_path == client.base_url().path(),
         "runtime web base path differs from the SDK base URL",
+    )?;
+    let xray_settings = client.xray_settings().settings().await?;
+    require(
+        !xray_settings.geodata_sources.is_empty(),
+        "tagged panel did not return its standard geodata presets",
     )?;
 
     let status = wait_for_server_status(&client).await?;
@@ -137,9 +143,7 @@ async fn live_cookie_http_and_websocket_smoke() -> TestResult {
         "full and slim inbound lists have different lengths",
     )?;
 
-    let mut events = client.events().connect().await?;
-    events.close().await?;
-    require(events.is_closed(), "WebSocket did not close locally")?;
+    check_websocket_status(&client, &config.expected_version).await?;
 
     client.auth().logout().await?;
     let error = client
@@ -154,7 +158,7 @@ async fn live_cookie_http_and_websocket_smoke() -> TestResult {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "requires XUI_LIVE_ALLOW_MUTATION=1 and a disposable 3x-ui v3.7.0 panel"]
+#[ignore = "requires XUI_LIVE_ALLOW_MUTATION=1 and a disposable 3x-ui v3.8.5 panel"]
 async fn live_token_and_inbound_round_trip_with_cleanup() -> TestResult {
     require(
         env::var("XUI_LIVE_ALLOW_MUTATION").as_deref() == Ok("1"),
@@ -170,6 +174,7 @@ async fn live_token_and_inbound_round_trip_with_cleanup() -> TestResult {
         .await?;
     let token_id = created_token.id;
     let mut inbound_id = None;
+    let mut balancer_id = None;
 
     let operation_result: TestResult = async {
         require(
@@ -187,6 +192,7 @@ async fn live_token_and_inbound_round_trip_with_cleanup() -> TestResult {
             .build()?;
         bearer.settings().all().await?;
         wait_for_server_status(&bearer).await?;
+        check_disabled_token(&client, &bearer, token_id).await?;
 
         let inbound = live_inbound_config();
 
@@ -217,16 +223,10 @@ async fn live_token_and_inbound_round_trip_with_cleanup() -> TestResult {
                 .any(|item| item.id == created.id),
             "created inbound is absent from the slim list",
         )?;
-        require(
-            client
-                .inbounds()
-                .options()
-                .await?
-                .iter()
-                .any(|item| item.id == created.id),
-            "created inbound is absent from options",
-        )?;
+        check_inbound_option(&client, created.id).await?;
         client.inbounds().all_links().await?;
+
+        check_weighted_balancer_and_sort(&client, created.id, &mut balancer_id).await?;
 
         let mut update = fetched.to_config();
         update.remark.push_str("-updated");
@@ -241,6 +241,14 @@ async fn live_token_and_inbound_round_trip_with_cleanup() -> TestResult {
     }
     .await;
 
+    let balancer_cleanup = match balancer_id {
+        Some(id) => client
+            .subscription_balancers()
+            .delete(id)
+            .await
+            .map_err(Into::into),
+        None => Ok(()),
+    };
     let inbound_cleanup = match inbound_id {
         Some(id) => client
             .inbounds()
@@ -256,11 +264,126 @@ async fn live_token_and_inbound_round_trip_with_cleanup() -> TestResult {
         .await
         .map_err(Into::into);
 
-    operation_result.and(inbound_cleanup).and(token_cleanup)
+    operation_result
+        .and(balancer_cleanup)
+        .and(inbound_cleanup)
+        .and(token_cleanup)
+}
+
+async fn check_inbound_option(client: &Client, inbound_id: i64) -> TestResult {
+    require(
+        client
+            .inbounds()
+            .options()
+            .await?
+            .iter()
+            .any(|item| item.id == inbound_id),
+        "created inbound is absent from options",
+    )?;
+    Ok(())
+}
+
+async fn check_websocket_status(client: &Client, expected_version: &str) -> TestResult {
+    let mut events = client.events().connect().await?;
+    tokio::time::timeout(Duration::from_secs(30), async {
+        while let Some(event) = events.next_event().await? {
+            if let xui_rs::PanelEventKind::Status(status) = event.kind {
+                require(
+                    event.timestamp_ms > 0,
+                    "WebSocket envelope has no timestamp",
+                )?;
+                return require(
+                    normalized_version(&status.panel_version)
+                        == normalized_version(expected_version),
+                    "WebSocket status did not decode the tagged panel version",
+                );
+            }
+        }
+        Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "WebSocket closed before status",
+        )
+        .into())
+    })
+    .await??;
+    events.close().await?;
+    require(events.is_closed(), "WebSocket did not close locally")
+}
+
+async fn check_disabled_token(client: &Client, bearer: &Client, token_id: i64) -> TestResult {
+    client
+        .settings()
+        .set_api_token_enabled(token_id, ApiTokenScope::Admin, false)
+        .await?;
+    let error = bearer
+        .settings()
+        .all()
+        .await
+        .expect_err("disabled token must be rejected");
+    require(
+        error.kind() == ErrorKind::Unauthorized,
+        "disabled token did not return HTTP 401",
+    )?;
+    client
+        .settings()
+        .set_api_token_enabled(token_id, ApiTokenScope::Admin, true)
+        .await?;
+    bearer.settings().all().await?;
+    Ok(())
+}
+
+async fn check_weighted_balancer_and_sort(
+    client: &Client,
+    inbound_id: i64,
+    balancer_id: &mut Option<i64>,
+) -> TestResult {
+    let mut balancer = SubscriptionBalancerInput::new("xui-rs-live-weights", vec![inbound_id]);
+    balancer.strategy = SubscriptionBalancerStrategy::LeastLoad;
+    balancer.member_weights.insert(inbound_id, 0.5);
+    let weighted = client.subscription_balancers().create(&balancer).await?;
+    *balancer_id = Some(weighted.id);
+    require(
+        weighted.member_weights == balancer.member_weights,
+        "created balancer lost fractional member weights",
+    )?;
+    balancer.member_weights.insert(inbound_id, 1.25);
+    let weighted = client
+        .subscription_balancers()
+        .update(weighted.id, &balancer)
+        .await?;
+    require(
+        weighted.member_weights == balancer.member_weights,
+        "updated balancer lost fractional member weights",
+    )?;
+    require(
+        client
+            .subscription_balancers()
+            .list()
+            .await?
+            .iter()
+            .any(|item| item.id == weighted.id && item.member_weights == balancer.member_weights),
+        "listed balancer differs from the stored weighted configuration",
+    )?;
+    client
+        .inbounds()
+        .set_subscription_sort_index(inbound_id, -2)
+        .await?;
+    require(
+        client
+            .inbounds()
+            .get(inbound_id)
+            .await?
+            .config
+            .sub_sort_index
+            == -2,
+        "negative subscription sort index was not preserved",
+    )?;
+
+    Ok(())
 }
 
 fn json_include() -> &'static str {
-    include_str!("../spec/3x-ui-v3.7.0.openapi.json")
+    include_str!("../spec/3x-ui-v3.8.5.openapi.json")
 }
 
 fn live_inbound_config() -> InboundConfig {
@@ -310,13 +433,13 @@ fn http_operations(document: &OpenApiDocument) -> BTreeSet<String> {
 
 fn source_only_panel_operations() -> TestResult<BTreeSet<String>> {
     const ROUTE_SNAPSHOTS: &[&str] = &[
-        include_str!("../spec/3x-ui-v3.7.0.clients-routes.json"),
-        include_str!("../spec/3x-ui-v3.7.0.hosts-routes.json"),
-        include_str!("../spec/3x-ui-v3.7.0.inbounds-routes.json"),
-        include_str!("../spec/3x-ui-v3.7.0.remaining-http-routes.json"),
-        include_str!("../spec/3x-ui-v3.7.0.server-routes.json"),
-        include_str!("../spec/3x-ui-v3.7.0.settings-routes.json"),
-        include_str!("../spec/3x-ui-v3.7.0.subscription-balancers-routes.json"),
+        include_str!("../spec/3x-ui-v3.8.5.clients-routes.json"),
+        include_str!("../spec/3x-ui-v3.8.5.hosts-routes.json"),
+        include_str!("../spec/3x-ui-v3.8.5.inbounds-routes.json"),
+        include_str!("../spec/3x-ui-v3.8.5.remaining-http-routes.json"),
+        include_str!("../spec/3x-ui-v3.8.5.server-routes.json"),
+        include_str!("../spec/3x-ui-v3.8.5.settings-routes.json"),
+        include_str!("../spec/3x-ui-v3.8.5.subscription-balancers-routes.json"),
     ];
     let mut operations = BTreeSet::new();
     for snapshot in ROUTE_SNAPSHOTS {

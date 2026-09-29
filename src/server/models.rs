@@ -248,7 +248,7 @@ pub struct ServerStatus {
     pub app_stats: AppStats,
 }
 
-/// History windows accepted by v3.7.0 history endpoints.
+/// History windows accepted by v3.8.5 history endpoints.
 ///
 /// Every response contains at most 60 points. The wire value is the bucket size
 /// in seconds, while variant names describe the resulting history window shown
@@ -697,22 +697,29 @@ pub struct RealityScanResult {
     /// Overall REALITY feasibility verdict.
     pub feasible: bool,
     /// Whether TLS 1.3 was negotiated.
-    #[serde(rename = "TLS13")]
+    #[serde(rename = "tls13", alias = "TLS13")]
     pub tls13: bool,
     /// Negotiated TLS version.
-    #[serde(rename = "TLSVersion")]
+    #[serde(rename = "tlsVersion", alias = "TLSVersion")]
     pub tls_version: String,
     /// Whether HTTP/2 was negotiated.
-    #[serde(rename = "H2")]
+    #[serde(rename = "h2", alias = "H2")]
     pub h2: bool,
     /// Negotiated ALPN.
-    #[serde(rename = "ALPN")]
+    #[serde(rename = "alpn", alias = "ALPN")]
     pub alpn: String,
     /// Whether X25519 was negotiated.
-    #[serde(rename = "X25519")]
+    #[serde(rename = "x25519", alias = "X25519")]
     pub x25519: bool,
     /// Negotiated curve identifier.
+    #[serde(rename = "curveID", alias = "curveId")]
     pub curve_id: String,
+    /// Whether the target resolved to a private address.
+    pub private_target: bool,
+    /// Whether the presented certificate chain is trusted, ignoring its name.
+    pub cert_chain_valid: bool,
+    /// Total DER certificate-chain size in bytes (ML-DSA-65 requires at least 3500).
+    pub cert_chain_bytes: i32,
     /// Whether the certificate validated.
     pub cert_valid: bool,
     /// Leaf certificate subject.

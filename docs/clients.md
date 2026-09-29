@@ -1,7 +1,7 @@
 # Client API
 
-`Client::clients()` covers all 46 routes registered and documented by the
-v3.7.0 client and group controllers.
+`Client::clients()` covers all 47 routes registered and documented by the
+v3.8.5 client and group controllers.
 
 | Area | SDK methods |
 |---|---|
@@ -21,7 +21,7 @@ creates an enabled client with unlimited quota and lets the server generate the
 protocol credential appropriate for each target inbound. The writable fields
 cover VMess/VLESS, Trojan, Shadowsocks, Hysteria, WireGuard, MTProto,
 per-inbound allowed IPs and forwarded ports, HWID limits, and the expanded
-v3.7.0 traffic-reset policy.
+v3.8.5 traffic-reset policy.
 
 `ClientRecord` is the canonical database-backed response. The different types
 are deliberate: for example, writable WireGuard `allowedIPs` is an array while
@@ -41,7 +41,7 @@ Ok(())
 }
 ```
 
-`update_on_inbounds` sends the v3.7.0 `inboundIds` query filter when only
+`update_on_inbounds` sends the v3.8.5 `inboundIds` query filter when only
 selected attachments should have their settings JSON rewritten. Canonical
 record fields such as group and enabled state remain global; an empty filter
 has the server's ordinary unfiltered-update meaning.
@@ -74,7 +74,7 @@ underlying client counters.
 ## HWID devices
 
 `hwid_devices`, `clear_hwid_devices`, and `delete_hwid_device` expose the
-v3.7.0 device-limit controller. Returned hardware identifiers are redacted
+v3.8.5 device-limit controller. Returned hardware identifiers are redacted
 from `Debug`; the explicit field remains available for administration.
 
 ## Paths and secrets
@@ -87,3 +87,11 @@ Protocol IDs, passwords, Hysteria auth, WireGuard private/pre-shared keys,
 MTProto secrets, subscription IDs, advertisement tags, and external-link URLs
 are redacted from `Debug`. They remain explicitly accessible and serializable
 when an application intentionally needs to update or export them.
+
+## 3.8.5 additions
+
+`happ_link(id)` generates a local encrypted Happ subscription link.
+`BulkAdjustRequest` accepts `limit_hwid` (`None` preserves; `Some(0)` disables)
+and `ad_tag` (empty preserves; `none` clears). Registered devices include a
+short `fingerprint`. `ClientConfig::keep_alive` uses `Option<i32>` to distinguish
+preservation from explicitly disabling keepalive with `Some(0)`.

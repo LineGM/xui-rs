@@ -1,6 +1,6 @@
 # Public API baseline
 
-`public-api.txt` is the current xui-rs 1.x public contract generated from
+`public-api.txt` is the current xui-rs 2.x public contract generated from
 rustdoc JSON. It includes owned items, methods, fields, explicit trait
 implementations, module paths, and crate-root re-exports while omitting noisy
 blanket, auto-trait, and auto-derived implementations.
@@ -23,6 +23,6 @@ scripts/public-api.sh update
 git diff -- api/public-api.txt
 ```
 
-Never update the snapshot merely to make a check pass. Within 1.x, additions
+Never update the snapshot merely to make a check pass. Within 2.x, additions
 must remain backward compatible; removals or signature changes require the
 next major release.

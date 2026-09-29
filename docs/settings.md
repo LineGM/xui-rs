@@ -1,7 +1,7 @@
 # Panel and Xray settings APIs
 
-3x-ui v3.7.0 splits this surface between `SettingController` and
-`XraySettingController`. `Client::settings()` covers the 14 panel-settings,
+3x-ui v3.8.5 splits this surface between `SettingController` and
+`XraySettingController`. `Client::settings()` covers the 15 panel-settings,
 credential, notification, and API-token routes. `Client::xray_settings()`
 covers all 26 Xray settings and integration routes. All 40 operations are
 documented by the tagged OpenAPI and independently pinned from the Go routers.
@@ -42,7 +42,7 @@ tokens. `create_api_token()` accepts `ApiTokenCreateRequest` with a typed
 admin, monitor, or node-sync scope and optional expiry, then returns
 `CreatedApiToken`; copy its token to secure storage immediately because the
 panel shows it only once. Delete and enable operations require the expected
-scope, matching v3.7.0's confused-deputy protection. `Debug` never prints the
+scope, matching v3.8.5's confused-deputy protection. `Debug` never prints the
 token.
 
 SMTP testing is an intentional exception to the normal 3x-ui envelope: an
@@ -64,7 +64,7 @@ available through `XrayConfig::as_value`; `Debug` is redacted. WARP and NordVPN
 actions return `SensitivePayload`, whose raw string and optional parsed JSON are
 available explicitly without appearing in logs.
 
-PIA joins the typed integration surface in v3.7.0: country/region/server
+PIA joins the typed integration surface in v3.8.5: country/region/server
 discovery, registration, persisted account state, deletion, and key creation.
 Private keys and credentials remain redacted. Geodata file, category, entry,
 pagination, and token-validation responses are also fully typed.
@@ -81,3 +81,15 @@ outbounds, parsed previews, and refresh results are redacted from `Debug`
 because subscription URLs and Xray outbound documents commonly contain access
 tokens, passwords, or private keys. Both the normal HTTP DELETE endpoint and
 the source-defined POST compatibility alias are exposed.
+
+## 3.8.5 additions
+
+Persisted settings cover all 147 fields. `PanelSettings::discord` carries the
+Discord bot configuration and `subscriptions.happ` carries Happ application
+settings. Blank Discord tokens preserve stored credentials; clearing one
+requires `PanelSettingsUpdate::clear_discord_bot_token`. `test_discord` is an
+explicit operation that asks the panel to send a notification.
+
+Outbound subscription create/update inputs include `user_agent`; use
+`parse_outbound_subscription_with_user_agent` for previews with the same header.
+Xray settings snapshots include typed `geodata_sources` presets.

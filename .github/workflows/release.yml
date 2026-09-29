@@ -140,20 +140,8 @@ jobs:
         run: cargo test --locked --all-targets --all-features
 
   live:
-    name: Verify against 3x-ui v3.7.0
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Install Rust 1.98.0
-        uses: dtolnay/rust-toolchain@f8be11a05b1d4f3fcebe6410cc16743212b999b0 # 1.98.0
-      - name: Cache Rust build data
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - name: Test against isolated 3x-ui
-        run: scripts/live-test.sh
+    name: Verify against 3x-ui v3.8.5
+    uses: ./.github/workflows/live.yml
 
   publish:
     name: Publish release

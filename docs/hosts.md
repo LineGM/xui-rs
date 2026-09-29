@@ -1,6 +1,6 @@
 # Subscription host overrides
 
-`Client::hosts()` covers all 12 routes registered by the 3x-ui v3.7.0
+`Client::hosts()` covers all 12 routes registered by the 3x-ui v3.8.5
 `HostController`, including the documented `/panel/api/hosts/bulk/add` alias.
 
 Hosts are overrides used while generating subscription links and client
@@ -56,7 +56,7 @@ notation. Group IDs in URL paths are percent-encoded as one segment.
 
 ## Typed overrides
 
-`HostSecurity`, `MihomoIpVersion`, and `SubscriptionFormat` expose the v3.7.0
+`HostSecurity`, `MihomoIpVersion`, and `SubscriptionFormat` expose the v3.8.5
 vocabulary while retaining unknown strings from newer panels. `VlessRoute`
 accepts only the source-supported 0–65535 range and maps its disabled state to
 the historical empty-string wire representation.

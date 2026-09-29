@@ -14,6 +14,6 @@ pub use models::{
     ClientExternalLinkInput, ClientExternalLinkKind, ClientHwidDevice, ClientIpEntry, ClientIpInfo,
     ClientIpsByGuid, ClientMutationStatus, ClientPage, ClientPageRequest, ClientRecord,
     ClientReverse, ClientSlim, ClientSort, ClientStatusFilter, ClientSummary,
-    ClientWithAttachments, ClientsByGuid, DeletedCount, GroupName, GroupSummary, LastOnlineByEmail,
-    SortOrder,
+    ClientWithAttachments, ClientsByGuid, DeletedCount, GroupName, GroupSummary, HappLink,
+    LastOnlineByEmail, SortOrder,
 };

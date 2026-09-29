@@ -178,11 +178,17 @@ pub enum RemoteInboundProtocol {
     Tun,
     /// `MTProto` proxy.
     Mtproto,
+    /// Embedded `AmneziaWG` tunnel.
+    Amneziawg,
+    /// TUIC v5 sidecar.
+    Tuic,
     /// Value introduced by a newer panel release.
     Other(String),
 }
 
 impl_string_enum!(RemoteInboundProtocol {
+    "amneziawg" => Amneziawg,
+    "tuic" => Tuic,
     "" => Unknown,
     "vmess" => Vmess,
     "vless" => Vless,
@@ -199,8 +205,8 @@ impl_string_enum!(RemoteInboundProtocol {
 
 /// One browser-safe view of a direct or transitive node.
 ///
-/// The upstream `OpenAPI` schema is stale and includes `apiToken`; the tagged
-/// v3.7.0 controller deliberately returns only `hasApiToken`.
+/// The tagged v3.8.5 read contract exposes `hasApiToken`; the token itself
+/// is write-only and is never included in node views.
 #[derive(Clone, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct NodeView {

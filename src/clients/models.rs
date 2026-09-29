@@ -63,9 +63,9 @@ pub struct ClientConfig {
     /// `WireGuard` pre-shared key.
     #[serde(skip_serializing_if = "String::is_empty")]
     pub pre_shared_key: String,
-    /// `WireGuard` keepalive interval.
-    #[serde(skip_serializing_if = "is_zero_i32")]
-    pub keep_alive: i32,
+    /// `WireGuard` keepalive seconds: `None` preserves the stored value; `Some(0)` disables it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub keep_alive: Option<i32>,
     /// `AmneziaWG` per-client port-forwarding specification.
     #[serde(skip_serializing_if = "String::is_empty")]
     pub forwarded_ports: String,
@@ -189,7 +189,7 @@ pub struct ClientRecord {
     pub flow: String,
     /// Protocol security method.
     pub security: String,
-    /// VLESS reverse-proxy settings, serialized as a nested object by v3.7.0.
+    /// VLESS reverse-proxy settings, serialized as a nested object by v3.8.5.
     pub reverse: Option<ClientReverse>,
     /// `WireGuard` private key.
     pub private_key: String,
@@ -262,7 +262,7 @@ impl ClientRecord {
                 .collect(),
             allowed_ips_by_inbound: HashMap::new(),
             pre_shared_key: self.pre_shared_key.clone(),
-            keep_alive: self.keep_alive,
+            keep_alive: Some(self.keep_alive),
             forwarded_ports: self.forwarded_ports.clone(),
             secret: self.secret.clone(),
             ad_tag: self.ad_tag.clone(),
@@ -384,6 +384,8 @@ pub struct ClientHwidDevice {
     pub device_os: String,
     /// Reported operating-system version.
     pub os_version: String,
+    /// Short fingerprint of the registered HWID hash.
+    pub fingerprint: String,
     /// Reported device model.
     pub device_model: String,
 }
@@ -798,7 +800,7 @@ impl BulkFlowAdjustment {
 }
 
 /// Bulk expiry/quota/flow adjustment request.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Default, Eq, PartialEq)]
 pub struct BulkAdjustRequest {
     /// Target emails.
     pub emails: Vec<String>,
@@ -808,6 +810,24 @@ pub struct BulkAdjustRequest {
     pub add_bytes: i64,
     /// Optional typed flow directive.
     pub flow: BulkFlowAdjustment,
+    /// Device limit: `None` leaves it unchanged; `Some(0)` disables the limit.
+    pub limit_hwid: Option<i32>,
+    /// `MTProto` advertisement tag; empty leaves it unchanged, `none` clears it.
+    pub ad_tag: String,
+}
+
+impl fmt::Debug for BulkAdjustRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("BulkAdjustRequest")
+            .field("emails", &self.emails)
+            .field("add_days", &self.add_days)
+            .field("add_bytes", &self.add_bytes)
+            .field("flow", &self.flow)
+            .field("limit_hwid", &self.limit_hwid)
+            .field("ad_tag", &"[REDACTED]")
+            .finish()
+    }
 }
 
 /// Per-client failure or skip report used by bulk operations.
@@ -966,6 +986,23 @@ const fn is_zero_i32(value: &i32) -> bool {
 #[allow(clippy::trivially_copy_pass_by_ref)]
 const fn is_zero_i64(value: &i64) -> bool {
     *value == 0
+}
+
+/// Locally generated, secret-bearing Happ Crypt5 subscription link.
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HappLink {
+    /// Encrypted subscription link for importing into Happ.
+    pub encrypted_link: String,
+}
+
+impl fmt::Debug for HappLink {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("HappLink")
+            .field("encrypted_link", &"[REDACTED]")
+            .finish()
+    }
 }
 
 #[cfg(test)]

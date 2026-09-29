@@ -350,6 +350,10 @@ impl<'client> ClientsApi<'client> {
             add_days: i32,
             add_bytes: i64,
             flow: &'static str,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            limit_hwid: Option<i32>,
+            #[serde(skip_serializing_if = "str::is_empty")]
+            ad_tag: &'a str,
         }
 
         self.post_object(
@@ -359,9 +363,21 @@ impl<'client> ClientsApi<'client> {
                 add_days: request.add_days,
                 add_bytes: request.add_bytes,
                 flow: request.flow.as_str(),
+                limit_hwid: request.limit_hwid,
+                ad_tag: &request.ad_tag,
             }),
         )
         .await
+    }
+
+    /// Generates a local Happ Crypt5 link for a client database identifier.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if Happ links are disabled, the client is missing, or transport fails.
+    pub async fn happ_link(self, client_id: i64) -> Result<super::HappLink> {
+        self.post_object(&format!("happLink/{client_id}"), None::<&()>)
+            .await
     }
 
     /// Enables multiple clients.
@@ -880,7 +896,7 @@ mod tests {
     }
 
     #[test]
-    fn page_request_uses_actual_v370_query_vocabulary() {
+    fn page_request_uses_actual_v385_query_vocabulary() {
         let request = ClientPageRequest {
             statuses: vec![ClientStatusFilter::Online, ClientStatusFilter::Expiring],
             protocols: vec![InboundProtocol::Vless],

@@ -1,43 +1,31 @@
 # Upstream API contract
 
-This directory pins the contract used to build and test `xui-rs`.
-
 - Upstream: `MHSanaei/3x-ui`
-- Release: `v3.7.0`
-- Commit: `f727d04f6522bb94a8fb52e8352fdcafb51c11e1`
+- Release: `v3.8.5`
+- Commit: `7ef22f94c950ff09f0870e2295fa65ad5968742c`
 - OpenAPI source: `docs/public/openapi.json`
-- OpenAPI SHA-256: `a8c92b434efc1f0c5e68de0a719150bd2056be6b45e784c2ccbad4fdd581cd50`
-- OpenAPI operations: 186
-- Official container runtime OpenAPI operations: 186
+- OpenAPI SHA-256: `9a24b28541f35a447a2c6c5d17bfe78bd656cbb202d0648ab5726bf8415b7388`
+- OpenAPI HTTP operations: 193 (includes the WebSocket upgrade)
+- Container index: `sha256:e0f90c10902e0e74f947d5a9efe017b273804477430233bbfc4918542ffe366c`
 
-`3x-ui-v3.7.0.openapi.json` is an unmodified copy from that release. The
-smaller per-domain route snapshots record endpoints found in the Go routers but
-alongside the OpenAPI contract. Contract tests compare both sources with the
-SDK route inventory so controller drift cannot hide behind stale generated
-documentation.
+`3x-ui-v3.8.5.openapi.json` is copied verbatim from the tagged source.
+Per-domain route snapshots were checked against the tagged Go routers. The
+subscription snapshot also records four conditional source-only operations:
+GET/HEAD for `/mihomo/{subid}` and `/clash-legacy/{subid}`. The aliases are
+registered only when Clash is enabled and their paths are not occupied by a
+configured subscription format.
 
-The official v3.7.0 container's runtime document matches the 186 static
-operations. The live test compares normalized method/path sets against the
-vendored document, so runtime drift is detected without treating placeholder
-names as different routes.
+The separate subscription server exposes twelve GET/HEAD operations, including
+the read-only HWID status route. Its HEAD routes now appear in OpenAPI.
+The panel runtime document is checked against this snapshot by the disposable
+live-test harness; tests normalize placeholder names before comparing routes.
 
-The OpenAPI document is vendored verbatim. Per-domain `*-routes.json` files are
-small source snapshots maintained from the exact tagged Go routers; their
-contract tests detect drift against both sources. When updating 3x-ui, replace
-the OpenAPI file from one exact tag, regenerate the route snapshots, update this
-provenance block, and adjust the typed modules in the same commit.
+`3x-ui-v3.8.5.websocket-contract.json` records the unchanged cookie-authenticated
+`/ws` route, `{type,payload,time}` envelope, limits, and ten hub constants.
+OpenAPI now documents nine emitted message types in `x-websocket-events` on
+`GET /ws`, instead of four invalid pseudo-operations. The tenth constant,
+`clients`, remains reserved without a direct broadcaster. Contract tests check
+both the source inventory and the documented nine-event subset.
 
-`3x-ui-v3.7.0.remaining-http-routes.json` records the two panel-wide routes and
-the six routes on the separate subscription server. All three subscription
-`HEAD` handlers exist in the tagged routers but not in the published document.
-The OpenAPI operation count includes four documentation-only WebSocket message
-pseudo-operations.
-
-`3x-ui-v3.7.0.websocket-contract.json` records the authenticated `/ws` route,
-actual `{type,payload,time}` envelope, limits, and all ten message constants
-from the tagged hub and broadcaster call sites. The published OpenAPI includes
-only four pseudo-message entries, calls one `xrayState` instead of the actual
-`xray_state`, and shows `data`/top-level notification fields rather than the
-source wire payload. WebSocket contract tests therefore treat the Go snapshot
-as authoritative while separately checking the documented handshake and four
-pseudo-operation IDs.
+See [the complete release review](../docs/upgrading-3.8.5.md), including the
+199-commit inventory and the provenance of the upstream documentation fixes.

@@ -1,0 +1,68 @@
+{
+  "sources": [
+    "internal/web/controller/api.go:initRouter",
+    "internal/sub/controller.go:initRouter"
+  ],
+  "routes": [
+    {
+      "method": "get",
+      "path": "/panel/api/openapi.json"
+    },
+    {
+      "method": "post",
+      "path": "/panel/api/backuptotgbot"
+    },
+    {
+      "method": "get",
+      "path": "/{subPath}{subid}"
+    },
+    {
+      "method": "head",
+      "path": "/{subPath}{subid}"
+    },
+    {
+      "method": "get",
+      "path": "/{jsonPath}{subid}"
+    },
+    {
+      "method": "head",
+      "path": "/{jsonPath}{subid}"
+    },
+    {
+      "method": "get",
+      "path": "/{clashPath}{subid}"
+    },
+    {
+      "method": "head",
+      "path": "/{clashPath}{subid}"
+    },
+    {
+      "method": "get",
+      "path": "/{subPath}{subid}/hwid-status"
+    },
+    {
+      "method": "head",
+      "path": "/{subPath}{subid}/hwid-status"
+    },
+    {
+      "method": "get",
+      "path": "/mihomo/{subid}",
+      "openapi": false
+    },
+    {
+      "method": "head",
+      "path": "/mihomo/{subid}",
+      "openapi": false
+    },
+    {
+      "method": "get",
+      "path": "/clash-legacy/{subid}",
+      "openapi": false
+    },
+    {
+      "method": "head",
+      "path": "/clash-legacy/{subid}",
+      "openapi": false
+    }
+  ]
+}
