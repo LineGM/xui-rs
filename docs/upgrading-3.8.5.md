@@ -25,8 +25,7 @@ available, with these source changes:
 The public API snapshot records these intentional changes. The Rust MSRV remains
 unchanged. The minimum rustls version is raised to 0.23.45 to address
 [RUSTSEC-2026-0285](https://rustsec.org/advisories/RUSTSEC-2026-0285.html),
-which the release dependency check found in the existing lockfile. This work prepares a release; it does
-not publish a crate or tag.
+which the release dependency check found in the existing lockfile.
 
 ## Changes that affect SDK callers
 
