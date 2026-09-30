@@ -203,6 +203,7 @@ pub struct HappMetadata {
 }
 
 impl HappMetadata {
+    /// Reads Happ headers, preserving text values and matching each flag against its wire literal.
     fn from_headers(headers: &HeaderMap) -> Self {
         Self {
             provider_id: header_text(headers, "providerid").map(str::to_owned),
@@ -279,6 +280,7 @@ pub struct SubscriptionMetadata {
 }
 
 impl SubscriptionMetadata {
+    /// Parses subscription and Happ headers, leaving absent or invalid optional values unset.
     pub(crate) fn from_headers(headers: &HeaderMap) -> Self {
         Self {
             happ: HappMetadata::from_headers(headers),

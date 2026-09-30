@@ -12,6 +12,7 @@ use xui_rs::{
     SubscriptionSettings,
 };
 
+/// Builds a token-authenticated mock client under the panel base path.
 fn client(server: &MockServer) -> Client {
     Client::builder(format!("{}/secret/", server.uri()))
         .unwrap()
@@ -20,6 +21,7 @@ fn client(server: &MockServer) -> Client {
         .unwrap()
 }
 
+/// Checks base-path routing, bearer authentication, and API failures for Discord and Happ actions.
 #[tokio::test]
 async fn new_panel_actions_use_base_path_auth_and_propagate_errors() {
     for success in [true, false] {
@@ -55,6 +57,7 @@ async fn new_panel_actions_use_base_path_auth_and_propagate_errors() {
     }
 }
 
+/// Distinguishes missing or malformed Happ link objects from HTTP authentication failures.
 #[tokio::test]
 async fn happ_link_requires_an_object_and_preserves_http_auth_failures() {
     for (status, body, kind) in [
@@ -93,6 +96,7 @@ async fn happ_link_requires_an_object_and_preserves_http_auth_failures() {
     }
 }
 
+/// Round-trips every `OpenAPI` setting and checks secret redaction and explicit Discord token clearing.
 #[tokio::test]
 async fn settings_round_trip_preserves_every_tagged_field_and_redacts_new_secrets() {
     let spec: Value =
@@ -133,6 +137,7 @@ async fn settings_round_trip_preserves_every_tagged_field_and_redacts_new_secret
     client(&server).settings().update(&update).await.unwrap();
 }
 
+/// Checks keepalive omission versus zero and bulk-adjust payloads on success and API failure.
 #[tokio::test]
 async fn bulk_adjust_and_keepalive_distinguish_omitted_from_explicit_zero() {
     let config = ClientConfig::new("alice");
@@ -175,6 +180,7 @@ async fn bulk_adjust_and_keepalive_distinguish_omitted_from_explicit_zero() {
     }
 }
 
+/// Checks keepalive update payloads and preservation of stored values when converting client records.
 #[tokio::test]
 async fn client_updates_send_omission_zero_and_stored_keepalive_distinctly() {
     let server = MockServer::start().await;
@@ -209,6 +215,7 @@ async fn client_updates_send_omission_zero_and_stored_keepalive_distinctly() {
     }
 }
 
+/// Ensures default bulk adjustments omit HWID and ad-tag changes and redact nonempty ad tags.
 #[tokio::test]
 async fn default_bulk_adjust_does_not_reset_hwid_or_advertisement_settings() {
     let server = MockServer::start().await;
@@ -245,6 +252,7 @@ async fn default_bulk_adjust_does_not_reset_hwid_or_advertisement_settings() {
     assert!(!format!("{request:?}").contains("private-advertisement-tag"));
 }
 
+/// Checks fractional weights in create forms and replies, API failures, and rejection of NaN.
 #[tokio::test]
 async fn balancer_weights_are_a_json_form_field_and_survive_reads() {
     for success in [true, false] {
@@ -279,6 +287,7 @@ async fn balancer_weights_are_a_json_form_field_and_survive_reads() {
     }
 }
 
+/// Checks weighted update replies and API failures, and decodes absent or null weights as empty.
 #[tokio::test]
 async fn balancer_weight_updates_propagate_errors_and_null_weights_decode() {
     for success in [true, false] {
@@ -318,6 +327,7 @@ async fn balancer_weight_updates_propagate_errors_and_null_weights_decode() {
     }
 }
 
+/// Rejects nonpositive, nonfinite, and out-of-range weights before create or update sends a request.
 #[tokio::test]
 async fn invalid_balancer_weights_fail_before_any_http_mutation() {
     let server = MockServer::start().await;
@@ -344,6 +354,7 @@ async fn invalid_balancer_weights_fail_before_any_http_mutation() {
     assert!(server.received_requests().await.unwrap().is_empty());
 }
 
+/// Accepts the smallest positive and largest finite float32 weights in create and update forms.
 #[tokio::test]
 async fn balancer_weight_float32_boundaries_are_accepted_on_create_and_update() {
     for weight in [f64::from(f32::from_bits(1)), f64::from(f32::MAX)] {
@@ -382,6 +393,7 @@ async fn balancer_weight_float32_boundaries_are_accepted_on_create_and_update() 
     }
 }
 
+/// Checks GET and HEAD alias routes retain the server base path and encode subscription IDs.
 #[tokio::test]
 async fn public_aliases_preserve_the_subscription_server_base_path() {
     let server = MockServer::start().await;
@@ -406,6 +418,7 @@ async fn public_aliases_preserve_the_subscription_server_base_path() {
     subs.clash_legacy_metadata("private/id").await.unwrap();
 }
 
+/// Checks alias collisions fail locally while configured routes and unshadowed aliases remain usable.
 #[tokio::test]
 async fn shadowed_aliases_fail_before_http_while_configured_routes_remain_usable() {
     for base_path in ["/", "/tenant/"] {
@@ -487,6 +500,7 @@ async fn shadowed_aliases_fail_before_http_while_configured_routes_remain_usable
     }
 }
 
+/// Checks settings-derived aliases detect collisions in both public URIs and configured router paths.
 #[tokio::test]
 async fn settings_aliases_check_public_uris_and_configured_router_paths() {
     let server = MockServer::start().await;
@@ -531,6 +545,7 @@ async fn settings_aliases_check_public_uris_and_configured_router_paths() {
     assert!(server.received_requests().await.unwrap().is_empty());
 }
 
+/// Checks encoded public routes omit panel credentials and bound HWID replies with redacted errors.
 #[tokio::test]
 async fn public_aliases_and_hwid_status_are_encoded_bounded_and_unauthenticated() {
     let server = MockServer::start().await;
@@ -591,6 +606,7 @@ async fn public_aliases_and_hwid_status_are_encoded_bounded_and_unauthenticated(
     );
 }
 
+/// Rejects invalid HWID status documents without exposing the subscription ID in decode errors.
 #[tokio::test]
 async fn hwid_status_rejects_malformed_or_incomplete_json_with_a_redacted_url() {
     for body in ["not json", "null", "{}"] {
@@ -611,6 +627,7 @@ async fn hwid_status_rejects_malformed_or_incomplete_json_with_a_redacted_url() 
     }
 }
 
+/// Decodes null inbound-link, panel-log, and Xray-log collections as empty lists.
 #[tokio::test]
 async fn nullable_link_and_log_collections_are_empty() {
     let server = MockServer::start().await;
@@ -648,6 +665,7 @@ async fn nullable_link_and_log_collections_are_empty() {
     );
 }
 
+/// Checks protocol, geodata, TUIC, and REALITY wire fields, including TUIC private-key redaction.
 #[test]
 fn tuic_and_reality_models_decode_actual_upstream_wire_names() {
     for (wire, expected) in [
@@ -684,6 +702,7 @@ fn tuic_and_reality_models_decode_actual_upstream_wire_names() {
     assert_eq!(scan.curve_id, "X25519");
 }
 
+/// Checks outbound subscription forms carry the user agent and debug output redacts it.
 #[tokio::test]
 async fn outbound_user_agent_is_sent_for_create_update_and_preview() {
     let server = MockServer::start().await;
@@ -727,6 +746,7 @@ async fn outbound_user_agent_is_sent_for_create_update_and_preview() {
         .unwrap();
 }
 
+/// Checks Happ metadata parsing, absent profile URLs, and redaction of private header values.
 #[tokio::test]
 async fn happ_headers_and_absent_profile_url_are_preserved_without_debug_leaks() {
     let server = MockServer::start().await;

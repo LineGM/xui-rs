@@ -250,6 +250,7 @@ impl SubscriptionClient {
         )
     }
 
+    /// Builds the public HTTP client, validates device headers, and disables shadowed alias routes.
     fn from_parts(
         alias_base: &Url,
         configured_paths: [&str; 3],
@@ -618,6 +619,9 @@ impl SubscriptionClient {
         })
     }
 
+    /// Sends a public subscription request with a bounded body and a redacted URL for errors.
+    ///
+    /// Rejects shadowed aliases before sending and appends the HWID status suffix when requested.
     async fn send(
         &self,
         method: Method,

@@ -609,6 +609,7 @@ impl<'client> ServerApi<'client> {
         self.required_object(Method::POST, &path, envelope)
     }
 
+    /// Posts a panel API form and decodes a missing or null response object as an empty list.
     async fn post_form_list<T: DeserializeOwned, B: Serialize + ?Sized>(
         self,
         suffix: &str,

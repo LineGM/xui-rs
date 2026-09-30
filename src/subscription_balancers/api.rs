@@ -85,6 +85,7 @@ impl<'client> SubscriptionBalancersApi<'client> {
         Ok(())
     }
 
+    /// Validates the strategy and weight range, submits the form, and requires a balancer response.
     async fn mutate(
         self,
         method: Method,

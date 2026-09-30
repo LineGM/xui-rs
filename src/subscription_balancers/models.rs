@@ -87,6 +87,7 @@ impl SubscriptionBalancerInput {
     }
 }
 
+/// Decodes a weight map, treating a JSON null as an empty map.
 fn deserialize_weights<'de, D: serde::Deserializer<'de>>(
     deserializer: D,
 ) -> Result<std::collections::BTreeMap<i64, f64>, D::Error> {
