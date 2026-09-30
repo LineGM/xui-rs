@@ -64,6 +64,7 @@ fn core_and_accessor_types_keep_their_async_trait_contracts() {
     assert_copy::<ProxyScheme>();
 }
 
+/// Uses compile-time assignments to guard the identity of crate-root and domain-module reexports.
 #[test]
 fn every_concise_root_reexport_names_the_same_domain_type() {
     assert_root_reexports!(auth => CsrfToken, LoginRequest);

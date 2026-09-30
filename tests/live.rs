@@ -71,6 +71,8 @@ async fn wait_for_server_status(client: &Client) -> TestResult<ServerStatus> {
     .into())
 }
 
+/// Checks cookie login, typed HTTP responses, the live API contract, WebSocket status, and logout.
+/// Requires an explicitly configured real panel and remains ignored in ordinary test runs.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore = "requires XUI_LIVE_* credentials for a real 3x-ui v3.8.5 panel"]
 async fn live_cookie_http_and_websocket_smoke() -> TestResult {
@@ -157,6 +159,8 @@ async fn live_cookie_http_and_websocket_smoke() -> TestResult {
     )
 }
 
+/// Exercises token revocation and inbound/balancer mutations on an explicitly disposable panel.
+/// Attempts cleanup of created resources even when the operation checks fail.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore = "requires XUI_LIVE_ALLOW_MUTATION=1 and a disposable 3x-ui v3.8.5 panel"]
 async fn live_token_and_inbound_round_trip_with_cleanup() -> TestResult {
@@ -270,6 +274,7 @@ async fn live_token_and_inbound_round_trip_with_cleanup() -> TestResult {
         .and(token_cleanup)
 }
 
+/// Verifies that a newly created inbound appears in the panel option list.
 async fn check_inbound_option(client: &Client, inbound_id: i64) -> TestResult {
     require(
         client
@@ -283,6 +288,8 @@ async fn check_inbound_option(client: &Client, inbound_id: i64) -> TestResult {
     Ok(())
 }
 
+/// Waits at most 30 seconds for a timestamped status event with the expected panel version.
+/// Closes the stream after validation and verifies its local closed state.
 async fn check_websocket_status(client: &Client, expected_version: &str) -> TestResult {
     let mut events = client.events().connect().await?;
     tokio::time::timeout(Duration::from_secs(30), async {
@@ -310,6 +317,7 @@ async fn check_websocket_status(client: &Client, expected_version: &str) -> Test
     require(events.is_closed(), "WebSocket did not close locally")
 }
 
+/// Disables an API token, checks for HTTP 401, then re-enables it and verifies access.
 async fn check_disabled_token(client: &Client, bearer: &Client, token_id: i64) -> TestResult {
     client
         .settings()
@@ -332,6 +340,8 @@ async fn check_disabled_token(client: &Client, bearer: &Client, token_id: i64) -
     Ok(())
 }
 
+/// Checks fractional balancer weights across create, update, and list, plus negative inbound sorting.
+/// Records the created balancer ID immediately so the caller can clean up after a failure.
 async fn check_weighted_balancer_and_sort(
     client: &Client,
     inbound_id: i64,
@@ -382,6 +392,7 @@ async fn check_weighted_balancer_and_sort(
     Ok(())
 }
 
+/// Returns the embedded `OpenAPI` snapshot used to compare the live panel with the supported release.
 fn json_include() -> &'static str {
     include_str!("../spec/3x-ui-v3.8.5.openapi.json")
 }
@@ -431,6 +442,8 @@ fn http_operations(document: &OpenApiDocument) -> BTreeSet<String> {
         .collect()
 }
 
+/// Collects panel operations present in Go-router snapshots but absent from `OpenAPI`.
+/// Normalizes route parameters so they can be compared with the live API document.
 fn source_only_panel_operations() -> TestResult<BTreeSet<String>> {
     const ROUTE_SNAPSHOTS: &[&str] = &[
         include_str!("../spec/3x-ui-v3.8.5.clients-routes.json"),

@@ -609,7 +609,9 @@ impl<'client> ServerApi<'client> {
         self.required_object(Method::POST, &path, envelope)
     }
 
-    /// Posts a panel API form and decodes a missing or null response object as an empty list.
+    /// Posts a panel-authenticated form and decodes its collection response.
+    /// A successful envelope with a null or absent object represents an empty list;
+    /// transport, API, and decoding errors propagate to the caller.
     async fn post_form_list<T: DeserializeOwned, B: Serialize + ?Sized>(
         self,
         suffix: &str,
@@ -623,6 +625,8 @@ impl<'client> ServerApi<'client> {
         Ok(envelope.obj.unwrap_or_default())
     }
 
+    /// Posts a panel-authenticated form for an action without a typed result.
+    /// Validates the response envelope and propagates transport and API errors.
     async fn post_form_empty<B>(self, suffix: &str, form: &B) -> Result<()>
     where
         B: Serialize + ?Sized,

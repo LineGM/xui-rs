@@ -35,6 +35,7 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
     ("head", "/clash-legacy/{subid}", None),
 ];
 
+/// Checks API-document, backup, and subscription routes against both upstream contract snapshots.
 #[test]
 fn sdk_covers_every_remaining_openapi_and_source_http_route() {
     let openapi: Value =

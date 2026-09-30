@@ -45,6 +45,7 @@ fn reality_json() -> Value {
     })
 }
 
+/// Exercises server actions and downloads against mocks to verify their HTTP contracts.
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
 async fn every_v385_server_route_is_wired() {

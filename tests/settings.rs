@@ -24,6 +24,7 @@ async fn mount_envelope(server: &MockServer, method: Method, path: &str, object:
         .await;
 }
 
+/// Exercises panel and Xray settings operations with the expected routes and request encodings.
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
 async fn every_v385_settings_and_xray_route_is_wired() {
@@ -559,6 +560,7 @@ fn exact_acronym_wire_names_and_sensitive_wrappers_are_safe() {
     assert!(!format!("{documents:?}").contains("outbound-secret"));
 }
 
+/// Compares serialized settings keys with the persisted upstream field inventory to catch omissions.
 #[test]
 #[allow(clippy::too_many_lines)]
 fn panel_settings_cover_every_v385_all_setting_field() {

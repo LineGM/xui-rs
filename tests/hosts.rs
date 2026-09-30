@@ -99,6 +99,7 @@ fn row_json(id: i64, inbound_id: i64, address: &str) -> Value {
     })
 }
 
+/// Exercises host CRUD, grouping, sorting, and bulk operations with exact HTTP payload checks.
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
 async fn every_v385_host_route_is_wired_with_exact_payloads() {
@@ -298,6 +299,7 @@ fn typed_host_values_round_trip_and_json_debug_is_redacted() {
     assert!(null_override.is_empty());
 }
 
+/// Checks serialized host-group field names against the upstream response model.
 #[test]
 fn host_group_matches_every_v385_source_field() {
     let object = serde_json::to_value(HostGroup::default())

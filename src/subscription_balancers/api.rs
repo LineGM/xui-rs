@@ -85,7 +85,14 @@ impl<'client> SubscriptionBalancersApi<'client> {
         Ok(())
     }
 
-    /// Validates the strategy and weight range, submits the form, and requires a balancer response.
+    /// Creates or replaces a balancer using the panel form contract.
+    /// Validates the strategy and positive float32 weight range before serializing weights
+    /// as JSON alongside repeated inbound IDs.
+    ///
+    /// # Errors
+    ///
+    /// Returns configuration errors before HTTP for invalid input, or propagates transport,
+    /// API, decoding, and missing-object errors from the mutation response.
     async fn mutate(
         self,
         method: Method,

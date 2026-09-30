@@ -17,6 +17,8 @@ const SDK_MESSAGE_TYPES: &[EventMessageType] = &[
     EventMessageType::Invalidate,
 ];
 
+/// Pins WebSocket authentication, envelope fields, size limits, and event names to upstream.
+/// Distinguishes source-only events from the broadcasts listed in `OpenAPI`.
 #[test]
 fn sdk_covers_websocket_route_and_every_source_message_type() {
     let source: Value = serde_json::from_str(include_str!(

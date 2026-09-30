@@ -203,7 +203,8 @@ pub struct HappMetadata {
 }
 
 impl HappMetadata {
-    /// Reads Happ headers, preserving text values and matching each flag against its wire literal.
+    /// Reads optional Happ headers and their exact upstream boolean encodings.
+    /// Absent or non-text headers leave optional fields unset and boolean flags disabled.
     fn from_headers(headers: &HeaderMap) -> Self {
         Self {
             provider_id: header_text(headers, "providerid").map(str::to_owned),
@@ -235,6 +236,7 @@ impl HappMetadata {
 }
 
 impl fmt::Debug for HappMetadata {
+    /// Identifies Happ metadata without exposing header values or subscription links.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_tuple("HappMetadata")
@@ -280,7 +282,8 @@ pub struct SubscriptionMetadata {
 }
 
 impl SubscriptionMetadata {
-    /// Parses subscription and Happ headers, leaving absent or invalid optional values unset.
+    /// Decodes subscription response headers, tolerating absent or malformed optional values.
+    /// Preserves secret-bearing profile URLs and routing rules for explicit accessors.
     pub(crate) fn from_headers(headers: &HeaderMap) -> Self {
         Self {
             happ: HappMetadata::from_headers(headers),
@@ -324,6 +327,7 @@ impl SubscriptionMetadata {
 }
 
 impl fmt::Debug for SubscriptionMetadata {
+    /// Formats subscription metadata while redacting Happ values, the profile URL, and routing rules.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("SubscriptionMetadata")
@@ -408,6 +412,7 @@ pub struct SubscriptionInfo {
 }
 
 impl fmt::Debug for SubscriptionInfo {
+    /// Formats subscription status while redacting identifiers, connection links, client emails, and URIs.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("SubscriptionInfo")

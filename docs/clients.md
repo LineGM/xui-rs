@@ -71,6 +71,41 @@ results normalize Go's possible `null` slices into empty Rust vectors. Group
 traffic reset moves the group's accounting baseline without changing the
 underlying client counters.
 
+### Bulk adjustment retries and partial results
+
+In 3x-ui v3.8.5, `bulk_adjust` trims surrounding whitespace from emails,
+discards empty entries, and removes exact duplicates within one request.
+Deduplication is case-sensitive; it does not combine differently cased emails.
+The SDK sends the supplied list unchanged. This request-local deduplication
+does not make separate calls idempotent: repeating `add_days` or `add_bytes`
+can apply the increment again. The endpoint provides no idempotency key.
+These rules come from the tagged [bulk-adjust service](https://github.com/MHSanaei/3x-ui/blob/v3.8.5/internal/web/service/client_bulk.go)
+and [email helpers](https://github.com/MHSanaei/3x-ui/blob/v3.8.5/internal/web/service/inbound_util.go).
+
+An adjustment is not an atomic transaction across every client and attachment.
+Inspect both `adjusted` and `skipped`, even after a successful response. A
+`skipped` entry can describe one unapplied field while another field changed:
+for example, a finite expiry can be extended while an unlimited quota stays
+unchanged. The same client can therefore contribute to `adjusted` and appear
+in `skipped`. An error also does not establish that all earlier work rolled
+back; the [service performs several separate writes](https://github.com/MHSanaei/3x-ui/blob/v3.8.5/internal/web/service/client_bulk.go).
+
+After a timeout, connection loss, unreadable response, or partial result:
+
+1. Keep the original request and any pre-operation state needed to establish
+   the intended final values. Do not replay the whole batch automatically.
+2. Read affected clients with `clients().get(email)` and `clients().traffic(email)`;
+   inspect attached inbound configurations when reconciling flow or attachment
+   changes. Compare the observed state with the intended result.
+3. Apply only confirmed outstanding changes. Coordinate with other writers
+   while reconciling; a read followed by a correction does not provide an
+   atomic compare-and-set. If the result remains ambiguous, resolve it before
+   applying another additive adjustment.
+
+The SDK dispatcher does not retry returned transport or decoding errors.
+Its one automatic mutation replay is cookie-session recovery after HTTP 403;
+see the [authentication guide](authentication.md) for its scope and assumptions.
+
 ## HWID devices
 
 `hwid_devices`, `clear_hwid_devices`, and `delete_hwid_device` expose the

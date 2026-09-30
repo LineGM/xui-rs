@@ -30,6 +30,7 @@ const SDK_ROUTES: &[(&str, &str, &str)] = &[
     ),
 ];
 
+/// Checks that the SDK implements every route in the tagged `OpenAPI` and Go-router inventories.
 #[test]
 fn sdk_covers_every_openapi_and_source_route() {
     let openapi: Value =

@@ -250,7 +250,13 @@ impl SubscriptionClient {
         )
     }
 
-    /// Builds the public HTTP client, validates device headers, and disables shadowed alias routes.
+    /// Builds an unauthenticated subscription transport from validated format prefixes.
+    /// Resolves fixed aliases below `alias_base` and marks conflicting aliases unavailable,
+    /// while allowing the configured Clash handler to serve Mihomo.
+    ///
+    /// # Errors
+    ///
+    /// Returns a configuration error for invalid device headers, alias URLs, or HTTP options.
     fn from_parts(
         alias_base: &Url,
         configured_paths: [&str; 3],
@@ -619,9 +625,13 @@ impl SubscriptionClient {
         })
     }
 
-    /// Sends a public subscription request with a bounded body and a redacted URL for errors.
+    /// Requests one subscription format with a safely encoded identifier and bounded response body.
+    /// Returns response headers, bytes, the method, and a URL with the identifier redacted.
     ///
-    /// Rejects shadowed aliases before sending and appends the HWID status suffix when requested.
+    /// # Errors
+    ///
+    /// Rejects unavailable aliases and empty identifiers before HTTP; propagates transport,
+    /// HTTP-status, and response-size errors without exposing the subscription identifier.
     async fn send(
         &self,
         method: Method,

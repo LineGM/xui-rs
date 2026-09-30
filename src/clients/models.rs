@@ -802,7 +802,8 @@ impl BulkFlowAdjustment {
 /// Bulk expiry/quota/flow adjustment request.
 #[derive(Clone, Default, Eq, PartialEq)]
 pub struct BulkAdjustRequest {
-    /// Target emails.
+    /// Target emails. The panel trims whitespace, drops empty entries, and
+    /// deduplicates exact, case-sensitive matches within this request only.
     pub emails: Vec<String>,
     /// Signed number of days added to finite expiry times.
     pub add_days: i32,
@@ -817,6 +818,7 @@ pub struct BulkAdjustRequest {
 }
 
 impl fmt::Debug for BulkAdjustRequest {
+    /// Formats bulk adjustment fields while redacting the advertisement tag.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("BulkAdjustRequest")
@@ -844,7 +846,8 @@ pub struct BulkClientIssue {
 pub struct BulkAdjustResult {
     /// Number of adjusted clients.
     pub adjusted: u64,
-    /// Per-client skips.
+    /// Per-client skip reasons. A client can also be counted in `adjusted` when
+    /// some requested fields changed and others were skipped.
     #[serde(default, deserialize_with = "deserialize_null_default")]
     pub skipped: Vec<BulkClientIssue>,
 }
@@ -997,6 +1000,7 @@ pub struct HappLink {
 }
 
 impl fmt::Debug for HappLink {
+    /// Formats a Happ link without exposing its encrypted subscription URL.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("HappLink")

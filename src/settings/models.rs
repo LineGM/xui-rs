@@ -184,6 +184,7 @@ pub struct SecuritySettings {
 }
 
 impl fmt::Debug for SecuritySettings {
+    /// Formats security settings without exposing the two-factor authentication seed.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("SecuritySettings")
@@ -447,6 +448,7 @@ pub struct DiscordSettings {
 }
 
 impl fmt::Debug for DiscordSettings {
+    /// Identifies Discord settings in diagnostics without exposing their configuration or credentials.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("DiscordSettings")
@@ -508,6 +510,7 @@ pub struct HappSettings {
 }
 
 impl fmt::Debug for HappSettings {
+    /// Identifies Happ settings in diagnostics without exposing application routing or subscription data.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("HappSettings")
@@ -1038,6 +1041,7 @@ pub struct XraySettingsSnapshot {
 }
 
 impl Default for XraySettingsSnapshot {
+    /// Creates an empty Xray settings snapshot with an object template and no runtime subscription outbounds.
     fn default() -> Self {
         Self {
             xray_setting: crate::XrayConfig::from(Value::Object(serde_json::Map::new())),
@@ -1052,6 +1056,7 @@ impl Default for XraySettingsSnapshot {
 }
 
 impl fmt::Debug for XraySettingsSnapshot {
+    /// Formats Xray settings metadata while redacting the template and runtime subscription outbounds.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("XraySettingsSnapshot")
@@ -1254,6 +1259,7 @@ pub struct OutboundSubscription {
 }
 
 impl fmt::Debug for OutboundSubscription {
+    /// Formats outbound-subscription state while redacting its URL, user agent, and cached outbounds.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("OutboundSubscription")
@@ -1320,6 +1326,7 @@ impl OutboundSubscriptionInput {
 }
 
 impl fmt::Debug for OutboundSubscriptionInput {
+    /// Formats outbound-subscription options while redacting the URL and custom user agent.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("OutboundSubscriptionInput")

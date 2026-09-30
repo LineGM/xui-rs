@@ -914,6 +914,7 @@ pub struct TuicServerSettings {
 }
 
 impl fmt::Debug for TuicServerSettings {
+    /// Formats TUIC transport settings while redacting the private key and omitting other details.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("TuicServerSettings")
@@ -1023,6 +1024,8 @@ mod tests {
         ),
     ];
 
+    /// Compares the SDK route inventory with both tagged `OpenAPI` operations and Go-router snapshots.
+    /// Source-only routes are checked separately so omissions in `OpenAPI` cannot hide SDK gaps.
     #[test]
     fn sdk_covers_openapi_and_source_routes() {
         let openapi: Value =
@@ -1109,6 +1112,7 @@ mod tests {
         assert!(!output.contains("private-secret"));
     }
 
+    /// Checks that `WireGuard` and remote-node option fields decode into their typed SDK fields.
     #[test]
     fn actual_v385_option_extensions_are_typed() {
         let option: InboundOption = serde_json::from_value(serde_json::json!({
@@ -1144,6 +1148,7 @@ mod tests {
         assert!(value["settings"].is_object());
     }
 
+    /// Pins each inbound protocol to its Xray wire name, including the TUIC sidecar.
     #[test]
     fn every_inbound_protocol_has_the_exact_xray_name() {
         assert_eq!(

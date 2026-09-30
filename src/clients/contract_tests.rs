@@ -240,6 +240,8 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
     ),
 ];
 
+/// Compares the SDK route inventory with both tagged `OpenAPI` operations and Go-router snapshots.
+/// Source-only routes are checked separately so omissions in `OpenAPI` cannot hide SDK gaps.
 #[test]
 fn sdk_covers_openapi_and_source_routes() {
     let openapi: Value =

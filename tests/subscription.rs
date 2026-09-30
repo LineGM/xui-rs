@@ -40,6 +40,7 @@ async fn mount(
     mock.respond_with(template).expect(1).mount(server).await;
 }
 
+/// Checks GET and HEAD for raw, JSON, and Clash subscriptions, including metadata and secret redaction.
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
 async fn all_six_v385_subscription_routes_are_typed_and_secret_safe() {
