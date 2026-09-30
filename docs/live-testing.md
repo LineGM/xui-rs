@@ -2,7 +2,7 @@
 
 The ordinary test suite is deterministic and uses protocol-level local test
 servers. Before release, the SDK is also exercised against the official 3x-ui
-v3.7.0 container:
+v3.8.5 container:
 
 ```console
 scripts/live-test.sh
@@ -27,10 +27,13 @@ The ignored `tests/live.rs` target checks:
 - the real CSRF, username/password login, shared HTTP/WebSocket cookie, logout,
   and post-logout rejection lifecycle;
 - settings, server status, runtime OpenAPI, full/slim inbound lists, and an
-  authenticated WebSocket handshake;
-- API-token creation, bearer authentication, listing, and deletion;
+  authenticated WebSocket handshake plus a decoded status event and timestamp;
+- API-token creation, bearer authentication, listing, disabling (HTTP 401),
+  re-enabling, and deletion;
 - a disabled VLESS inbound create/read/update/list/options/reset/delete round
-  trip, with best-effort cleanup before the container is destroyed.
+  trip, including negative subscription ordering indices;
+- fractional balancer weights through create/update/list/delete and geodata
+  presets from Xray settings, with best-effort cleanup before container removal.
 
 Mutation tests refuse to start unless `XUI_LIVE_ALLOW_MUTATION=1` is set. The
 script supplies this only for its disposable panel.
@@ -38,13 +41,13 @@ script supplies this only for its disposable panel.
 ## Testing another disposable panel
 
 Read-only and cookie/WebSocket checks can be run directly when the target is
-exactly 3x-ui v3.7.0 and the account does not require 2FA:
+exactly 3x-ui v3.8.5 and the account does not require 2FA:
 
 ```console
 export XUI_LIVE_BASE_URL=https://panel.example.com/secret/
 export XUI_LIVE_USERNAME=integration-user
 export XUI_LIVE_PASSWORD=replace-me
-export XUI_LIVE_EXPECTED_VERSION=3.7.0
+export XUI_LIVE_EXPECTED_VERSION=3.8.5
 cargo test --locked --test live live_cookie_http_and_websocket_smoke \
   -- --ignored --nocapture
 ```
@@ -57,9 +60,10 @@ XUI_LIVE_ALLOW_MUTATION=1 cargo test --locked --test live \
   live_token_and_inbound_round_trip_with_cleanup -- --ignored --nocapture
 ```
 
-The repository's **3x-ui live** GitHub Actions workflow runs the complete
-container harness manually and every Monday. A normal `cargo test` compiles the
-live target but keeps both tests ignored.
+The reusable **3x-ui live** GitHub Actions workflow runs the complete container
+harness on every CI push/PR and as a release gate, as well as manually and every
+Monday. It retains the harness log as a workflow artifact, including on failure.
+A normal `cargo test` compiles the live target but keeps both tests ignored.
 
 ## Troubleshooting
 

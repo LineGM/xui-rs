@@ -5,6 +5,11 @@ use serde_json::Value;
 const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
     (
         "post",
+        "/panel/api/setting/testDiscord",
+        Some("post_panel_api_setting_testDiscord"),
+    ),
+    (
+        "post",
         "/panel/api/setting/all",
         Some("post_panel_api_setting_all"),
     ),
@@ -201,10 +206,12 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
     ),
 ];
 
+/// Compares the SDK route inventory with both tagged `OpenAPI` operations and Go-router snapshots.
+/// Source-only routes are checked separately so omissions in `OpenAPI` cannot hide SDK gaps.
 #[test]
 fn sdk_covers_openapi_and_source_routes() {
     let openapi: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.8.5.openapi.json")).unwrap();
     let documented = openapi["paths"]
         .as_object()
         .unwrap()
@@ -239,11 +246,11 @@ fn sdk_covers_openapi_and_source_routes() {
             operation.map(|operation| (*method, *path, operation))
         })
         .collect::<BTreeSet<_>>();
-    assert_eq!(documented.len(), 40);
+    assert_eq!(documented.len(), 41);
     assert_eq!(documented, implemented_openapi);
 
     let snapshot: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.settings-routes.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.8.5.settings-routes.json")).unwrap();
     let source = snapshot["routes"]
         .as_array()
         .unwrap()
@@ -259,6 +266,6 @@ fn sdk_covers_openapi_and_source_routes() {
         .iter()
         .map(|(method, path, _)| (*method, *path))
         .collect::<BTreeSet<_>>();
-    assert_eq!(source.len(), 40);
+    assert_eq!(source.len(), 41);
     assert_eq!(source, implemented);
 }

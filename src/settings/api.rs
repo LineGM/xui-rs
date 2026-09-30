@@ -39,6 +39,11 @@ impl<'client> SettingsApi<'client> {
         self.post_object("all", None::<&()>).await
     }
 
+    /// Sends a test notification through the configured Discord bot.
+    pub async fn test_discord(self) -> Result<()> {
+        self.post_empty("testDiscord", None::<&()>).await
+    }
+
     /// Returns host-derived effective defaults.
     pub async fn defaults(self) -> Result<EffectiveDefaults> {
         self.post_object("defaultSettings", None::<&()>).await
@@ -662,12 +667,25 @@ impl<'client> XraySettingsApi<'client> {
         allow_private: bool,
         allow_insecure: bool,
     ) -> Result<OutboundDocuments> {
+        self.parse_outbound_subscription_with_user_agent(url, allow_private, allow_insecure, "")
+            .await
+    }
+
+    /// Fetches a remote subscription with a custom user agent without retaining it.
+    pub async fn parse_outbound_subscription_with_user_agent(
+        self,
+        url: &str,
+        allow_private: bool,
+        allow_insecure: bool,
+        user_agent: &str,
+    ) -> Result<OutboundDocuments> {
         #[derive(Serialize)]
         #[serde(rename_all = "camelCase")]
         struct Form<'a> {
             url: &'a str,
             allow_private: bool,
             allow_insecure: bool,
+            user_agent: &'a str,
         }
         self.post_form_object(
             "outbound-subs/parse",
@@ -675,6 +693,7 @@ impl<'client> XraySettingsApi<'client> {
                 url,
                 allow_private,
                 allow_insecure,
+                user_agent,
             },
         )
         .await

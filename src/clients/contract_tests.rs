@@ -4,6 +4,11 @@ use serde_json::Value;
 
 const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
     (
+        "post",
+        "/panel/api/clients/happLink/{id}",
+        Some("post_panel_api_clients_happLink_id"),
+    ),
+    (
         "get",
         "/panel/api/clients/list",
         Some("get_panel_api_clients_list"),
@@ -235,10 +240,12 @@ const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
     ),
 ];
 
+/// Compares the SDK route inventory with both tagged `OpenAPI` operations and Go-router snapshots.
+/// Source-only routes are checked separately so omissions in `OpenAPI` cannot hide SDK gaps.
 #[test]
 fn sdk_covers_openapi_and_source_routes() {
     let openapi: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.8.5.openapi.json")).unwrap();
     let paths = openapi["paths"].as_object().unwrap();
     let documented = paths
         .iter()
@@ -267,11 +274,11 @@ fn sdk_covers_openapi_and_source_routes() {
             operation.map(|operation| (*method, *path, operation))
         })
         .collect::<BTreeSet<_>>();
-    assert_eq!(documented.len(), 46);
+    assert_eq!(documented.len(), 47);
     assert_eq!(documented, implemented_openapi);
 
     let source: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.clients-routes.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.8.5.clients-routes.json")).unwrap();
     let source_routes = source["routes"]
         .as_array()
         .unwrap()
@@ -287,6 +294,6 @@ fn sdk_covers_openapi_and_source_routes() {
         .iter()
         .map(|(method, path, _)| (*method, *path))
         .collect::<BTreeSet<_>>();
-    assert_eq!(source_routes.len(), 46);
+    assert_eq!(source_routes.len(), 47);
     assert_eq!(source_routes, implemented_routes);
 }

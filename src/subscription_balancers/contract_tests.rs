@@ -30,10 +30,11 @@ const SDK_ROUTES: &[(&str, &str, &str)] = &[
     ),
 ];
 
+/// Checks that the SDK implements every route in the tagged `OpenAPI` and Go-router inventories.
 #[test]
 fn sdk_covers_every_openapi_and_source_route() {
     let openapi: Value =
-        serde_json::from_str(include_str!("../../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
+        serde_json::from_str(include_str!("../../spec/3x-ui-v3.8.5.openapi.json")).unwrap();
     let documented = openapi["paths"]
         .as_object()
         .unwrap()
@@ -60,7 +61,7 @@ fn sdk_covers_every_openapi_and_source_route() {
     assert_eq!(documented, SDK_ROUTES.iter().copied().collect());
 
     let source: Value = serde_json::from_str(include_str!(
-        "../../spec/3x-ui-v3.7.0.subscription-balancers-routes.json"
+        "../../spec/3x-ui-v3.8.5.subscription-balancers-routes.json"
     ))
     .unwrap();
     let source = source["routes"]

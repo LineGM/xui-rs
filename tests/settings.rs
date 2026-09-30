@@ -24,9 +24,10 @@ async fn mount_envelope(server: &MockServer, method: Method, path: &str, object:
         .await;
 }
 
+/// Exercises panel and Xray settings operations with the expected routes and request encodings.
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
-async fn every_v370_settings_and_xray_route_is_wired() {
+async fn every_v385_settings_and_xray_route_is_wired() {
     let server = MockServer::start().await;
     let subscription = json!({
         "id": 7, "remark": "remote", "url": "https://secret.example/sub?token=abc",
@@ -559,9 +560,10 @@ fn exact_acronym_wire_names_and_sensitive_wrappers_are_safe() {
     assert!(!format!("{documents:?}").contains("outbound-secret"));
 }
 
+/// Compares serialized settings keys with the persisted upstream field inventory to catch omissions.
 #[test]
 #[allow(clippy::too_many_lines)]
-fn panel_settings_cover_every_v370_all_setting_field() {
+fn panel_settings_cover_every_v385_all_setting_field() {
     let actual = serde_json::to_value(PanelSettings::default()).unwrap();
     let actual = actual
         .as_object()
@@ -569,116 +571,15 @@ fn panel_settings_cover_every_v370_all_setting_field() {
         .keys()
         .map(String::as_str)
         .collect::<BTreeSet<_>>();
-    let expected = [
-        "datepicker",
-        "expireDiff",
-        "externalTrafficInformEnable",
-        "externalTrafficInformURI",
-        "ipLimitAllowlist",
-        "ldapAutoCreate",
-        "ldapAutoDelete",
-        "ldapBaseDN",
-        "ldapBindDN",
-        "ldapDefaultExpiryDays",
-        "ldapDefaultLimitIP",
-        "ldapDefaultTotalGB",
-        "ldapEnable",
-        "ldapFlagField",
-        "ldapHost",
-        "ldapInboundTags",
-        "ldapInsecureSkipVerify",
-        "ldapInvertFlag",
-        "ldapPassword",
-        "ldapPort",
-        "ldapSyncCron",
-        "ldapTruthyValues",
-        "ldapUseTLS",
-        "ldapUserAttr",
-        "ldapUserFilter",
-        "ldapVlessField",
-        "outboundDownThreshold",
-        "pageSize",
-        "panelOutbound",
-        "remarkTemplate",
-        "restartXrayOnClientDisable",
-        "sessionMaxAge",
-        "smtpCpu",
-        "smtpEnable",
-        "smtpEnabledEvents",
-        "smtpEncryptionType",
-        "smtpFrom",
-        "smtpFromName",
-        "smtpHost",
-        "smtpMemory",
-        "smtpPassword",
-        "smtpPort",
-        "smtpTo",
-        "smtpUsername",
-        "subAnnounce",
-        "subCertFile",
-        "subClashAutoDetect",
-        "subClashEnable",
-        "subClashEnableRouting",
-        "subClashPath",
-        "subClashRules",
-        "subClashURI",
-        "subClashUserAgentRegex",
-        "subDomain",
-        "subEnable",
-        "subEnableRouting",
-        "subEncrypt",
-        "subHideSettings",
-        "subIncyEnableRouting",
-        "subIncyRoutingRules",
-        "subJsonAlwaysArray",
-        "subJsonAutoDetect",
-        "subJsonEnable",
-        "subJsonFinalMask",
-        "subJsonMux",
-        "subJsonObservatory",
-        "subJsonPath",
-        "subJsonRules",
-        "subJsonURI",
-        "subJsonUserAgentRegex",
-        "subKeyFile",
-        "subListen",
-        "subPath",
-        "subPort",
-        "subProfileUrl",
-        "subRoutingRules",
-        "subShowIdentityOnAllLinks",
-        "subSupportUrl",
-        "subThemeDir",
-        "subTitle",
-        "subURI",
-        "subUpdates",
-        "tgBotAPIServer",
-        "tgBotBackup",
-        "tgBotChatId",
-        "tgBotEnable",
-        "tgBotProxy",
-        "tgBotToken",
-        "tgCpu",
-        "tgEnabledEvents",
-        "tgLang",
-        "tgMemory",
-        "tgRunTime",
-        "timeLocation",
-        "trafficDiff",
-        "trustedProxyCIDRs",
-        "twoFactorEnable",
-        "twoFactorToken",
-        "warpUpdateInterval",
-        "webBasePath",
-        "webCertFile",
-        "webDomain",
-        "webKeyFile",
-        "webListen",
-        "webPort",
-    ]
-    .into_iter()
-    .collect::<BTreeSet<_>>();
-    assert_eq!(actual.len(), 105);
+    let spec: Value =
+        serde_json::from_str(include_str!("../spec/3x-ui-v3.8.5.openapi.json")).unwrap();
+    let expected = spec["components"]["schemas"]["AllSetting"]["properties"]
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect::<BTreeSet<_>>();
+    assert_eq!(actual.len(), 147);
     assert_eq!(actual, expected);
 }
 

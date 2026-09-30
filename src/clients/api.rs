@@ -339,9 +339,16 @@ impl<'client> ClientsApi<'client> {
 
     /// Applies a signed expiry/quota change and optional typed flow directive.
     ///
+    /// The panel deduplicates emails within a request, but separate calls can
+    /// apply the same expiry/quota delta again. Inspect both result fields:
+    /// a skipped field does not imply that every change for that client failed.
+    /// After an ambiguous response, reconcile client and attachment state before
+    /// retrying. Cookie-authenticated calls may be replayed once after HTTP 403.
+    ///
     /// # Errors
     ///
-    /// Returns an error when adjustment or decoding fails.
+    /// Returns an error when adjustment or decoding fails. Earlier server-side
+    /// changes may already have committed; an error does not guarantee rollback.
     pub async fn bulk_adjust(self, request: &BulkAdjustRequest) -> Result<BulkAdjustResult> {
         #[derive(Serialize)]
         #[serde(rename_all = "camelCase")]
@@ -350,6 +357,10 @@ impl<'client> ClientsApi<'client> {
             add_days: i32,
             add_bytes: i64,
             flow: &'static str,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            limit_hwid: Option<i32>,
+            #[serde(skip_serializing_if = "str::is_empty")]
+            ad_tag: &'a str,
         }
 
         self.post_object(
@@ -359,9 +370,21 @@ impl<'client> ClientsApi<'client> {
                 add_days: request.add_days,
                 add_bytes: request.add_bytes,
                 flow: request.flow.as_str(),
+                limit_hwid: request.limit_hwid,
+                ad_tag: &request.ad_tag,
             }),
         )
         .await
+    }
+
+    /// Generates a local Happ Crypt5 link for a client database identifier.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if Happ links are disabled, the client is missing, or transport fails.
+    pub async fn happ_link(self, client_id: i64) -> Result<super::HappLink> {
+        self.post_object(&format!("happLink/{client_id}"), None::<&()>)
+            .await
     }
 
     /// Enables multiple clients.
@@ -879,8 +902,9 @@ mod tests {
         assert_eq!(segment("группа"), "%D0%B3%D1%80%D1%83%D0%BF%D0%BF%D0%B0");
     }
 
+    /// Checks that typed page filters serialize to the query names and values accepted by 3x-ui.
     #[test]
-    fn page_request_uses_actual_v370_query_vocabulary() {
+    fn page_request_uses_actual_v385_query_vocabulary() {
         let request = ClientPageRequest {
             statuses: vec![ClientStatusFilter::Online, ClientStatusFilter::Expiring],
             protocols: vec![InboundProtocol::Vless],

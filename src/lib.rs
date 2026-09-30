@@ -1,4 +1,4 @@
-//! A typed, asynchronous SDK for the complete 3x-ui v3.7.0 API.
+//! A typed, asynchronous SDK for the complete 3x-ui v3.8.5 API.
 //!
 //! API tokens are the preferred authentication mechanism for automation.
 //! Cookie sessions remain available for username/password and 2FA login flows,
@@ -63,7 +63,7 @@ pub use clients::{
     ClientIpsByGuid, ClientMutationStatus, ClientPage, ClientPageRequest, ClientRecord,
     ClientReverse, ClientSlim, ClientSort, ClientStatusFilter, ClientSummary,
     ClientWithAttachments, ClientsApi, ClientsByGuid, DeletedCount, GroupName, GroupSummary,
-    LastOnlineByEmail, SortOrder,
+    HappLink, LastOnlineByEmail, SortOrder,
 };
 pub use error::{Error, ErrorKind, Result};
 pub use events::{
@@ -79,7 +79,7 @@ pub use inbounds::{
     AmneziaWgServerSettings, BulkDeleteClientsResult, BulkDeleteInboundsResult, ClientTraffic,
     ClientTrafficUsage, FallbackInput, FallbackParent, Inbound, InboundConfig, InboundFallback,
     InboundOption, InboundProtocol, InboundsApi, ShareAddressStrategy, SkippedClient,
-    SkippedInbound, TrafficPushRequest, TrafficReset,
+    SkippedInbound, TrafficPushRequest, TrafficReset, TuicServerSettings,
 };
 pub use nodes::{
     NodeInboundSyncMode, NodeMetric, NodeMtlsCa, NodeProbeResult, NodeRequest, NodeScheme,
@@ -100,19 +100,21 @@ pub use server::{
 };
 pub use settings::{
     ApiTokenCreateRequest, ApiTokenMetadata, ApiTokenScope, BalancerStatus, CreatedApiToken,
-    DisplaySettings, EffectiveDefaults, FactoryDefaults, GeoCategory, GeoCategoryPage, GeoEntry,
-    GeoEntryPage, GeoFile, GeodataTokenIssue, LdapSettings, MoveDirection, OutboundDocuments,
-    OutboundSubscription, OutboundSubscriptionInput, OutboundTestMode, OutboundTestResult,
-    OutboundTraffic, PanelSettings, PanelSettingsUpdate, PanelSettingsView, PiaAccount, PiaCountry,
-    PiaKey, PiaRegion, PiaServer, PiaServers, RouteTestRequest, RouteTestResult, SecuritySettings,
+    DiscordSettings, DisplaySettings, EffectiveDefaults, FactoryDefaults, GeoCategory,
+    GeoCategoryPage, GeoEntry, GeoEntryPage, GeoFile, GeodataSource, GeodataTokenIssue,
+    HappSettings, LdapSettings, MoveDirection, OutboundDocuments, OutboundSubscription,
+    OutboundSubscriptionInput, OutboundTestMode, OutboundTestResult, OutboundTraffic,
+    PanelSettings, PanelSettingsUpdate, PanelSettingsView, PiaAccount, PiaCountry, PiaKey,
+    PiaRegion, PiaServer, PiaServers, RouteTestRequest, RouteTestResult, SecuritySettings,
     SensitivePayload, SettingsApi, SmtpSettings, SmtpTestResult, SubscriptionSettings,
     TelegramSettings, TestEgressResult, TestEndpointResult, UserCredentialsUpdate,
     WarpRegistration, WebSettings, XraySettingsApi, XraySettingsSnapshot,
 };
 pub use subscription::{
-    DEFAULT_SUBSCRIPTION_RESPONSE_BODY_LIMIT, SubscriptionClient, SubscriptionClientBuilder,
-    SubscriptionDecodeError, SubscriptionDevice, SubscriptionDocument, SubscriptionInfo,
-    SubscriptionJson, SubscriptionMetadata, SubscriptionResponse, SubscriptionTraffic,
+    DEFAULT_SUBSCRIPTION_RESPONSE_BODY_LIMIT, HappMetadata, HwidSlotStatus, SubscriptionClient,
+    SubscriptionClientBuilder, SubscriptionDecodeError, SubscriptionDevice, SubscriptionDocument,
+    SubscriptionInfo, SubscriptionJson, SubscriptionMetadata, SubscriptionResponse,
+    SubscriptionTraffic,
 };
 pub use subscription_balancers::{
     SubscriptionBalancer, SubscriptionBalancerInput, SubscriptionBalancerStrategy,

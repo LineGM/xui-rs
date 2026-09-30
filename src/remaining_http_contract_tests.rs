@@ -3,24 +3,43 @@ use std::collections::BTreeSet;
 use serde_json::Value;
 
 const SDK_ROUTES: &[(&str, &str, Option<&str>)] = &[
-    ("get", "/panel/api/openapi.json", None),
+    (
+        "get",
+        "/panel/api/openapi.json",
+        Some("get_panel_api_openapi_json"),
+    ),
     (
         "post",
         "/panel/api/backuptotgbot",
         Some("post_panel_api_backuptotgbot"),
     ),
     ("get", "/{subPath}{subid}", Some("get_subPath_subid")),
-    ("head", "/{subPath}{subid}", None),
+    ("head", "/{subPath}{subid}", Some("head_subPath_subid")),
     ("get", "/{jsonPath}{subid}", Some("get_jsonPath_subid")),
-    ("head", "/{jsonPath}{subid}", None),
+    ("head", "/{jsonPath}{subid}", Some("head_jsonPath_subid")),
     ("get", "/{clashPath}{subid}", Some("get_clashPath_subid")),
-    ("head", "/{clashPath}{subid}", None),
+    ("head", "/{clashPath}{subid}", Some("head_clashPath_subid")),
+    (
+        "get",
+        "/{subPath}{subid}/hwid-status",
+        Some("get_subPath_subid_hwid_status"),
+    ),
+    (
+        "head",
+        "/{subPath}{subid}/hwid-status",
+        Some("head_subPath_subid_hwid_status"),
+    ),
+    ("get", "/mihomo/{subid}", None),
+    ("head", "/mihomo/{subid}", None),
+    ("get", "/clash-legacy/{subid}", None),
+    ("head", "/clash-legacy/{subid}", None),
 ];
 
+/// Checks API-document, backup, and subscription routes against both upstream contract snapshots.
 #[test]
 fn sdk_covers_every_remaining_openapi_and_source_http_route() {
     let openapi: Value =
-        serde_json::from_str(include_str!("../spec/3x-ui-v3.7.0.openapi.json")).unwrap();
+        serde_json::from_str(include_str!("../spec/3x-ui-v3.8.5.openapi.json")).unwrap();
     let documented = openapi["paths"]
         .as_object()
         .unwrap()
@@ -29,12 +48,13 @@ fn sdk_covers_every_remaining_openapi_and_source_http_route() {
             item.as_object().into_iter().flat_map(move |operations| {
                 operations
                     .iter()
-                    .filter(|(_, operation)| {
-                        operation["tags"].as_array().is_some_and(|tags| {
-                            tags.iter().any(|tag| {
-                                matches!(tag.as_str(), Some("Backup" | "Subscription Server"))
+                    .filter(move |(_, operation)| {
+                        path == "/panel/api/openapi.json"
+                            || operation["tags"].as_array().is_some_and(|tags| {
+                                tags.iter().any(|tag| {
+                                    matches!(tag.as_str(), Some("Backup" | "Subscription Server"))
+                                })
                             })
-                        })
                     })
                     .map(move |(method, operation)| {
                         (
@@ -52,11 +72,11 @@ fn sdk_covers_every_remaining_openapi_and_source_http_route() {
             operation.map(|operation| (*method, *path, operation))
         })
         .collect::<BTreeSet<_>>();
-    assert_eq!(documented.len(), 4);
+    assert_eq!(documented.len(), 10);
     assert_eq!(documented, implemented_openapi);
 
     let snapshot: Value = serde_json::from_str(include_str!(
-        "../spec/3x-ui-v3.7.0.remaining-http-routes.json"
+        "../spec/3x-ui-v3.8.5.remaining-http-routes.json"
     ))
     .unwrap();
     let source = snapshot["routes"]
@@ -74,6 +94,6 @@ fn sdk_covers_every_remaining_openapi_and_source_http_route() {
         .iter()
         .map(|(method, path, _)| (*method, *path))
         .collect::<BTreeSet<_>>();
-    assert_eq!(source.len(), 8);
+    assert_eq!(source.len(), 14);
     assert_eq!(source, implemented);
 }

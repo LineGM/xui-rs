@@ -10,8 +10,11 @@ sends panel bearer tokens, cookies, or CSRF headers.
 | Raw subscription | `raw`, `html`, `info`, `info_with_metadata`, `raw_metadata` |
 | Xray JSON | `json`, `json_metadata` |
 | Clash/Mihomo YAML | `clash`, `clash_metadata` |
+| Mihomo alias | `mihomo`, `mihomo_metadata` |
+| Legacy Clash alias | `clash_legacy`, `clash_legacy_metadata` |
+| Read-only HWID slots | `hwid_status`, `hwid_status_metadata` |
 
-The three metadata methods use the source-defined `HEAD` routes. They retrieve
+The metadata methods use the source-defined `HEAD` routes. They retrieve
 traffic, expiry, profile, routing, and content headers without downloading a
 credential-bearing body.
 
@@ -37,7 +40,7 @@ can be derived from its settings snapshot:
 use xui_rs::{Client, SubscriptionClient};
 async fn example(panel: &Client) -> xui_rs::Result<()> {
 let settings = panel.settings().all().await?;
-let subscriptions = SubscriptionClient::from_settings(&settings.settings.subscription)?;
+let subscriptions = SubscriptionClient::from_settings(&settings.settings.subscriptions)?;
 let metadata = subscriptions.raw_metadata("secret-subscription-id").await?;
 println!("traffic: {:?}", metadata.traffic);
 Ok(())
@@ -78,7 +81,7 @@ emails, and generated public links.
 
 ## HWID device identity
 
-v3.7.0 can limit a subscription to registered devices. Configure
+v3.8.5 can limit a subscription to registered devices. Configure
 `SubscriptionDevice` on the builder to send the source-defined `X-HWID`,
 device OS/version/model, and user-agent headers. HWIDs shorter than six bytes
 are rejected before any request is sent. `info_with_metadata` returns the
@@ -117,3 +120,19 @@ The two HTTP routes outside the domain controllers live under
 
 Backup delivery is an explicit mutating operation and is never triggered by
 client construction or any read method.
+
+## 3.8.5 behavior
+
+Fresh panels randomize format paths. Prefer `from_settings` or explicit paths.
+The two fixed Clash aliases require Clash to be enabled. The builder preserves
+the subscription server's base path for both aliases; `from_settings` uses the
+Clash server origin, even when the raw or JSON public URI points elsewhere.
+An alias shadowed by a configured subscription path returns a configuration
+error before sending either GET or HEAD. A configured Clash path of `/mihomo/`
+remains usable through `mihomo`, matching upstream's shared handler; a Clash
+path of `/clash-legacy/` shadows the separate legacy renderer.
+
+`hwid_status` reads slot counts without consuming or touching a device slot.
+`SubscriptionMetadata::happ` exposes Happ application headers with redacted
+`Debug` output. `profile_web_page_url()` may be absent: the profile page is
+opt-in (`subProfileMode` is `none`, `builtin`, or `custom`).

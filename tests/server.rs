@@ -45,9 +45,10 @@ fn reality_json() -> Value {
     })
 }
 
+/// Exercises server actions and downloads against mocks to verify their HTTP contracts.
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
-async fn every_v370_server_route_is_wired() {
+async fn every_v385_server_route_is_wired() {
     let server = MockServer::start().await;
     let status = json!({
         "cpu": 12.5,
@@ -60,7 +61,7 @@ async fn every_v370_server_route_is_wired() {
         "diskIO": {"read": 50, "write": 60},
         "diskTraffic": {"read": 5, "write": 6},
         "xray": {"state": "running", "errorMsg": "", "version": "v25.8.3"},
-        "panelVersion": "v3.7.0",
+        "panelVersion": "v3.8.5",
         "panelGuid": "panel-guid",
         "uptime": 100,
         "loads": [0.1, 0.2, 0.3],
@@ -122,7 +123,7 @@ async fn every_v370_server_route_is_wired() {
             Method::GET,
             "/panel/api/server/getPanelUpdateInfo",
             Some(json!({
-                "channel": "stable", "currentVersion": "v3.7.0",
+                "channel": "stable", "currentVersion": "v3.8.5",
                 "latestVersion": "v3.6.1", "updateAvailable": true
             })),
         ),
@@ -156,7 +157,7 @@ async fn every_v370_server_route_is_wired() {
                 "guid": "child", "parentGuid": "parent", "name": "node",
                 "address": "node.example", "scheme": "https", "port": 443,
                 "status": "online", "lastHeartbeat": 1, "latencyMs": 2,
-                "panelVersion": "v3.7.0", "xrayVersion": "v25.8.3",
+                "panelVersion": "v3.8.5", "xrayVersion": "v25.8.3",
                 "xrayState": "running"
             }])),
         ),

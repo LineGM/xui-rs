@@ -152,10 +152,105 @@ pub struct SubscriptionTraffic {
     pub expire: i64,
 }
 
+/// Application management headers emitted for Happ subscription clients.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Clone, Default, Eq, PartialEq)]
+pub struct HappMetadata {
+    /// Exact `ProviderID` header value.
+    pub provider_id: Option<String>,
+    /// Exact `New-Url` header value.
+    pub new_url: Option<String>,
+    /// Exact `Fallback-Url` header value.
+    pub fallback_url: Option<String>,
+    /// Exact `Sub-Info-Color` header value.
+    pub sub_info_color: Option<String>,
+    /// Exact `Sub-Info-Text` header value.
+    pub sub_info_text: Option<String>,
+    /// Exact `Sub-Info-Button-Text` header value.
+    pub sub_info_button_text: Option<String>,
+    /// Exact `Sub-Info-Button-Link` header value.
+    pub sub_info_button_link: Option<String>,
+    /// Exact `Sub-Expire-Button-Link` header value.
+    pub sub_expire_button_link: Option<String>,
+    /// Exact `Tun-Mode` header value.
+    pub tun_mode: Option<String>,
+    /// Exact `Tun-Type` header value.
+    pub tun_type: Option<String>,
+    /// Exact `Exclude-Routes` header value.
+    pub exclude_routes: Option<String>,
+    /// Exact `Color-Profile` header value.
+    pub color_profile: Option<String>,
+    /// Exact `Ping-Type` header value.
+    pub ping_type: Option<String>,
+    /// Exact `Subscription-Autoconnect-Type` header value.
+    pub autoconnect_type: Option<String>,
+    /// Exact `Per-App-Proxy-Mode` header value.
+    pub per_app_proxy_mode: Option<String>,
+    /// Exact `Per-App-Proxy-List` header value.
+    pub per_app_proxy_list: Option<String>,
+    /// Whether `Sub-Expire` is enabled.
+    pub sub_expire: bool,
+    /// Whether `Notification-Subs-Expire` is enabled.
+    pub notification_subs_expire: bool,
+    /// Whether `No-Limit-Enabled` is enabled.
+    pub no_limit_enabled: bool,
+    /// Whether `Subscription-Always-Hwid-Enable` is enabled.
+    pub always_hwid: bool,
+    /// Whether `Exclude-Apns-Enable` is enabled.
+    pub exclude_apns: bool,
+    /// Whether `Subscription-Autoconnect` is enabled.
+    pub autoconnect: bool,
+}
+
+impl HappMetadata {
+    /// Reads optional Happ headers and their exact upstream boolean encodings.
+    /// Absent or non-text headers leave optional fields unset and boolean flags disabled.
+    fn from_headers(headers: &HeaderMap) -> Self {
+        Self {
+            provider_id: header_text(headers, "providerid").map(str::to_owned),
+            new_url: header_text(headers, "new-url").map(str::to_owned),
+            fallback_url: header_text(headers, "fallback-url").map(str::to_owned),
+            sub_info_color: header_text(headers, "sub-info-color").map(str::to_owned),
+            sub_info_text: header_text(headers, "sub-info-text").map(str::to_owned),
+            sub_info_button_text: header_text(headers, "sub-info-button-text").map(str::to_owned),
+            sub_info_button_link: header_text(headers, "sub-info-button-link").map(str::to_owned),
+            sub_expire_button_link: header_text(headers, "sub-expire-button-link")
+                .map(str::to_owned),
+            tun_mode: header_text(headers, "tun-mode").map(str::to_owned),
+            tun_type: header_text(headers, "tun-type").map(str::to_owned),
+            exclude_routes: header_text(headers, "exclude-routes").map(str::to_owned),
+            color_profile: header_text(headers, "color-profile").map(str::to_owned),
+            ping_type: header_text(headers, "ping-type").map(str::to_owned),
+            autoconnect_type: header_text(headers, "subscription-autoconnect-type")
+                .map(str::to_owned),
+            per_app_proxy_mode: header_text(headers, "per-app-proxy-mode").map(str::to_owned),
+            per_app_proxy_list: header_text(headers, "per-app-proxy-list").map(str::to_owned),
+            sub_expire: header_text(headers, "sub-expire") == Some("1"),
+            notification_subs_expire: header_text(headers, "notification-subs-expire") == Some("1"),
+            no_limit_enabled: header_text(headers, "no-limit-enabled") == Some("1"),
+            always_hwid: header_text(headers, "subscription-always-hwid-enable") == Some("1"),
+            exclude_apns: header_text(headers, "exclude-apns-enable") == Some("true"),
+            autoconnect: header_text(headers, "subscription-autoconnect") == Some("1"),
+        }
+    }
+}
+
+impl fmt::Debug for HappMetadata {
+    /// Identifies Happ metadata without exposing header values or subscription links.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_tuple("HappMetadata")
+            .field(&"[REDACTED]")
+            .finish()
+    }
+}
+
 /// Common response headers emitted by all three subscription formats.
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Default, Eq, PartialEq)]
 pub struct SubscriptionMetadata {
+    /// Happ application management headers.
+    pub happ: HappMetadata,
     /// Parsed traffic/expiry header, when present and valid.
     pub traffic: Option<SubscriptionTraffic>,
     /// Decoded profile title.
@@ -187,8 +282,11 @@ pub struct SubscriptionMetadata {
 }
 
 impl SubscriptionMetadata {
+    /// Decodes subscription response headers, tolerating absent or malformed optional values.
+    /// Preserves secret-bearing profile URLs and routing rules for explicit accessors.
     pub(crate) fn from_headers(headers: &HeaderMap) -> Self {
         Self {
+            happ: HappMetadata::from_headers(headers),
             traffic: header_text(headers, "subscription-userinfo")
                 .and_then(parse_subscription_userinfo),
             profile_title: header_text(headers, "profile-title").and_then(decode_text_header),
@@ -229,9 +327,11 @@ impl SubscriptionMetadata {
 }
 
 impl fmt::Debug for SubscriptionMetadata {
+    /// Formats subscription metadata while redacting Happ values, the profile URL, and routing rules.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("SubscriptionMetadata")
+            .field("happ", &self.happ)
             .field("traffic", &self.traffic)
             .field("profile_title", &self.profile_title)
             .field("update_interval_minutes", &self.update_interval_minutes)
@@ -301,6 +401,8 @@ pub struct SubscriptionInfo {
     pub sub_title: String,
     /// Support URL.
     pub sub_support_url: String,
+    /// Suggested subscription update interval in hours.
+    pub sub_updates: i32,
     /// Distinct client emails represented by the subscription.
     pub emails: Vec<String>,
     /// Calendar identifier used by the information page.
@@ -310,9 +412,11 @@ pub struct SubscriptionInfo {
 }
 
 impl fmt::Debug for SubscriptionInfo {
+    /// Formats subscription status while redacting identifiers, connection links, client emails, and URIs.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("SubscriptionInfo")
+            .field("sub_updates", &self.sub_updates)
             .field("subscription_id", &"[REDACTED]")
             .field("enabled", &self.enabled)
             .field("is_online", &self.is_online)
@@ -370,6 +474,21 @@ fn decode_text_header(value: &str) -> Option<String> {
     let encoded = value.strip_prefix("base64:")?;
     let bytes = STANDARD.decode(encoded).ok()?;
     String::from_utf8(bytes).ok()
+}
+
+/// Read-only aggregate HWID slot status; fetching this never registers a device.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct HwidSlotStatus {
+    /// Whether any represented client enforces an HWID limit.
+    pub active: bool,
+    /// Effective device limit shared by the enabled clients in this subscription.
+    pub limit: i32,
+    /// Number of registered devices.
+    pub registered: i32,
+    /// Number of remaining slots.
+    pub remaining: i32,
+    /// Whether all available slots are occupied.
+    pub full: bool,
 }
 
 #[cfg(test)]

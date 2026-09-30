@@ -71,7 +71,7 @@ for required in \
     src/lib.rs \
     tests/public_api.rs \
     tests/live.rs \
-    spec/3x-ui-v3.7.0.openapi.json \
+    spec/3x-ui-v3.8.5.openapi.json \
     docs/api-stability.md \
     scripts/live-test.sh \
     scripts/package-check.sh; do

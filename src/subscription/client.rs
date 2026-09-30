@@ -145,6 +145,8 @@ impl SubscriptionClientBuilder {
         let json_prefix = prefix_from_path(&self.base_url, &self.json_path, "JSON")?;
         let clash_prefix = prefix_from_path(&self.base_url, &self.clash_path, "Clash")?;
         SubscriptionClient::from_parts(
+            &self.base_url,
+            [&self.raw_path, &self.json_path, &self.clash_path],
             raw_prefix,
             json_prefix,
             clash_prefix,
@@ -190,6 +192,8 @@ pub struct SubscriptionClient {
     json_prefix: Url,
     clash_prefix: Url,
     response_body_limit: usize,
+    mihomo_prefix: Option<Url>,
+    legacy_prefix: Option<Url>,
 }
 
 impl SubscriptionClient {
@@ -233,6 +237,12 @@ impl SubscriptionClient {
             normalize_prefix_uri(&settings.sub_clash_uri, "subClashURI")?
         };
         Self::from_parts(
+            &origin_url(&clash_prefix),
+            [
+                &settings.sub_path,
+                &settings.sub_json_path,
+                &settings.sub_clash_path,
+            ],
             raw_prefix,
             json_prefix,
             clash_prefix,
@@ -240,7 +250,16 @@ impl SubscriptionClient {
         )
     }
 
+    /// Builds an unauthenticated subscription transport from validated format prefixes.
+    /// Resolves fixed aliases below `alias_base` and marks conflicting aliases unavailable,
+    /// while allowing the configured Clash handler to serve Mihomo.
+    ///
+    /// # Errors
+    ///
+    /// Returns a configuration error for invalid device headers, alias URLs, or HTTP options.
     fn from_parts(
+        alias_base: &Url,
+        configured_paths: [&str; 3],
         raw_prefix: Url,
         json_prefix: Url,
         clash_prefix: Url,
@@ -293,8 +312,24 @@ impl SubscriptionClient {
         let http = http_builder
             .build()
             .map_err(|error| Error::Configuration(error.to_string()))?;
+        let prefixes = [&raw_prefix, &json_prefix, &clash_prefix];
+        let alias_prefix = |path: &str, label: &str, owner_count: usize| -> Result<Option<Url>> {
+            let candidate = prefix_from_path(alias_base, path, label)?;
+            let shadowed = prefixes[..owner_count].iter().any(|prefix| {
+                prefix.path().trim_matches('/') == candidate.path().trim_matches('/')
+            }) || configured_paths[..owner_count]
+                .iter()
+                .any(|configured| configured.trim().trim_matches('/') == path.trim_matches('/'));
+            Ok((!shadowed).then_some(candidate))
+        };
+        // The configured Clash handler already serves Mihomo, but it cannot
+        // substitute for the distinct legacy renderer.
+        let mihomo_prefix = alias_prefix("mihomo/", "Mihomo", 2)?;
+        let legacy_prefix = alias_prefix("clash-legacy/", "legacy Clash", 3)?;
         Ok(Self {
             http,
+            mihomo_prefix,
+            legacy_prefix,
             raw_prefix,
             json_prefix,
             clash_prefix,
@@ -437,6 +472,103 @@ impl SubscriptionClient {
         .await
     }
 
+    /// Fetches the Mihomo alias (`/mihomo/`), when enabled and not shadowed by a configured path.
+    ///
+    /// # Errors
+    ///
+    /// Returns a configuration error when the alias is shadowed, or an error
+    /// for transport, unsuccessful HTTP status, or invalid UTF-8.
+    pub async fn mihomo(
+        &self,
+        subscription_id: &str,
+    ) -> Result<SubscriptionResponse<SubscriptionDocument>> {
+        self.text(
+            Method::GET,
+            Format::Mihomo,
+            subscription_id,
+            Some(("view", "raw")),
+            "application/yaml",
+        )
+        .await
+    }
+
+    /// Retrieves response headers from the mihomo alias.
+    ///
+    /// # Errors
+    ///
+    /// Returns a configuration error when the alias is shadowed, or an error
+    /// for transport or unsuccessful HTTP status.
+    pub async fn mihomo_metadata(&self, subscription_id: &str) -> Result<SubscriptionMetadata> {
+        self.head(Format::Mihomo, subscription_id).await
+    }
+
+    /// Fetches the legacy Clash alias (`/clash-legacy/`), when enabled and not shadowed by a configured path.
+    ///
+    /// # Errors
+    ///
+    /// Returns a configuration error when the alias is shadowed, or an error
+    /// for transport, unsuccessful HTTP status, or invalid UTF-8.
+    pub async fn clash_legacy(
+        &self,
+        subscription_id: &str,
+    ) -> Result<SubscriptionResponse<SubscriptionDocument>> {
+        self.text(
+            Method::GET,
+            Format::Legacy,
+            subscription_id,
+            Some(("view", "raw")),
+            "application/yaml",
+        )
+        .await
+    }
+
+    /// Retrieves response headers from the `clash_legacy` alias.
+    ///
+    /// # Errors
+    ///
+    /// Returns a configuration error when the alias is shadowed, or an error
+    /// for transport or unsuccessful HTTP status.
+    pub async fn clash_legacy_metadata(
+        &self,
+        subscription_id: &str,
+    ) -> Result<SubscriptionMetadata> {
+        self.head(Format::Legacy, subscription_id).await
+    }
+
+    /// Reads device-slot counts without registering or touching a device.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for transport, unsuccessful HTTP status, or malformed JSON.
+    pub async fn hwid_status(&self, subscription_id: &str) -> Result<super::HwidSlotStatus> {
+        let (_, bytes, method, url) = self
+            .send(
+                Method::GET,
+                Format::HwidStatus,
+                subscription_id,
+                None,
+                "application/json",
+            )
+            .await?;
+        serde_json::from_slice(&bytes).map_err(|source| Error::Decode {
+            method,
+            url: Box::new(url),
+            source,
+        })
+    }
+
+    /// Checks the read-only HWID status route with HEAD.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for transport or unsuccessful HTTP status.
+    pub async fn hwid_status_metadata(
+        &self,
+        subscription_id: &str,
+    ) -> Result<SubscriptionMetadata> {
+        self.head(Format::HwidStatus, subscription_id).await
+    }
+
     /// Executes `HEAD` against the raw subscription route.
     ///
     /// # Errors
@@ -493,6 +625,13 @@ impl SubscriptionClient {
         })
     }
 
+    /// Requests one subscription format with a safely encoded identifier and bounded response body.
+    /// Returns response headers, bytes, the method, and a URL with the identifier redacted.
+    ///
+    /// # Errors
+    ///
+    /// Rejects unavailable aliases and empty identifiers before HTTP; propagates transport,
+    /// HTTP-status, and response-size errors without exposing the subscription identifier.
     async fn send(
         &self,
         method: Method,
@@ -502,11 +641,27 @@ impl SubscriptionClient {
         accept: &str,
     ) -> Result<(header::HeaderMap, Vec<u8>, Method, Url)> {
         let prefix = match format {
-            Format::Raw => &self.raw_prefix,
-            Format::Json => &self.json_prefix,
-            Format::Clash => &self.clash_prefix,
-        };
+            Format::Raw | Format::HwidStatus => Some(&self.raw_prefix),
+            Format::Mihomo => self.mihomo_prefix.as_ref(),
+            Format::Legacy => self.legacy_prefix.as_ref(),
+            Format::Json => Some(&self.json_prefix),
+            Format::Clash => Some(&self.clash_prefix),
+        }
+        .ok_or_else(|| {
+            Error::Configuration(
+                "subscription alias is shadowed by a configured subscription path".into(),
+            )
+        })?;
         let (mut url, mut redacted_url) = endpoint(prefix, subscription_id)?;
+        if matches!(format, Format::HwidStatus) {
+            url.path_segments_mut()
+                .expect("validated HTTP URL")
+                .push("hwid-status");
+            redacted_url
+                .path_segments_mut()
+                .expect("validated HTTP URL")
+                .push("hwid-status");
+        }
         if let Some((key, value)) = query {
             url.query_pairs_mut().append_pair(key, value);
             redacted_url.query_pairs_mut().append_pair(key, value);
@@ -595,6 +750,9 @@ enum Format {
     Raw,
     Json,
     Clash,
+    Mihomo,
+    Legacy,
+    HwidStatus,
 }
 
 fn normalize_server_url(value: &str) -> Result<Url> {

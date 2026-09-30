@@ -1,7 +1,7 @@
 # Real-time WebSocket events
 
 `Client::events()` covers the complete real-time protocol registered by 3x-ui
-v3.7.0. The endpoint is the panel base path plus `/ws`, so custom secret paths
+v3.8.5. The endpoint is the panel base path plus `/ws`, so custom secret paths
 are handled in the same way as HTTP API routes.
 
 ## Authentication and the shared cookie jar
@@ -65,7 +65,7 @@ Ok(())
 Every message carries the server-generated Unix timestamp in
 `PanelEvent::timestamp_ms`. Ping/pong control frames are handled internally.
 The SDK accepts at most 10 MiB per message, matching the hub's own outbound
-limit, and rejects binary application frames because v3.7.0 sends JSON text
+limit, and rejects binary application frames because v3.8.5 sends JSON text
 only.
 
 3x-ui currently discards every client application frame and applies a 512-byte
@@ -84,20 +84,20 @@ operation; only a standards-compliant close frame can be written.
 | `notification` | `Notification` | Title, body, and typed severity |
 | `xray_state` | `XrayState` | Xray `running`/`stop`/`error` transition |
 | `client_stats` | `ClientStats` | Absolute client and inbound counters |
-| `clients` | `Clients` | Reserved source constant with no v3.7.0 direct broadcaster |
+| `clients` | `Clients` | Reserved source constant with no v3.8.5 direct broadcaster |
 | `invalidate` | `Invalidate` | Resource that must be refreshed over HTTP |
 
 Unknown message names are preserved as `PanelEventKind::Unknown` with their
 exact JSON payload, allowing applications to observe events added by newer
 panels before upgrading the SDK. The reserved `clients` payload and unknown
-payloads remain open-ended because v3.7.0 defines no stable structure for
+payloads remain open-ended because v3.8.5 defines no stable structure for
 them.
 
-The published OpenAPI describes only `status`, `notification`, `invalidate`,
-and a stale `xrayState` example. Its examples also use `data` instead of the
-actual envelope field `payload`. The SDK contract snapshot follows the tagged
-Go hub and broadcasters: the wire name is `xray_state`, the envelope is
-`{type,payload,time}`, and all ten source message names are covered.
+The tagged OpenAPI now describes all nine emitted events in the
+`x-websocket-events` extension on `GET /ws`, with the correct
+`{type,payload,time}` envelope and `xray_state` name. The SDK also preserves
+the tenth, reserved `clients` constant. The source snapshot remains the
+reference for hub limits and broadcaster semantics.
 
 ## Traffic and invalidation semantics
 

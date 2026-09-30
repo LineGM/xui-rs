@@ -85,6 +85,14 @@ impl<'client> SubscriptionBalancersApi<'client> {
         Ok(())
     }
 
+    /// Creates or replaces a balancer using the panel form contract.
+    /// Validates the strategy and positive float32 weight range before serializing weights
+    /// as JSON alongside repeated inbound IDs.
+    ///
+    /// # Errors
+    ///
+    /// Returns configuration errors before HTTP for invalid input, or propagates transport,
+    /// API, decoding, and missing-object errors from the mutation response.
     async fn mutate(
         self,
         method: Method,
@@ -94,7 +102,19 @@ impl<'client> SubscriptionBalancersApi<'client> {
         let strategy = input.strategy.as_str().ok_or_else(|| {
             Error::Configuration("an unknown subscription-balancer strategy cannot be sent".into())
         })?;
+        if input.member_weights.values().any(|weight| {
+            !weight.is_finite()
+                || *weight < f64::from(f32::from_bits(1))
+                || *weight > f64::from(f32::MAX)
+        }) {
+            return Err(Error::Configuration(
+                "balancer weights must be finite and within the positive float32 range".into(),
+            ));
+        }
+        let weights = serde_json::to_string(&input.member_weights)
+            .map_err(|_| Error::Configuration("cannot encode balancer weights".into()))?;
         let mut form = vec![
+            ("memberWeights", weights),
             ("remark", input.remark.clone()),
             ("strategy", strategy.to_owned()),
             ("sortOrder", input.sort_order.to_string()),

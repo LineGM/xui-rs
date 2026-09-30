@@ -2,8 +2,8 @@
 
 set -Eeuo pipefail
 
-readonly PANEL_VERSION="3.7.0"
-readonly PANEL_IMAGE="ghcr.io/mhsanaei/3x-ui@sha256:3b3131f1876e6bf35063a9ec4dd1c594e4525180bfc2e1c477dcc8a3c9550ca1"
+readonly PANEL_VERSION="3.8.5"
+readonly PANEL_IMAGE="ghcr.io/mhsanaei/3x-ui@sha256:e0f90c10902e0e74f947d5a9efe017b273804477430233bbfc4918542ffe366c"
 readonly PANEL_PORT="2053"
 readonly PANEL_BASE_PATH="/xui-live/"
 readonly PANEL_USERNAME="xui-live"

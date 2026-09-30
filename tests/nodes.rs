@@ -24,6 +24,7 @@ async fn mount_endpoint(server: &MockServer, method: Method, path: &str, object:
         .await;
 }
 
+/// Builds a node-list fixture with runtime status fields and nullable inbound tags, excluding the API token.
 fn node_json() -> Value {
     json!({
         "id": 7,
@@ -46,7 +47,7 @@ fn node_json() -> Value {
         "lastHeartbeat": 1_700_000_000,
         "latencyMs": 42,
         "xrayVersion": "25.10.31",
-        "panelVersion": "v3.7.0",
+        "panelVersion": "v3.8.5",
         "cpuPct": 12.5,
         "memPct": 45.2,
         "uptimeSecs": 86_400,
@@ -70,12 +71,13 @@ fn node_json() -> Value {
     })
 }
 
+/// Builds a node-probe response for the requested status, including an error for an offline node.
 fn probe_json(status: &str) -> Value {
     json!({
         "status": status,
         "latencyMs": 42,
         "xrayVersion": "25.10.31",
-        "panelVersion": "v3.7.0",
+        "panelVersion": "v3.8.5",
         "cpuPct": 12.5,
         "memPct": 45.2,
         "uptimeSecs": 86_400,
@@ -85,9 +87,10 @@ fn probe_json(status: &str) -> Value {
     })
 }
 
+/// Exercises node management and remote operations with exact route, authentication, and payload checks.
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
-async fn every_v370_node_route_is_wired_with_exact_payloads() {
+async fn every_v385_node_route_is_wired_with_exact_payloads() {
     let server = MockServer::start().await;
     let routes = [
         (
@@ -366,8 +369,9 @@ fn node_credentials_are_explicit_mutually_exclusive_and_redacted() {
     assert_eq!(NodeScheme::default(), NodeScheme::Https);
 }
 
+/// Checks that the public node view covers the upstream response fields without exposing API tokens.
 #[test]
-fn node_view_matches_every_v370_source_field_and_never_api_token() {
+fn node_view_matches_every_v385_source_field_and_never_api_token() {
     let object = serde_json::to_value(NodeView::default())
         .unwrap()
         .as_object()

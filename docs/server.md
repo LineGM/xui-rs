@@ -1,7 +1,7 @@
 # Server and Xray API
 
 `Client::server()` covers all 39 routes registered and documented by the 3x-ui
-v3.7.0 server controller.
+v3.8.5 server controller.
 
 | Area | SDK methods |
 |---|---|
@@ -23,7 +23,7 @@ panel identity, Xray state, and AmneziaWG service status.
 
 `SystemMetric` exposes all 16 names accepted by the controller's source
 allowlist. `XrayMetric` exposes the five accepted expvar series.
-`HistoryBucket` similarly models the exact v3.7.0 allowlist, preventing an
+`HistoryBucket` similarly models the exact v3.8.5 allowlist, preventing an
 unsupported bucket from reaching the server. Its variants describe the visible
 window (`Minutes2` through `Days7`); the wire value is the per-point bucket size
 in seconds and each response contains at most 60 points.
@@ -73,7 +73,7 @@ and importing a database are never performed implicitly by another SDK call.
 ## Cryptographic material and paths
 
 The source implementation differs from several OpenAPI examples. The SDK uses
-the authoritative v3.7.0 shapes: UUID is `{uuid}`, ML-DSA-65 is `{seed,
+the authoritative v3.8.5 shapes: UUID is `{uuid}`, ML-DSA-65 is `{seed,
 verify}`, and ML-KEM-768 is `{seed, client}`. Generated private keys, seeds,
 ECH server keys, and VLESS encryption strings are redacted from `Debug`.
 

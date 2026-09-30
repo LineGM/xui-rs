@@ -1,6 +1,6 @@
 # Remote nodes
 
-`Client::nodes()` covers all 16 routes registered by the 3x-ui v3.7.0
+`Client::nodes()` covers all 16 routes registered by the 3x-ui v3.8.5
 `NodeController`: registration, connectivity tests, remote inbound discovery,
 health/history, panel updates, certificate pinning, and node mTLS.
 
@@ -14,8 +14,7 @@ health/history, panel updates, certificate pinning, and node mTLS.
 
 ## Safe read and write contracts
 
-The tagged controller returns `NodeView`, not the database `Node` described by
-the stale upstream OpenAPI schema. In particular, API tokens are write-only:
+The tagged controller returns the browser-safe `NodeView`. API tokens are write-only:
 reads expose `has_api_token` and never contain `apiToken`. `NodeView` covers all
 41 fields returned by the source, including health, Xray state, traffic rates,
 client counts, dirty configuration state, and multi-hop identity.

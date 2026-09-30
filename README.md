@@ -10,15 +10,15 @@
 [![crates.io](https://img.shields.io/crates/v/xui-rs.svg)](https://crates.io/crates/xui-rs)
 [![docs.rs](https://docs.rs/xui-rs/badge.svg)](https://docs.rs/xui-rs)
 [![MSRV](https://img.shields.io/badge/MSRV-1.88.0-dea584.svg)](https://www.rust-lang.org)
-[![3x-ui](https://img.shields.io/badge/3x--ui-v3.7.0-0ea5e9.svg)](https://github.com/MHSanaei/3x-ui/releases/tag/v3.7.0)
+[![3x-ui](https://img.shields.io/badge/3x--ui-v3.8.5-0ea5e9.svg)](https://github.com/MHSanaei/3x-ui/releases/tag/v3.8.5)
 [![License](https://img.shields.io/badge/license-Unlicense-blue.svg)](LICENSE)
 
 </div>
 
 > [!IMPORTANT]
-> The `1.0` line targets the complete 3x-ui v3.7.0 HTTP and WebSocket API. It is
-> a ground-up replacement for the original `0.0.1` client and is not
-> source-compatible with it.
+> The `2.0` line targets the complete 3x-ui v3.8.5 HTTP and WebSocket API.
+> Upgrading from 1.x requires small model changes; see the
+> [migration guide and upstream review](docs/upgrading-3.8.5.md).
 
 ## Why xui-rs?
 
@@ -37,7 +37,7 @@
 ## Installation
 
 ```console
-cargo add xui-rs@1
+cargo add xui-rs@2
 ```
 
 xui-rs requires Rust 1.88 or newer. Browse the complete API on
@@ -86,7 +86,7 @@ See [the authentication design](docs/authentication.md) for the rationale.
 
 ## Inbounds
 
-The complete 18-route v3.7.0 inbound surface is available through
+The complete 18-route v3.8.5 inbound surface is available through
 `Client::inbounds`, including AmneziaWG settings and subscription sort order.
 
 ```rust
@@ -120,7 +120,7 @@ replacement/import semantics, and intentionally open-ended Xray JSON fields.
 
 ## Clients
 
-`Client::clients()` covers all 46 client and group routes registered by v3.7.0,
+`Client::clients()` covers all 47 client and group routes registered by v3.8.5,
 including server-side paging, portable import/export, bulk operations, online
 and IP attribution, HWID device management, and group traffic baselines.
 
@@ -155,7 +155,7 @@ keys are redacted from `Debug`. See [the client API guide](docs/clients.md).
 
 ## Server and Xray
 
-`Client::server()` covers all 39 routes registered by the v3.7.0 server
+`Client::server()` covers all 39 routes registered by the v3.8.5 server
 controller: typed host/Xray status and history, observatory data, lifecycle and
 updates, logs, cryptographic helpers, REALITY target scanning, database
 backup/restore, cluster IP synchronization, and AmneziaWG peer diagnostics.
@@ -182,7 +182,7 @@ server API guide](docs/server.md).
 
 ## Panel and Xray settings
 
-`Client::settings()` covers all 14 v3.7.0 panel-settings routes, including
+`Client::settings()` covers all 15 v3.8.5 panel-settings routes, including
 scoped and expiring API tokens, notification tests, and credential replacement.
 `Client::xray_settings()` covers all 26 Xray settings and integration routes,
 including WARP, NordVPN, PIA, geodata inspection, outbound and routing tests,
@@ -209,7 +209,7 @@ plaintext are redacted from `Debug`. See [the settings API guide](docs/settings.
 
 ## Subscription hosts
 
-`Client::hosts()` covers all 12 host-override routes registered by v3.7.0.
+`Client::hosts()` covers all 12 host-override routes registered by v3.8.5.
 Logical groups span multiple inbounds and addresses, while create/update
 results expose every physical row produced by that Cartesian expansion.
 
@@ -234,7 +234,7 @@ Hosts API guide](docs/hosts.md).
 
 ## Remote nodes
 
-`Client::nodes()` covers all 16 v3.7.0 node routes: registration and lifecycle,
+`Client::nodes()` covers all 16 v3.8.5 node routes: registration and lifecycle,
 saved/unsaved probes, remote inbound discovery, health history, bulk panel
 updates, certificate pinning, node mTLS, and live mTLS-client reload.
 
@@ -261,9 +261,9 @@ guide](docs/nodes.md).
 
 ## Public subscriptions and panel metadata
 
-`SubscriptionClient` covers all six routes exposed by 3x-ui's separate public
+`SubscriptionClient` covers all twelve routes exposed by 3x-ui's separate public
 subscription server: `GET` and `HEAD` for raw, Xray JSON, and Clash/Mihomo
-formats. It intentionally carries no panel authentication because this server
+formats, the Mihomo and legacy Clash aliases, and read-only HWID slot status. It intentionally carries no panel authentication because this server
 can run on another origin and port.
 
 ```rust
@@ -280,7 +280,7 @@ Ok(())
 }
 ```
 
-Custom raw/JSON/Clash paths, construction from panel settings, and the v3.7.0
+Custom raw/JSON/Clash paths, construction from panel settings, and the v3.8.5
 HWID/device headers are supported. Successful responses expose the panel's
 HWID registration, limit, and device-existence metadata.
 Subscription identifiers, documents, generated links, routing rules, and
@@ -295,7 +295,7 @@ panel-wide operations guide](docs/subscriptions.md).
 
 ## Subscription balancers
 
-`Client::subscription_balancers()` covers the complete v3.7.0 controller for
+`Client::subscription_balancers()` covers the complete v3.8.5 controller for
 JSON-subscription balancers: list, create, replace, and both delete transports.
 Strategies are typed, inbound IDs preserve the upstream repeated-form wire
 contract, and unknown future strategy values fail closed for mutations.
@@ -373,7 +373,7 @@ semantics and introspection.
 ## Real-time events
 
 `Client::events()` covers the authenticated `/ws` handshake and all ten
-message names declared by the v3.7.0 source. Status, traffic, inbounds,
+message names declared by the v3.8.5 source. Status, traffic, inbounds,
 outbounds, nodes, notifications, Xray transitions, client counters, reserved
 clients payloads, and invalidations have distinct typed variants.
 
@@ -432,12 +432,12 @@ for idempotency-aware recommendations and WebSocket recovery semantics.
 
 ## API stability
 
-The complete 1.0 Rust surface is recorded in a reproducible rustdoc
+The complete 2.0 Rust surface is recorded in a reproducible rustdoc
 snapshot. Downstream contract tests compile every concise crate-root re-export,
 important trait guarantee, and representative multithreaded-runtime future.
 Extensible enums are non-exhaustive, so matches should retain a wildcard arm.
 
-See the [API stability policy](docs/api-stability.md) for the exact 1.x SemVer
+See the [API stability policy](docs/api-stability.md) for the exact SemVer
 guarantees and the boundary between Rust source compatibility and upstream
 3x-ui server behavior.
 
@@ -445,7 +445,8 @@ guarantees and the boundary between Rust source compatibility and upstream
 
 | xui-rs | 3x-ui | Status |
 |---|---|---|
-| `1.0.x` | `3.7.0` | Complete tagged HTTP and WebSocket API |
+| `2.0.x` | `3.8.5` | Complete tagged HTTP and WebSocket API |
+| `1.0.x` | `3.7.0` | Previous compatibility line |
 
 Rust 1.88.0 is the minimum supported compiler. Development and CI use the
 pinned Rust 1.98.0 toolchain.
@@ -465,7 +466,7 @@ scripts/package-check.sh --allow-dirty
 ```
 
 The opt-in real-panel gate runs the ignored integration target against an
-isolated, digest-pinned 3x-ui v3.7.0 container:
+isolated, digest-pinned 3x-ui v3.8.5 container:
 
 ```console
 scripts/live-test.sh

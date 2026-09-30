@@ -32,7 +32,7 @@ impl SubscriptionBalancerStrategy {
 }
 
 /// Persisted subscription balancer returned by 3x-ui.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct SubscriptionBalancer {
     /// Database identifier.
@@ -43,6 +43,9 @@ pub struct SubscriptionBalancer {
     pub strategy: SubscriptionBalancerStrategy,
     /// Inbounds whose generated outbounds participate.
     pub inbound_ids: Vec<i64>,
+    /// Relative least-load weights keyed by inbound identifier.
+    #[serde(default, deserialize_with = "deserialize_weights")]
+    pub member_weights: std::collections::BTreeMap<i64, f64>,
     /// One-based order in generated subscription documents.
     pub sort_order: i32,
     /// Whether the balancer is emitted.
@@ -54,7 +57,7 @@ pub struct SubscriptionBalancer {
 }
 
 /// Writable subscription-balancer fields.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SubscriptionBalancerInput {
     /// User-visible name.
     pub remark: String,
@@ -62,6 +65,8 @@ pub struct SubscriptionBalancerInput {
     pub strategy: SubscriptionBalancerStrategy,
     /// Inbounds whose generated outbounds participate.
     pub inbound_ids: Vec<i64>,
+    /// Relative least-load weights keyed by inbound identifier.
+    pub member_weights: std::collections::BTreeMap<i64, f64>,
     /// One-based order in generated subscription documents.
     pub sort_order: i32,
     /// Explicit enabled state. `None` uses the create default or preserves it on update.
@@ -75,10 +80,20 @@ impl SubscriptionBalancerInput {
             remark: remark.into(),
             strategy: SubscriptionBalancerStrategy::Random,
             inbound_ids,
+            member_weights: std::collections::BTreeMap::new(),
             sort_order: 1,
             enabled: Some(true),
         }
     }
+}
+
+/// Decodes numeric member weights, treating an explicit JSON null as an empty map.
+/// Malformed maps still return the deserializer error.
+fn deserialize_weights<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<std::collections::BTreeMap<i64, f64>, D::Error> {
+    Option::<std::collections::BTreeMap<i64, f64>>::deserialize(deserializer)
+        .map(Option::unwrap_or_default)
 }
 
 #[cfg(test)]

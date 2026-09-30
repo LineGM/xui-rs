@@ -167,6 +167,8 @@ impl fmt::Debug for SmtpSettings {
 #[derive(Clone, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct SecuritySettings {
+    /// Comma-separated host:port candidates for REALITY scans.
+    pub reality_scan_candidates: String,
     /// Percentage below which an outbound is treated as down.
     pub outbound_down_threshold: u8,
     /// Comma-separated addresses or CIDRs exempt from client IP limits.
@@ -182,9 +184,11 @@ pub struct SecuritySettings {
 }
 
 impl fmt::Debug for SecuritySettings {
+    /// Formats security settings without exposing the two-factor authentication seed.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("SecuritySettings")
+            .field("reality_scan_candidates", &self.reality_scan_candidates)
             .field("outbound_down_threshold", &self.outbound_down_threshold)
             .field("ip_limit_allowlist", &self.ip_limit_allowlist)
             .field("time_location", &self.time_location)
@@ -199,6 +203,19 @@ impl fmt::Debug for SecuritySettings {
 #[derive(Clone, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct SubscriptionSettings {
+    /// Enables local Happ Crypt5 link generation.
+    pub happ_link_enable: bool,
+    /// Adds a synthetic usage/status node to subscriptions.
+    pub sub_info_node_enable: bool,
+    /// Presents calendar expiry as the inclusive end of the previous month.
+    pub sub_calendar_expire_inclusive: bool,
+    /// Subscription template for expired clients.
+    pub sub_expired_template: String,
+    /// Subscription template for clients with depleted traffic.
+    pub sub_traffic_depleted_template: String,
+    /// Happ application settings, flattened on the wire.
+    #[serde(flatten)]
+    pub happ: HappSettings,
     /// Enables the subscription server.
     pub sub_enable: bool,
     /// Enables JSON subscriptions.
@@ -217,6 +234,8 @@ pub struct SubscriptionSettings {
     pub sub_title: String,
     /// Support URL.
     pub sub_support_url: String,
+    /// Profile page mode: `none` (default), `builtin`, or `custom`.
+    pub sub_profile_mode: String,
     /// Profile URL.
     pub sub_profile_url: String,
     /// Announcement text.
@@ -275,6 +294,10 @@ pub struct SubscriptionSettings {
     pub sub_json_mux: String,
     /// JSON routing rules.
     pub sub_json_rules: String,
+    /// Additional JSON subscription routing rules.
+    pub sub_json_routing_rules: String,
+    /// DNS servers included in JSON subscriptions.
+    pub sub_json_dns: String,
     /// JSON final-mask template.
     pub sub_json_final_mask: String,
     /// JSON observatory template merged into generated subscriptions.
@@ -398,6 +421,104 @@ impl fmt::Debug for LdapSettings {
     }
 }
 
+/// Discord notification and bot settings.
+#[derive(Clone, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct DiscordSettings {
+    /// Comma-separated Discord administrator user IDs.
+    pub discord_admin_ids: String,
+    /// Enables database backups through Discord.
+    pub discord_bot_backup: bool,
+    /// Enables the Discord notification bot.
+    pub discord_bot_enable: bool,
+    /// Discord bot token (blank updates preserve the stored token).
+    pub discord_bot_token: String,
+    /// Discord channel ID for notifications.
+    pub discord_channel_id: String,
+    /// CPU warning threshold in percent.
+    pub discord_cpu: u8,
+    /// Comma-separated enabled notification event names.
+    pub discord_enabled_events: String,
+    /// Notification language.
+    pub discord_lang: String,
+    /// Memory warning threshold in percent.
+    pub discord_memory: u8,
+    /// Scheduled report time.
+    pub discord_run_time: String,
+}
+
+impl fmt::Debug for DiscordSettings {
+    /// Identifies Discord settings in diagnostics without exposing their configuration or credentials.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DiscordSettings")
+            .field("settings", &"[REDACTED]")
+            .finish_non_exhaustive()
+    }
+}
+
+/// Happ application management and routing settings.
+#[derive(Clone, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct HappSettings {
+    /// Always requests device identification from Happ.
+    pub sub_happ_always_hwid: bool,
+    /// Automatically connects after importing the subscription.
+    pub sub_happ_auto_connect: bool,
+    /// Automatic connection selection policy.
+    pub sub_happ_auto_connect_type: String,
+    /// Emits Happ headers when its user agent is detected.
+    pub sub_happ_auto_detect: bool,
+    /// Application color profile.
+    pub sub_happ_color_profile: String,
+    /// Bypasses Apple Push Notification traffic.
+    pub sub_happ_exclude_apns: bool,
+    /// Routes excluded from the tunnel.
+    pub sub_happ_exclude_routes: String,
+    /// Fallback subscription URL.
+    pub sub_happ_fallback_url: String,
+    /// Replacement subscription URL.
+    pub sub_happ_new_url: String,
+    /// Enables the Happ no-limit indicator.
+    pub sub_happ_no_limit: bool,
+    /// Enables subscription expiry notifications.
+    pub sub_happ_notification_expire: bool,
+    /// Applications selected for per-app proxy rules.
+    pub sub_happ_per_app_list: String,
+    /// Per-app proxy policy: off, include, or exclude.
+    pub sub_happ_per_app_mode: String,
+    /// Latency probe mode.
+    pub sub_happ_ping_type: String,
+    /// Subscription provider identifier.
+    pub sub_happ_provider_id: String,
+    /// Enables the subscription expiry notice.
+    pub sub_happ_sub_expire: bool,
+    /// URL opened by the expiry notice button.
+    pub sub_happ_sub_expire_button_link: String,
+    /// URL opened by the subscription information button.
+    pub sub_happ_sub_info_button_link: String,
+    /// Subscription information button label.
+    pub sub_happ_sub_info_button_text: String,
+    /// Subscription information notice color.
+    pub sub_happ_sub_info_color: String,
+    /// Subscription information notice text.
+    pub sub_happ_sub_info_text: String,
+    /// Requested TUN mode.
+    pub sub_happ_tun_mode: String,
+    /// Requested TUN implementation.
+    pub sub_happ_tun_type: String,
+}
+
+impl fmt::Debug for HappSettings {
+    /// Identifies Happ settings in diagnostics without exposing application routing or subscription data.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("HappSettings")
+            .field("settings", &"[REDACTED]")
+            .finish_non_exhaustive()
+    }
+}
+
 /// Complete persisted panel settings, grouped ergonomically but flattened on the wire.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
@@ -414,6 +535,9 @@ pub struct PanelSettings {
     /// SMTP settings.
     #[serde(flatten)]
     pub smtp: SmtpSettings,
+    /// Discord notification settings.
+    #[serde(flatten)]
+    pub discord: DiscordSettings,
     /// Security and integration settings.
     #[serde(flatten)]
     pub security: SecuritySettings,
@@ -444,6 +568,8 @@ pub struct PanelSettingsView {
     pub has_warp_secret: bool,
     /// `NordVPN` credentials are stored.
     pub has_nord_secret: bool,
+    /// A Discord bot token is stored.
+    pub has_discord_bot_token: bool,
     /// An SMTP password is stored.
     pub has_smtp_password: bool,
 }
@@ -457,6 +583,8 @@ pub struct PanelSettingsUpdate {
     pub settings: PanelSettings,
     /// Current 2FA code, required when disabling 2FA.
     pub two_factor_code: String,
+    /// Explicitly clears the stored Discord bot token.
+    pub clear_discord_bot_token: bool,
     /// Explicitly clears the stored Telegram token.
     pub clear_tg_bot_token: bool,
     /// Explicitly clears the stored LDAP password.
@@ -883,12 +1011,23 @@ impl fmt::Debug for WarpRegistration {
     }
 }
 
+/// Standard geodata download preset supplied by the panel.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct GeodataSource {
+    /// Download URL.
+    pub url: String,
+    /// Destination database filename.
+    pub file: String,
+}
+
 /// Decoded Xray settings response, including runtime-only subscription outbounds.
 #[derive(Clone, Deserialize, PartialEq, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct XraySettingsSnapshot {
     /// Editable Xray template.
     pub xray_setting: crate::XrayConfig,
+    /// Standard downloadable geodata source presets.
+    pub geodata_sources: Vec<GeodataSource>,
     /// Known inbound tags.
     pub inbound_tags: Vec<String>,
     /// Client reverse-proxy tags.
@@ -902,10 +1041,12 @@ pub struct XraySettingsSnapshot {
 }
 
 impl Default for XraySettingsSnapshot {
+    /// Creates an empty Xray settings snapshot with an object template and no runtime subscription outbounds.
     fn default() -> Self {
         Self {
             xray_setting: crate::XrayConfig::from(Value::Object(serde_json::Map::new())),
             inbound_tags: Vec::new(),
+            geodata_sources: Vec::new(),
             client_reverse_tags: Vec::new(),
             outbound_test_url: String::new(),
             subscription_outbounds: Vec::new(),
@@ -915,9 +1056,11 @@ impl Default for XraySettingsSnapshot {
 }
 
 impl fmt::Debug for XraySettingsSnapshot {
+    /// Formats Xray settings metadata while redacting the template and runtime subscription outbounds.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("XraySettingsSnapshot")
+            .field("geodata_sources", &self.geodata_sources)
             .field("xray_setting", &"[REDACTED]")
             .field("inbound_tags", &self.inbound_tags)
             .field("client_reverse_tags", &self.client_reverse_tags)
@@ -1091,6 +1234,8 @@ pub struct OutboundSubscription {
     pub allow_private: bool,
     /// Whether invalid TLS certificates are accepted.
     pub allow_insecure: bool,
+    /// User agent used to fetch this remote subscription.
+    pub user_agent: String,
     /// Prefix applied to generated outbound tags.
     pub tag_prefix: String,
     /// Refresh interval in seconds.
@@ -1114,9 +1259,11 @@ pub struct OutboundSubscription {
 }
 
 impl fmt::Debug for OutboundSubscription {
+    /// Formats outbound-subscription state while redacting its URL, user agent, and cached outbounds.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("OutboundSubscription")
+            .field("user_agent", &"[REDACTED]")
             .field("id", &self.id)
             .field("remark", &self.remark)
             .field("url", &"[REDACTED]")
@@ -1145,6 +1292,8 @@ pub struct OutboundSubscriptionInput {
     pub remark: String,
     /// Remote subscription URL.
     pub url: String,
+    /// User agent used to fetch this remote subscription.
+    pub user_agent: String,
     /// Prefix applied to generated tags.
     pub tag_prefix: String,
     /// Whether it contributes outbounds.
@@ -1166,6 +1315,7 @@ impl OutboundSubscriptionInput {
             remark: String::new(),
             url: url.into(),
             tag_prefix: String::new(),
+            user_agent: String::new(),
             enabled: true,
             allow_private: false,
             allow_insecure: false,
@@ -1176,9 +1326,11 @@ impl OutboundSubscriptionInput {
 }
 
 impl fmt::Debug for OutboundSubscriptionInput {
+    /// Formats outbound-subscription options while redacting the URL and custom user agent.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("OutboundSubscriptionInput")
+            .field("user_agent", &"[REDACTED]")
             .field("remark", &self.remark)
             .field("url", &"[REDACTED]")
             .field("tag_prefix", &self.tag_prefix)

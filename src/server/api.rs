@@ -484,7 +484,7 @@ impl<'client> ServerApi<'client> {
     /// Refreshes one named Xray geo file.
     ///
     /// The filename is encoded as one path segment; the server additionally
-    /// enforces its v3.7.0 safe-filename allowlist.
+    /// enforces its v3.8.5 safe-filename allowlist.
     ///
     /// # Errors
     ///
@@ -507,7 +507,7 @@ impl<'client> ServerApi<'client> {
             syslog: bool,
         }
 
-        self.post_form_object(
+        self.post_form_list(
             &format!("logs/{}", request.count),
             &Form {
                 level: request.level.as_str(),
@@ -532,7 +532,7 @@ impl<'client> ServerApi<'client> {
             show_proxy: bool,
         }
 
-        self.post_form_object(
+        self.post_form_list(
             &format!("xraylogs/{}", request.count),
             &Form {
                 filter: &request.filter,
@@ -609,6 +609,24 @@ impl<'client> ServerApi<'client> {
         self.required_object(Method::POST, &path, envelope)
     }
 
+    /// Posts a panel-authenticated form and decodes its collection response.
+    /// A successful envelope with a null or absent object represents an empty list;
+    /// transport, API, and decoding errors propagate to the caller.
+    async fn post_form_list<T: DeserializeOwned, B: Serialize + ?Sized>(
+        self,
+        suffix: &str,
+        form: &B,
+    ) -> Result<Vec<T>> {
+        let path = format!("{ROOT}/{suffix}");
+        let envelope = self
+            .client
+            .execute_form::<Vec<T>, _>(Method::POST, &path, form, AuthenticationScope::PanelApi)
+            .await?;
+        Ok(envelope.obj.unwrap_or_default())
+    }
+
+    /// Posts a panel-authenticated form for an action without a typed result.
+    /// Validates the response envelope and propagates transport and API errors.
     async fn post_form_empty<B>(self, suffix: &str, form: &B) -> Result<()>
     where
         B: Serialize + ?Sized,

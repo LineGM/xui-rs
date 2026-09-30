@@ -1,7 +1,7 @@
 # Client API
 
-`Client::clients()` covers all 46 routes registered and documented by the
-v3.7.0 client and group controllers.
+`Client::clients()` covers all 47 routes registered and documented by the
+v3.8.5 client and group controllers.
 
 | Area | SDK methods |
 |---|---|
@@ -21,7 +21,7 @@ creates an enabled client with unlimited quota and lets the server generate the
 protocol credential appropriate for each target inbound. The writable fields
 cover VMess/VLESS, Trojan, Shadowsocks, Hysteria, WireGuard, MTProto,
 per-inbound allowed IPs and forwarded ports, HWID limits, and the expanded
-v3.7.0 traffic-reset policy.
+v3.8.5 traffic-reset policy.
 
 `ClientRecord` is the canonical database-backed response. The different types
 are deliberate: for example, writable WireGuard `allowedIPs` is an array while
@@ -41,7 +41,7 @@ Ok(())
 }
 ```
 
-`update_on_inbounds` sends the v3.7.0 `inboundIds` query filter when only
+`update_on_inbounds` sends the v3.8.5 `inboundIds` query filter when only
 selected attachments should have their settings JSON rewritten. Canonical
 record fields such as group and enabled state remain global; an empty filter
 has the server's ordinary unfiltered-update meaning.
@@ -71,10 +71,45 @@ results normalize Go's possible `null` slices into empty Rust vectors. Group
 traffic reset moves the group's accounting baseline without changing the
 underlying client counters.
 
+### Bulk adjustment retries and partial results
+
+In 3x-ui v3.8.5, `bulk_adjust` trims surrounding whitespace from emails,
+discards empty entries, and removes exact duplicates within one request.
+Deduplication is case-sensitive; it does not combine differently cased emails.
+The SDK sends the supplied list unchanged. This request-local deduplication
+does not make separate calls idempotent: repeating `add_days` or `add_bytes`
+can apply the increment again. The endpoint provides no idempotency key.
+These rules come from the tagged [bulk-adjust service](https://github.com/MHSanaei/3x-ui/blob/v3.8.5/internal/web/service/client_bulk.go)
+and [email helpers](https://github.com/MHSanaei/3x-ui/blob/v3.8.5/internal/web/service/inbound_util.go).
+
+An adjustment is not an atomic transaction across every client and attachment.
+Inspect both `adjusted` and `skipped`, even after a successful response. A
+`skipped` entry can describe one unapplied field while another field changed:
+for example, a finite expiry can be extended while an unlimited quota stays
+unchanged. The same client can therefore contribute to `adjusted` and appear
+in `skipped`. An error also does not establish that all earlier work rolled
+back; the [service performs several separate writes](https://github.com/MHSanaei/3x-ui/blob/v3.8.5/internal/web/service/client_bulk.go).
+
+After a timeout, connection loss, unreadable response, or partial result:
+
+1. Keep the original request and any pre-operation state needed to establish
+   the intended final values. Do not replay the whole batch automatically.
+2. Read affected clients with `clients().get(email)` and `clients().traffic(email)`;
+   inspect attached inbound configurations when reconciling flow or attachment
+   changes. Compare the observed state with the intended result.
+3. Apply only confirmed outstanding changes. Coordinate with other writers
+   while reconciling; a read followed by a correction does not provide an
+   atomic compare-and-set. If the result remains ambiguous, resolve it before
+   applying another additive adjustment.
+
+The SDK dispatcher does not retry returned transport or decoding errors.
+Its one automatic mutation replay is cookie-session recovery after HTTP 403;
+see the [authentication guide](authentication.md) for its scope and assumptions.
+
 ## HWID devices
 
 `hwid_devices`, `clear_hwid_devices`, and `delete_hwid_device` expose the
-v3.7.0 device-limit controller. Returned hardware identifiers are redacted
+v3.8.5 device-limit controller. Returned hardware identifiers are redacted
 from `Debug`; the explicit field remains available for administration.
 
 ## Paths and secrets
@@ -87,3 +122,11 @@ Protocol IDs, passwords, Hysteria auth, WireGuard private/pre-shared keys,
 MTProto secrets, subscription IDs, advertisement tags, and external-link URLs
 are redacted from `Debug`. They remain explicitly accessible and serializable
 when an application intentionally needs to update or export them.
+
+## 3.8.5 additions
+
+`happ_link(id)` generates a local encrypted Happ subscription link.
+`BulkAdjustRequest` accepts `limit_hwid` (`None` preserves; `Some(0)` disables)
+and `ad_tag` (empty preserves; `none` clears). Registered devices include a
+short `fingerprint`. `ClientConfig::keep_alive` uses `Option<i32>` to distinguish
+preservation from explicitly disabling keepalive with `Some(0)`.

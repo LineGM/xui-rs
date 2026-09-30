@@ -64,11 +64,12 @@ fn core_and_accessor_types_keep_their_async_trait_contracts() {
     assert_copy::<ProxyScheme>();
 }
 
+/// Uses compile-time assignments to guard the identity of crate-root and domain-module reexports.
 #[test]
 fn every_concise_root_reexport_names_the_same_domain_type() {
     assert_root_reexports!(auth => CsrfToken, LoginRequest);
     assert_root_reexports!(client => AuthenticationKind, Client, ClientBuilder);
-    assert_root_reexports!(clients =>
+    assert_root_reexports!(clients => HappLink,
         ActiveInboundsByGuid, AffectedCount, BulkAdjustRequest, BulkAdjustResult,
         BulkAttachResult, BulkClientIssue, BulkCreateResult, BulkDeleteResult,
         BulkDetachResult, BulkFlowAdjustment, BulkSetEnabledResult, ClientConfig,
@@ -88,7 +89,7 @@ fn every_concise_root_reexport_names_the_same_domain_type() {
         HostGroup, HostJsonOverride, HostOptions, HostRow, HostSecurity, MihomoIpVersion,
         SubscriptionFormat, VlessRoute,
     );
-    assert_root_reexports!(inbounds =>
+    assert_root_reexports!(inbounds => TuicServerSettings,
         AmneziaWgServerSettings, BulkDeleteClientsResult, BulkDeleteInboundsResult, ClientTraffic, ClientTrafficUsage,
         FallbackInput, FallbackParent, Inbound, InboundConfig, InboundFallback, InboundOption,
         InboundProtocol, ShareAddressStrategy, SkippedClient, SkippedInbound, TrafficPushRequest,
@@ -111,7 +112,7 @@ fn every_concise_root_reexport_names_the_same_domain_type() {
         X25519KeyPair, XrayConfig, XrayLogEntry, XrayLogEvent, XrayLogRequest, XrayMetric,
         XrayMetricsState, XrayObservatoryEntry, XrayStatus,
     );
-    assert_root_reexports!(settings =>
+    assert_root_reexports!(settings => GeodataSource, DiscordSettings, HappSettings,
         ApiTokenCreateRequest, ApiTokenMetadata, ApiTokenScope, BalancerStatus, CreatedApiToken, DisplaySettings, EffectiveDefaults,
         FactoryDefaults, GeoCategory, GeoCategoryPage, GeoEntry, GeoEntryPage, GeoFile,
         GeodataTokenIssue, LdapSettings, MoveDirection, OutboundDocuments, OutboundSubscription,
@@ -122,7 +123,7 @@ fn every_concise_root_reexport_names_the_same_domain_type() {
         TelegramSettings, TestEgressResult, TestEndpointResult, UserCredentialsUpdate,
         WarpRegistration, WebSettings, XraySettingsSnapshot,
     );
-    assert_root_reexports!(subscription =>
+    assert_root_reexports!(subscription => HappMetadata, HwidSlotStatus,
         SubscriptionClient, SubscriptionClientBuilder, SubscriptionDecodeError,
         SubscriptionDevice, SubscriptionDocument, SubscriptionInfo, SubscriptionJson, SubscriptionMetadata,
         SubscriptionTraffic,

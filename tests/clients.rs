@@ -80,9 +80,11 @@ async fn mount_endpoint(server: &MockServer, method: Method, path: &str, object:
         .await;
 }
 
+/// Exercises every client and client-group operation against authenticated HTTP mocks.
+/// Checks route selection and request payloads against the tagged contract.
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
-async fn every_v370_client_and_group_route_is_wired() {
+async fn every_v385_client_and_group_route_is_wired() {
     let server = MockServer::start().await;
     let page = json!({
         "items": [],
@@ -422,6 +424,7 @@ async fn every_v370_client_and_group_route_is_wired() {
                 add_days: 30,
                 add_bytes: 1024,
                 flow: BulkFlowAdjustment::Vision,
+                ..BulkAdjustRequest::default()
             })
             .await
             .unwrap()
