@@ -3,7 +3,7 @@
 3x-ui v3.8.5 splits this surface between `SettingController` and
 `XraySettingController`. `Client::settings()` covers the 15 panel-settings,
 credential, notification, and API-token routes. `Client::xray_settings()`
-covers all 26 Xray settings and integration routes. All 40 operations are
+covers all 26 Xray settings and integration routes. All 41 operations are
 documented by the tagged OpenAPI and independently pinned from the Go routers.
 
 ## Full-replacement panel settings

@@ -145,6 +145,8 @@ impl SubscriptionClientBuilder {
         let json_prefix = prefix_from_path(&self.base_url, &self.json_path, "JSON")?;
         let clash_prefix = prefix_from_path(&self.base_url, &self.clash_path, "Clash")?;
         SubscriptionClient::from_parts(
+            &self.base_url,
+            [&self.raw_path, &self.json_path, &self.clash_path],
             raw_prefix,
             json_prefix,
             clash_prefix,
@@ -190,8 +192,8 @@ pub struct SubscriptionClient {
     json_prefix: Url,
     clash_prefix: Url,
     response_body_limit: usize,
-    mihomo_prefix: Url,
-    legacy_prefix: Url,
+    mihomo_prefix: Option<Url>,
+    legacy_prefix: Option<Url>,
 }
 
 impl SubscriptionClient {
@@ -235,6 +237,12 @@ impl SubscriptionClient {
             normalize_prefix_uri(&settings.sub_clash_uri, "subClashURI")?
         };
         Self::from_parts(
+            &origin_url(&clash_prefix),
+            [
+                &settings.sub_path,
+                &settings.sub_json_path,
+                &settings.sub_clash_path,
+            ],
             raw_prefix,
             json_prefix,
             clash_prefix,
@@ -243,6 +251,8 @@ impl SubscriptionClient {
     }
 
     fn from_parts(
+        alias_base: &Url,
+        configured_paths: [&str; 3],
         raw_prefix: Url,
         json_prefix: Url,
         clash_prefix: Url,
@@ -295,14 +305,24 @@ impl SubscriptionClient {
         let http = http_builder
             .build()
             .map_err(|error| Error::Configuration(error.to_string()))?;
+        let prefixes = [&raw_prefix, &json_prefix, &clash_prefix];
+        let alias_prefix = |path: &str, label: &str, owner_count: usize| -> Result<Option<Url>> {
+            let candidate = prefix_from_path(alias_base, path, label)?;
+            let shadowed = prefixes[..owner_count].iter().any(|prefix| {
+                prefix.path().trim_matches('/') == candidate.path().trim_matches('/')
+            }) || configured_paths[..owner_count]
+                .iter()
+                .any(|configured| configured.trim().trim_matches('/') == path.trim_matches('/'));
+            Ok((!shadowed).then_some(candidate))
+        };
+        // The configured Clash handler already serves Mihomo, but it cannot
+        // substitute for the distinct legacy renderer.
+        let mihomo_prefix = alias_prefix("mihomo/", "Mihomo", 2)?;
+        let legacy_prefix = alias_prefix("clash-legacy/", "legacy Clash", 3)?;
         Ok(Self {
             http,
-            mihomo_prefix: prefix_from_path(&origin_url(&clash_prefix), "mihomo/", "Mihomo")?,
-            legacy_prefix: prefix_from_path(
-                &origin_url(&clash_prefix),
-                "clash-legacy/",
-                "legacy Clash",
-            )?,
+            mihomo_prefix,
+            legacy_prefix,
             raw_prefix,
             json_prefix,
             clash_prefix,
@@ -449,7 +469,8 @@ impl SubscriptionClient {
     ///
     /// # Errors
     ///
-    /// Returns an error for transport, unsuccessful HTTP status, or invalid UTF-8.
+    /// Returns a configuration error when the alias is shadowed, or an error
+    /// for transport, unsuccessful HTTP status, or invalid UTF-8.
     pub async fn mihomo(
         &self,
         subscription_id: &str,
@@ -468,7 +489,8 @@ impl SubscriptionClient {
     ///
     /// # Errors
     ///
-    /// Returns an error for transport or unsuccessful HTTP status.
+    /// Returns a configuration error when the alias is shadowed, or an error
+    /// for transport or unsuccessful HTTP status.
     pub async fn mihomo_metadata(&self, subscription_id: &str) -> Result<SubscriptionMetadata> {
         self.head(Format::Mihomo, subscription_id).await
     }
@@ -477,7 +499,8 @@ impl SubscriptionClient {
     ///
     /// # Errors
     ///
-    /// Returns an error for transport, unsuccessful HTTP status, or invalid UTF-8.
+    /// Returns a configuration error when the alias is shadowed, or an error
+    /// for transport, unsuccessful HTTP status, or invalid UTF-8.
     pub async fn clash_legacy(
         &self,
         subscription_id: &str,
@@ -496,7 +519,8 @@ impl SubscriptionClient {
     ///
     /// # Errors
     ///
-    /// Returns an error for transport or unsuccessful HTTP status.
+    /// Returns a configuration error when the alias is shadowed, or an error
+    /// for transport or unsuccessful HTTP status.
     pub async fn clash_legacy_metadata(
         &self,
         subscription_id: &str,
@@ -603,12 +627,17 @@ impl SubscriptionClient {
         accept: &str,
     ) -> Result<(header::HeaderMap, Vec<u8>, Method, Url)> {
         let prefix = match format {
-            Format::Raw | Format::HwidStatus => &self.raw_prefix,
-            Format::Mihomo => &self.mihomo_prefix,
-            Format::Legacy => &self.legacy_prefix,
-            Format::Json => &self.json_prefix,
-            Format::Clash => &self.clash_prefix,
-        };
+            Format::Raw | Format::HwidStatus => Some(&self.raw_prefix),
+            Format::Mihomo => self.mihomo_prefix.as_ref(),
+            Format::Legacy => self.legacy_prefix.as_ref(),
+            Format::Json => Some(&self.json_prefix),
+            Format::Clash => Some(&self.clash_prefix),
+        }
+        .ok_or_else(|| {
+            Error::Configuration(
+                "subscription alias is shadowed by a configured subscription path".into(),
+            )
+        })?;
         let (mut url, mut redacted_url) = endpoint(prefix, subscription_id)?;
         if matches!(format, Format::HwidStatus) {
             url.path_segments_mut()

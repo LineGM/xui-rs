@@ -94,13 +94,13 @@ impl<'client> SubscriptionBalancersApi<'client> {
         let strategy = input.strategy.as_str().ok_or_else(|| {
             Error::Configuration("an unknown subscription-balancer strategy cannot be sent".into())
         })?;
-        if input
-            .member_weights
-            .values()
-            .any(|weight| !weight.is_finite() || *weight <= 0.0)
-        {
+        if input.member_weights.values().any(|weight| {
+            !weight.is_finite()
+                || *weight < f64::from(f32::from_bits(1))
+                || *weight > f64::from(f32::MAX)
+        }) {
             return Err(Error::Configuration(
-                "balancer weights must be finite and positive".into(),
+                "balancer weights must be finite and within the positive float32 range".into(),
             ));
         }
         let weights = serde_json::to_string(&input.member_weights)

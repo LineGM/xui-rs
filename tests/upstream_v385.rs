@@ -9,6 +9,7 @@ use wiremock::{
 use xui_rs::{
     Client, ClientConfig, InboundProtocol, PanelSettings, PanelSettingsUpdate,
     SubscriptionBalancerInput, SubscriptionBalancerStrategy, SubscriptionClient,
+    SubscriptionSettings,
 };
 
 fn client(server: &MockServer) -> Client {
@@ -321,7 +322,15 @@ async fn balancer_weight_updates_propagate_errors_and_null_weights_decode() {
 async fn invalid_balancer_weights_fail_before_any_http_mutation() {
     let server = MockServer::start().await;
     let client = client(&server);
-    for weight in [0.0, -1.0, f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+    for weight in [
+        0.0,
+        -1.0,
+        f64::NAN,
+        f64::INFINITY,
+        f64::NEG_INFINITY,
+        f64::from_bits(f64::from(f32::from_bits(1)).to_bits() - 1),
+        f64::from_bits(f64::from(f32::MAX).to_bits() + 1),
+    ] {
         let mut input = SubscriptionBalancerInput::new("weighted", vec![7]);
         input.strategy = SubscriptionBalancerStrategy::LeastLoad;
         input.member_weights.insert(7, weight);
@@ -330,6 +339,193 @@ async fn invalid_balancer_weights_fail_before_any_http_mutation() {
             client.subscription_balancers().update(5, &input).await,
         ] {
             assert_eq!(result.unwrap_err().kind(), xui_rs::ErrorKind::Configuration);
+        }
+    }
+    assert!(server.received_requests().await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn balancer_weight_float32_boundaries_are_accepted_on_create_and_update() {
+    for weight in [f64::from(f32::from_bits(1)), f64::from(f32::MAX)] {
+        let server = MockServer::start().await;
+        let weights = BTreeMap::from([(7, weight)]);
+        let encoded = serde_json::to_string(&weights).unwrap();
+        for route in ["sub-balancers", "sub-balancers/5"] {
+            let encoded = encoded.clone();
+            Mock::given(method("POST"))
+                .and(path(format!("/secret/panel/api/{route}")))
+                .and(move |request: &wiremock::Request| {
+                    url::form_urlencoded::parse(&request.body)
+                        .any(|(key, value)| key == "memberWeights" && value == encoded)
+                })
+                .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                    "success":true,"obj":{"id":5,"memberWeights":weights}
+                })))
+                .expect(1)
+                .mount(&server)
+                .await;
+        }
+        let client = client(&server);
+        let mut input = SubscriptionBalancerInput::new("weighted", vec![7]);
+        input.strategy = SubscriptionBalancerStrategy::LeastLoad;
+        input.member_weights = weights;
+        client
+            .subscription_balancers()
+            .create(&input)
+            .await
+            .unwrap();
+        client
+            .subscription_balancers()
+            .update(5, &input)
+            .await
+            .unwrap();
+    }
+}
+
+#[tokio::test]
+async fn public_aliases_preserve_the_subscription_server_base_path() {
+    let server = MockServer::start().await;
+    for alias in ["mihomo", "clash-legacy"] {
+        for verb in ["GET", "HEAD"] {
+            Mock::given(method(verb))
+                .and(path(format!("/tenant/subscriptions/{alias}/private%2Fid")))
+                .respond_with(ResponseTemplate::new(200).set_body_string("proxies: []"))
+                .expect(1)
+                .mount(&server)
+                .await;
+        }
+    }
+    let subs = SubscriptionClient::builder(format!("{}/tenant/subscriptions", server.uri()))
+        .unwrap()
+        .clash_path("custom/clash/")
+        .build()
+        .unwrap();
+    subs.mihomo("private/id").await.unwrap();
+    subs.mihomo_metadata("private/id").await.unwrap();
+    subs.clash_legacy("private/id").await.unwrap();
+    subs.clash_legacy_metadata("private/id").await.unwrap();
+}
+
+#[tokio::test]
+async fn shadowed_aliases_fail_before_http_while_configured_routes_remain_usable() {
+    for base_path in ["/", "/tenant/"] {
+        for alias in ["mihomo", "clash-legacy"] {
+            for owner in ["raw", "json", "clash"] {
+                let server = MockServer::start().await;
+                let builder =
+                    SubscriptionClient::builder(format!("{}{base_path}", server.uri())).unwrap();
+                let configured_path = format!("/{alias}/");
+                let subs = match owner {
+                    "raw" => builder.raw_path(configured_path),
+                    "json" => builder.json_path(configured_path),
+                    _ => builder.clash_path(configured_path),
+                }
+                .build()
+                .unwrap();
+                let body = if owner == "json" {
+                    "[]"
+                } else {
+                    "configured content"
+                };
+                Mock::given(path(format!("{base_path}{alias}/private-id")))
+                    .respond_with(ResponseTemplate::new(200).set_body_string(body))
+                    .mount(&server)
+                    .await;
+                if alias == "mihomo" && owner == "clash" {
+                    // Upstream deliberately reuses the configured Clash handler.
+                    assert_eq!(
+                        subs.mihomo("private-id").await.unwrap().content.as_str(),
+                        body
+                    );
+                    subs.mihomo_metadata("private-id").await.unwrap();
+                } else {
+                    let errors = if alias == "mihomo" {
+                        [
+                            subs.mihomo("private-id").await.unwrap_err(),
+                            subs.mihomo_metadata("private-id").await.unwrap_err(),
+                        ]
+                    } else {
+                        [
+                            subs.clash_legacy("private-id").await.unwrap_err(),
+                            subs.clash_legacy_metadata("private-id").await.unwrap_err(),
+                        ]
+                    };
+                    for error in errors {
+                        assert_eq!(error.kind(), xui_rs::ErrorKind::Configuration);
+                        assert!(!error.to_string().contains("private-id"));
+                    }
+                    assert!(server.received_requests().await.unwrap().is_empty());
+                }
+                match owner {
+                    "raw" => {
+                        subs.raw("private-id").await.unwrap();
+                    }
+                    "json" => {
+                        subs.json("private-id").await.unwrap();
+                    }
+                    _ => {
+                        subs.clash("private-id").await.unwrap();
+                    }
+                }
+                let other_alias = if alias == "mihomo" {
+                    "clash-legacy"
+                } else {
+                    "mihomo"
+                };
+                Mock::given(path(format!("{base_path}{other_alias}/private-id")))
+                    .respond_with(ResponseTemplate::new(200).set_body_string("proxies: []"))
+                    .expect(1)
+                    .mount(&server)
+                    .await;
+                if alias == "mihomo" {
+                    subs.clash_legacy("private-id").await.unwrap();
+                } else {
+                    subs.mihomo("private-id").await.unwrap();
+                }
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn settings_aliases_check_public_uris_and_configured_router_paths() {
+    let server = MockServer::start().await;
+    for public_uri_collision in [false, true] {
+        let settings = SubscriptionSettings {
+            sub_uri: format!(
+                "{}/{}",
+                server.uri(),
+                if public_uri_collision {
+                    "mihomo"
+                } else {
+                    "custom/raw"
+                }
+            ),
+            sub_path: if public_uri_collision {
+                "/configured-raw/"
+            } else {
+                "/mihomo/"
+            }
+            .into(),
+            sub_json_uri: format!("{}/custom/json/", server.uri()),
+            sub_json_path: "/json/".into(),
+            sub_clash_uri: format!("{}/clash-legacy/", server.uri()),
+            sub_clash_path: if public_uri_collision {
+                "/configured-clash/"
+            } else {
+                "/clash-legacy/"
+            }
+            .into(),
+            ..SubscriptionSettings::default()
+        };
+        let subs = SubscriptionClient::from_settings(&settings).unwrap();
+        for error in [
+            subs.mihomo("private-id").await.unwrap_err(),
+            subs.mihomo_metadata("private-id").await.unwrap_err(),
+            subs.clash_legacy("private-id").await.unwrap_err(),
+            subs.clash_legacy_metadata("private-id").await.unwrap_err(),
+        ] {
+            assert_eq!(error.kind(), xui_rs::ErrorKind::Configuration);
         }
     }
     assert!(server.received_requests().await.unwrap().is_empty());

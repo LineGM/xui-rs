@@ -124,9 +124,13 @@ client construction or any read method.
 ## 3.8.5 behavior
 
 Fresh panels randomize format paths. Prefer `from_settings` or explicit paths.
-The two fixed Clash aliases are available only with Clash enabled and no
-configured-path collision. They use the Clash server origin, even when the raw
-or JSON subscription URI points elsewhere.
+The two fixed Clash aliases require Clash to be enabled. The builder preserves
+the subscription server's base path for both aliases; `from_settings` uses the
+Clash server origin, even when the raw or JSON public URI points elsewhere.
+An alias shadowed by a configured subscription path returns a configuration
+error before sending either GET or HEAD. A configured Clash path of `/mihomo/`
+remains usable through `mihomo`, matching upstream's shared handler; a Clash
+path of `/clash-legacy/` shadows the separate legacy renderer.
 
 `hwid_status` reads slot counts without consuming or touching a device slot.
 `SubscriptionMetadata::happ` exposes Happ application headers with redacted
