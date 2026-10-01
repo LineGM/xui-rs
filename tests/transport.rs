@@ -86,15 +86,20 @@ async fn chunked_body_is_bounded_without_content_length() {
     server.await.unwrap();
 }
 
+/// Checks connection refusal and truncated bodies retain transport context without leaking IDs.
 #[tokio::test]
 async fn connection_and_stream_failures_keep_safe_transport_context() {
-    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
-    let unavailable = listener.local_addr().unwrap();
-    drop(listener);
+    // Reserve the port without listening so parallel mock servers cannot reuse it.
+    let socket = tokio::net::TcpSocket::new_v4().unwrap();
+    socket.bind((Ipv4Addr::LOCALHOST, 0).into()).unwrap();
+    let unavailable = socket.local_addr().unwrap();
 
     let panel = Client::new(format!("http://{unavailable}")).unwrap();
     let panel_error = panel.panel().openapi().await.unwrap_err();
-    assert!(matches!(panel_error, xui_rs::Error::Transport { .. }));
+    assert!(
+        matches!(panel_error, xui_rs::Error::Transport { .. }),
+        "unexpected error: {panel_error:?}"
+    );
     assert_eq!(panel_error.method(), Some(&Method::GET));
     assert_eq!(panel_error.url().unwrap().path(), "/panel/api/openapi.json");
 
