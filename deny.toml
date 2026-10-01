@@ -32,7 +32,7 @@ deny = [
     { crate = "openssl-sys", reason = "The SDK must not require a system OpenSSL installation" },
 ]
 skip = [
-    { crate = "base64@0.22.1", reason = "reqwest 0.13 and wiremock have not adopted base64 0.23 yet" },
+    { crate = "base64@0.22.1", reason = "hyper-util and wiremock still require base64 0.22" },
     { crate = "core-foundation@0.9.4", reason = "hyper-util and rustls platform support require different major versions" },
     { crate = "syn@2.0.119", reason = "some transitive derive crates have not adopted syn 3 yet" },
     { crate = "thiserror@1.0.69", reason = "tokio-socks 0.5 has not adopted thiserror 2 yet" },

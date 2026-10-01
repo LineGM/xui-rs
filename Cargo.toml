@@ -1,6 +1,6 @@
 [package]
 name = "xui-rs"
-version = "2.0.0"
+version = "2.0.1"
 edition = "2024"
 rust-version = "1.88"
 authors = ["Gleb Gudkov <GudkovGO@tutamail.com>"]
@@ -32,15 +32,15 @@ base64 = "0.23.1"
 futures-util = "0.3.34"
 httparse = "1.10.1"
 percent-encoding = "2.3.2"
-reqwest = { version = "0.13.4", features = ["cookies", "form", "json", "multipart", "query", "socks"] }
+reqwest = { version = "0.13.5", features = ["cookies", "form", "json", "multipart", "query", "socks"] }
 rustls = { version = "0.23.45", default-features = false, features = ["aws_lc_rs", "std", "tls12"] }
 rustls-native-certs = "0.8.4"
 secrecy = "0.10.3"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
-thiserror = "2.0.20"
+thiserror = "2.0.21"
 tokio = { version = "1.53.1", features = ["io-util", "net", "sync", "time"] }
-tokio-rustls = "0.26.4"
+tokio-rustls = "0.26.5"
 tokio-socks = "0.5.3"
 tokio-tungstenite = { version = "0.30.0", default-features = false, features = ["connect", "rustls-tls-native-roots"] }
 tracing = "0.1.44"

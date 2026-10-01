@@ -3,7 +3,7 @@
 Releases are built and published only by
 [`.github/workflows/release.yml`](../.github/workflows/release.yml). A manual
 run performs the complete verification and uploads a `.crate` artifact but
-cannot publish. Only an exact stable-version tag such as `v2.0.0` enables the
+cannot publish. Only an exact stable-version tag such as `v2.0.1` enables the
 protected publish job.
 
 ## One-time repository setup
@@ -48,13 +48,14 @@ must retain the full SHA and its human-readable release comment.
 
 4. Merge the release-preparation commit and wait for all required `main` CI
    checks.
-5. Manually run the `Release` workflow from `main`. This is the non-publishing
-   rehearsal; inspect the generated `.crate` artifact.
+5. A separate manual `Release` rehearsal is optional. After successful CI on
+   the release commit in `main`, proceed directly to the tag. Use the manual
+   workflow only when a non-publishing rehearsal is explicitly needed.
 6. Create and push the exact annotated tag, for example:
 
    ```console
-   git tag -a v2.0.0 -m "xui-rs 2.0.0"
-   git push origin v2.0.0
+   git tag -a v2.0.1 -m "xui-rs 2.0.1"
+   git push origin v2.0.1
    ```
 
 7. Review and approve the protected `release` deployment. The workflow checks
@@ -75,8 +76,8 @@ then repair a missing GitHub release or replace its attached copy.
 Download the `.crate` file from the GitHub release and verify its provenance:
 
 ```console
-gh attestation verify xui-rs-2.0.0.crate --repo LineGM/xui-rs
-cargo info xui-rs@2.0.0
+gh attestation verify xui-rs-2.0.1.crate --repo LineGM/xui-rs
+cargo info xui-rs@2.0.1
 ```
 
 Published crates.io versions are immutable. If a release is defective, yank

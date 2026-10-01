@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file. The
 format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.0.1] - 2026-10-01
+
+### Changed
+
+- Update reqwest to 0.13.5, thiserror to 2.0.21, and tokio-rustls to 0.26.5,
+  including their minimum manifest versions and the lockfile. These updates
+  include upstream timeout classification, proxy authentication, derive parsing,
+  and TLS read improvements; the SDK API and Rust 1.88 minimum remain unchanged.
+- Update the SHA-pinned taiki-e/install-action to v2.87.21 in CI and release
+  workflows while retaining explicitly versioned Rust tools.
+- Make a separate release rehearsal optional after successful main CI; tagged
+  releases retain all verification and publishing gates.
+
+### Fixed
+
+- Keep the connection-refusal test port reserved so parallel mock servers
+  cannot reuse it and change the expected transport error into an HTTP response.
+
 ## [2.0.0] - 2026-09-30
 
 ### Changed
