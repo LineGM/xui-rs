@@ -30,7 +30,7 @@ jobs:
       - name: Install Rust 1.98.0
         uses: dtolnay/rust-toolchain@f8be11a05b1d4f3fcebe6410cc16743212b999b0 # 1.98.0
       - name: Cache Rust build data
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Check integration harness syntax
         run: bash -n scripts/live-test.sh
       - name: Test against isolated 3x-ui

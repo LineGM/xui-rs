@@ -38,7 +38,7 @@ jobs:
       - name: Install pinned nightly
         run: rustup toolchain install nightly-2026-08-31 --profile minimal
       - name: Cache Rust build data
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: v1-rust-release
       - name: Install cargo-public-api
@@ -115,7 +115,7 @@ jobs:
       - name: Install Rust 1.88.0
         uses: dtolnay/rust-toolchain@2eae45db285e407f22119950686d47e1101e071b # 1.88.0
       - name: Cache Rust build data
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Check library on the MSRV
         run: cargo check --locked --lib
 
@@ -135,7 +135,7 @@ jobs:
       - name: Install Rust 1.98.0
         uses: dtolnay/rust-toolchain@f8be11a05b1d4f3fcebe6410cc16743212b999b0 # 1.98.0
       - name: Cache Rust build data
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Test all targets
         run: cargo test --locked --all-targets --all-features
 
